@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  telegramId  String   @unique
+  name        String
+  username    String?
+  avatarUrl   String?
+  role        String   @default("user") // user | admin
+  whitelisted Boolean  @default(false)
+  balance     Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  invitesCreated Invite[]       @relation("InviteCreator")
+  seats          TableSeat[]
+  ledger         LedgerEntry[]
+  deposits       DepositIntent[]
+  messages       ChatMessage[]
+  tablesCreated  PokerTable[]   @relation("TableCreator")
+}
+
+model Invite {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  maxUses     Int       @default(1)
+  uses        Int       @default(0)
+  expiresAt   DateTime?
+  createdById String
+  createdBy   User      @relation("InviteCreator", fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+}
+
+model PokerTable {
+  id          String   @id @default(cuid())
+  name        String
+  smallBlind  Int
+  bigBlind    Int
+  /** Pot rake % (cash standard). Default 5 */
+  rakePercent Int      @default(5)
+  /** Rake cap in big blinds. Default 3 (= GG-style 3BB) */
+  rakeCapBb   Int      @default(3)
+  maxSeats    Int      @default(6)
+  status      String   @default("open") // open | closed
+  createdById String
+  createdBy   User     @relation("TableCreator", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  seats    TableSeat[]
+  hands    Hand[]
+  messages ChatMessage[]
+}
+
+model TableSeat {
+  id        String @id @default(cuid())
+  tableId   String
+  userId    String
+  seatIndex Int
+  stack     Int
+  sittingOut Boolean @default(false)
+
+  table PokerTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  user  User       @relation(fields: [userId], references: [id])
+
+  @@unique([tableId, seatIndex])
+  @@unique([tableId, userId])
+}
+
+model Hand {
+  id        String   @id @default(cuid())
+  tableId   String
+  handNo    Int
+  board     String   // JSON
+  pot       Int
+  winners   String   // JSON
+  history   String   // JSON
+  createdAt DateTime @default(now())
+
+  table PokerTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+}
+
+model LedgerEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  kind      String // signup_bonus | deposit | withdraw | buy_in | cash_out | adjust
+  amount    Int
+  meta      String? // JSON
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model DepositIntent {
+  id          String   @id @default(cuid())
+  userId      String
+  amountChips Int
+  asset       String   @default("USDT")
+  status      String   @default("pending") // pending | confirmed | cancelled
+  externalRef String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  tableId   String
+  userId    String
+  text      String
+  createdAt DateTime @default(now())
+
+  table PokerTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  user  User       @relation(fields: [userId], references: [id])
+}

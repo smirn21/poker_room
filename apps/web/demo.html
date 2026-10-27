@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Club Hold'em — 3 players demo</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0a1f18;
+        color: #f0d9a0;
+        font-family: system-ui, sans-serif;
+      }
+      header {
+        padding: 0.45rem 0.75rem;
+        font-size: 0.8rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      header .hint {
+        opacity: 0.7;
+      }
+      .tabs {
+        display: flex;
+        gap: 0.35rem;
+      }
+      .tabs button {
+        border: 0;
+        border-radius: 8px;
+        padding: 0.35rem 0.7rem;
+        background: rgba(255, 255, 255, 0.08);
+        color: #f0d9a0;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .tabs button.active {
+        background: #d4a84b;
+        color: #1a1206;
+      }
+      .stage {
+        height: calc(100% - 42px);
+        position: relative;
+      }
+      iframe {
+        position: absolute;
+        inset: 0;
+        border: 0;
+        width: 100%;
+        height: 100%;
+        background: #0d3b2e;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+      }
+      iframe.active {
+        opacity: 1;
+        pointer-events: auto;
+        z-index: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>Demo</strong>
+      <div class="tabs" id="tabs">
+        <button type="button" data-i="0" class="active">Alice</button>
+        <button type="button" data-i="1">Bob</button>
+        <button type="button" data-i="2">Carol</button>
+      </div>
+      <span class="hint"
+        >Один стол на весь экран — переключай игрока вкладками. Invite:
+        CLUB-133F25</span
+      >
+    </header>
+    <div class="stage">
+      <iframe
+        class="active"
+        data-i="0"
+        src="/?dev=1&name=Alice"
+        title="Alice"
+      ></iframe>
+      <iframe
+        data-i="1"
+        src="/?dev=2&name=Bob&invite=CLUB-133F25"
+        title="Bob"
+      ></iframe>
+      <iframe
+        data-i="2"
+        src="/?dev=3&name=Carol&invite=CLUB-133F25"
+        title="Carol"
+      ></iframe>
+    </div>
+    <script>
+      const tabs = document.getElementById("tabs");
+      const frames = [...document.querySelectorAll("iframe")];
+      tabs.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-i]");
+        if (!btn) return;
+        const i = btn.dataset.i;
+        tabs
+          .querySelectorAll("button")
+          .forEach((b) => b.classList.toggle("active", b.dataset.i === i));
+        frames.forEach((f) =>
+          f.classList.toggle("active", f.dataset.i === i),
+        );
+      });
+    </script>
+  </body>
+</html>

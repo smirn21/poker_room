@@ -1,0 +1,20 @@
+{
+  "name": "poker-room",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @poker/api & npm run dev -w @poker/web",
+    "dev:api": "npm run dev -w @poker/api",
+    "dev:web": "npm run dev -w @poker/web",
+    "build": "npm run build -w @poker/shared && npm run build -w @poker/poker-engine && npm run build -w @poker/api && npm run build -w @poker/web",
+    "db:push": "npm run db:push -w @poker/api",
+    "db:seed": "npm run db:seed -w @poker/api",
+    "test": "npm run test -w @poker/poker-engine"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
