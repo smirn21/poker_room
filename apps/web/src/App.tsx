@@ -1,22 +1,45 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { UserDTO } from "@poker/shared";
 import { api, getToken, setToken } from "./api";
 import { TableView } from "./TableView";
 import { bindTelegramBackButton, initTelegramChrome } from "./telegram";
+import { useI18n } from "./i18n";
+import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
 
 type Screen = "boot" | "invite" | "lobby" | "table" | "wallet" | "admin";
 
 function resolveInitData(): string {
   const tg = initTelegramChrome();
   if (tg?.initData) return tg.initData;
-  // Local/dev: pick player via query ?dev=2 or default admin 1
   const params = new URLSearchParams(window.location.search);
   const id = params.get("dev") ?? "1";
   const name = params.get("name") ?? `Player${id}`;
   return `dev:${id}:${name}`;
 }
 
+function RichText({
+  template,
+  values,
+}: {
+  template: string;
+  values: Record<string, ReactNode>;
+}) {
+  const parts = template.split(/(\{\w+\})/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const m = part.match(/^\{(\w+)\}$/);
+        if (m && m[1] in values) {
+          return <span key={i}>{values[m[1]]}</span>;
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
+
 export function App() {
+  const { t } = useI18n();
   const [screen, setScreen] = useState<Screen>("boot");
   const [user, setUser] = useState<UserDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +80,6 @@ export function App() {
     void boot();
   }, []);
 
-  // Telegram native Back (clears TG header left control) on nested screens
   useEffect(() => {
     if (screen === "lobby" || screen === "boot" || screen === "invite") {
       document.body.classList.remove("has-tg-back");
@@ -104,7 +126,7 @@ export function App() {
       await refreshTables();
       setScreen("lobby");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Boot failed");
+      setError(e instanceof Error ? e.message : t("errBoot"));
       setScreen("invite");
     }
   }
@@ -122,14 +144,14 @@ export function App() {
       await refreshTables();
       setScreen("lobby");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Invite failed");
+      setError(e instanceof Error ? e.message : t("errInvite"));
     }
   }
 
   async function createTable() {
     try {
       const r = await api.createTable({
-        name: "NL Hold'em",
+        name: t("tableNameNl"),
         smallBlind: 50,
         bigBlind: 100,
         rakePercent: Math.max(0, Math.min(20, Math.floor(rakePercent))),
@@ -138,7 +160,7 @@ export function App() {
       });
       await join(r.table.id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Create failed");
+      setError(e instanceof Error ? e.message : t("errCreate"));
     }
   }
 
@@ -150,7 +172,7 @@ export function App() {
       setTableId(id);
       setScreen("table");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Join failed");
+      setError(e instanceof Error ? e.message : t("errJoin"));
     }
   }
 
@@ -159,7 +181,7 @@ export function App() {
       const r = await api.deposit(depositAmt, "USDT");
       setDepositRef(r.intent.externalRef);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Deposit failed");
+      setError(e instanceof Error ? e.message : t("errDeposit"));
     }
   }
 
@@ -190,11 +212,18 @@ export function App() {
     setUser(me.user);
   }
 
+  const shellHeader = (
+    <div className="shell-header">
+      <h1 className="brand">{t("brand")}</h1>
+      <LanguageSwitcher />
+    </div>
+  );
+
   if (screen === "boot") {
     return (
       <div className="app-shell">
-        <h1 className="brand">Club Hold'em</h1>
-        <p className="sub">Opening the room…</p>
+        {shellHeader}
+        <p className="sub">{t("openingRoom")}</p>
         {error && <p className="error">{error}</p>}
       </div>
     );
@@ -203,10 +232,10 @@ export function App() {
   if (screen === "invite" || (user && !user.whitelisted)) {
     return (
       <div className="app-shell">
-        <h1 className="brand">Club Hold'em</h1>
-        <p className="sub">Invite-only. Enter your club code.</p>
+        {shellHeader}
+        <p className="sub">{t("inviteOnly")}</p>
         <div className="panel">
-          <label htmlFor="invite">Invite code</label>
+          <label htmlFor="invite">{t("inviteCode")}</label>
           <input
             id="invite"
             value={inviteCode}
@@ -214,7 +243,7 @@ export function App() {
             placeholder="CLUB-XXXXXX"
           />
           <button type="button" onClick={redeem} style={{ width: "100%" }}>
-            Enter
+            {t("enter")}
           </button>
           {error && <p className="error">{error}</p>}
           {!getToken() && (
@@ -224,7 +253,7 @@ export function App() {
               style={{ width: "100%", marginTop: 8 }}
               onClick={boot}
             >
-              Retry auth
+              {t("retryAuth")}
             </button>
           )}
         </div>
@@ -253,16 +282,18 @@ export function App() {
   if (screen === "wallet") {
     return (
       <div className="app-shell">
-        <h1 className="brand">Wallet</h1>
+        {shellHeader}
         <p className="sub">
-          Balance <span className="balance">{user.balance}</span> chips
+          <RichText
+            template={t("balanceLabel")}
+            values={{
+              balance: <span className="balance">{user.balance}</span>,
+            }}
+          />
         </p>
         <div className="panel">
-          <p className="hint">
-            Crypto deposit (MVP): create an intent, pay the club wallet off-app,
-            admin confirms.
-          </p>
-          <label htmlFor="dep">Chips to buy</label>
+          <p className="hint">{t("walletHint")}</p>
+          <label htmlFor="dep">{t("chipsToBuy")}</label>
           <input
             id="dep"
             type="number"
@@ -270,16 +301,23 @@ export function App() {
             onChange={(e) => setDepositAmt(Number(e.target.value))}
           />
           <button type="button" onClick={makeDeposit} style={{ width: "100%" }}>
-            Create USDT deposit
+            {t("createUsdtDeposit")}
           </button>
           {depositRef && (
             <p className="hint" style={{ marginTop: 8 }}>
-              Reference: <strong>{depositRef}</strong>
+              <RichText
+                template={t("reference")}
+                values={{ ref: <strong>{depositRef}</strong> }}
+              />
             </p>
           )}
         </div>
-        <button type="button" className="secondary" onClick={() => setScreen("lobby")}>
-          Back
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => setScreen("lobby")}
+        >
+          {t("back")}
         </button>
       </div>
     );
@@ -288,14 +326,16 @@ export function App() {
   if (screen === "admin") {
     return (
       <div className="app-shell">
-        <h1 className="brand">Admin</h1>
+        {shellHeader}
         <div className="panel">
-          <p className="sub">Rake income (you)</p>
+          <p className="sub">{t("rakeIncome")}</p>
           <div className="balance">
-            {houseStats?.balance ?? user?.balance ?? 0} chips
+            {houseStats?.balance ?? user?.balance ?? 0} {t("chips")}
           </div>
           <p className="hint">
-            Total collected: {houseStats?.totalHouseFees ?? 0}
+            {t("totalCollected", {
+              amount: houseStats?.totalHouseFees ?? 0,
+            })}
           </p>
           {houseStats?.recent.slice(0, 5).map((e) => (
             <div key={e.id} className="hint">
@@ -305,30 +345,37 @@ export function App() {
         </div>
         <div className="panel">
           <button type="button" onClick={createInvite} style={{ width: "100%" }}>
-            Create invite
+            {t("createInvite")}
           </button>
           {inviteCreated && (
             <p className="hint" style={{ marginTop: 8 }}>
-              Code: <strong>{inviteCreated}</strong>
+              <RichText
+                template={t("code")}
+                values={{ code: <strong>{inviteCreated}</strong> }}
+              />
             </p>
           )}
         </div>
         <div className="panel">
-          <p className="sub">Pending deposits</p>
-          {pending.length === 0 && <p className="hint">None</p>}
+          <p className="sub">{t("pendingDeposits")}</p>
+          {pending.length === 0 && <p className="hint">{t("none")}</p>}
           {pending.map((d) => (
             <div key={d.id} className="table-item">
               <div>
                 {d.user.name}: {d.amountChips} ({d.asset})
               </div>
               <button type="button" onClick={() => confirmDep(d.id)}>
-                Confirm
+                {t("confirm")}
               </button>
             </div>
           ))}
         </div>
-        <button type="button" className="secondary" onClick={() => setScreen("lobby")}>
-          Back
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => setScreen("lobby")}
+        >
+          {t("back")}
         </button>
       </div>
     );
@@ -336,8 +383,8 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <h1 className="brand">Club Hold'em</h1>
-      <p className="sub">Private Texas Hold'em · invite only</p>
+      {shellHeader}
+      <p className="sub">{t("privateHoldem")}</p>
 
       <div className="panel row spread">
         <div className="row" style={{ gap: "0.65rem" }}>
@@ -352,16 +399,22 @@ export function App() {
           ) : null}
           <div>
             <div>{user.name}</div>
-            <div className="balance">{user.balance} chips</div>
+            <div className="balance">
+              {user.balance} {t("chips")}
+            </div>
           </div>
         </div>
         <div className="row">
-          <button type="button" className="secondary" onClick={() => setScreen("wallet")}>
-            Wallet
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => setScreen("wallet")}
+          >
+            {t("wallet")}
           </button>
           {user.role === "admin" && (
             <button type="button" className="secondary" onClick={loadAdmin}>
-              Admin
+              {t("admin")}
             </button>
           )}
         </div>
@@ -369,22 +422,22 @@ export function App() {
 
       <div className="tabs">
         <button type="button" className="active">
-          Tables
+          {t("tables")}
         </button>
         <button type="button" onClick={refreshTables}>
-          Refresh
+          {t("refresh")}
         </button>
       </div>
 
       <div className="panel">
-        <label htmlFor="buyin">Buy-in</label>
+        <label htmlFor="buyin">{t("buyIn")}</label>
         <input
           id="buyin"
           type="number"
           value={buyIn}
           onChange={(e) => setBuyIn(Number(e.target.value))}
         />
-        <label htmlFor="rake">Rake % (of pot)</label>
+        <label htmlFor="rake">{t("rakePercent")}</label>
         <input
           id="rake"
           type="number"
@@ -393,7 +446,7 @@ export function App() {
           value={rakePercent}
           onChange={(e) => setRakePercent(Number(e.target.value))}
         />
-        <label htmlFor="rakecap">Rake cap (× BB)</label>
+        <label htmlFor="rakecap">{t("rakeCap")}</label>
         <input
           id="rakecap"
           type="number"
@@ -402,38 +455,42 @@ export function App() {
           value={rakeCapBb}
           onChange={(e) => setRakeCapBb(Number(e.target.value))}
         />
-        <p className="hint">
-          World standard: % of pot, capped in BB. No flop → no rake. Scales
-          when blinds are millions.
-        </p>
+        <p className="hint">{t("rakeHint")}</p>
         <button type="button" onClick={createTable} style={{ width: "100%" }}>
-          Create table & sit
+          {t("createTableSit")}
         </button>
       </div>
 
       <div className="table-list">
-        {tables.map((t) => (
-          <div key={t.id} className="table-item">
+        {tables.map((tbl) => (
+          <div key={tbl.id} className="table-item">
             <div>
-              <strong>{t.name}</strong>
+              <strong>{tbl.name}</strong>
               <div className="hint">
-                {t.smallBlind}/{t.bigBlind} · rake {t.rakePercent}%/
-                {t.rakeCapBb}BB · {t.seated}/{t.maxSeats}
+                {t("tableMeta", {
+                  sb: tbl.smallBlind,
+                  bb: tbl.bigBlind,
+                  rake: tbl.rakePercent,
+                  cap: tbl.rakeCapBb,
+                  seated: tbl.seated,
+                  max: tbl.maxSeats,
+                })}
               </div>
             </div>
-            <button type="button" onClick={() => join(t.id)}>
-              Join
+            <button type="button" onClick={() => join(tbl.id)}>
+              {t("join")}
             </button>
           </div>
         ))}
-        {tables.length === 0 && (
-          <p className="hint">No open tables — create one.</p>
-        )}
+        {tables.length === 0 && <p className="hint">{t("noTables")}</p>}
       </div>
 
       {error && <p className="error">{error}</p>}
       <p className="hint">
-        Dev: open <code>?dev=2</code> in another tab as a second player.
+        <RichText
+          template={t("devHint")}
+          values={{ code: <code>?dev=2</code> }}
+        />
       </p>
     </div>
   );

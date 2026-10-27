@@ -98,6 +98,72 @@ button.primary-wide {
   min-height: 100svh;
 }
 
+.shell-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.shell-header .brand {
+  margin-bottom: 0;
+}
+
+.lang-switch {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.lang-switch-label {
+  font-size: 0.68rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.lang-switch select {
+  appearance: none;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--gold-soft);
+  border: 1px solid rgba(212, 168, 75, 0.4);
+  border-radius: 8px;
+  padding: 0.35rem 1.6rem 0.35rem 0.55rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background-image: linear-gradient(45deg, transparent 50%, var(--gold-soft) 50%),
+    linear-gradient(135deg, var(--gold-soft) 50%, transparent 50%);
+  background-position:
+    calc(100% - 12px) 55%,
+    calc(100% - 7px) 55%;
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+.lang-switch select:focus {
+  outline: 1px solid rgba(212, 168, 75, 0.7);
+}
+
+.lang-switch-compact {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.lang-switch-compact .lang-switch-label {
+  display: none;
+}
+
+.lang-switch-compact select {
+  padding: 0.28rem 1.4rem 0.28rem 0.45rem;
+  font-size: 0.75rem;
+}
+
 .brand {
   font-family: var(--font-display);
   font-size: 1.65rem;

@@ -1,7 +1,11 @@
 import { evaluateBest } from "@poker/poker-engine";
 import type { Card } from "@poker/shared";
+import { en } from "./i18n/locales/en";
+import { ru, type MessageKey } from "./i18n/locales/ru";
 
-const RANK_RU: Record<string, string> = {
+type Locale = "ru" | "en";
+
+const RANK: Record<string, string> = {
   "2": "2",
   "3": "3",
   "4": "4",
@@ -17,29 +21,42 @@ const RANK_RU: Record<string, string> = {
   A: "A",
 };
 
-/** Live hand label for hero (Russian, Pokerdom-style) */
+const catalogs = { ru, en } as const;
+
+function tr(locale: Locale, key: MessageKey, vars?: Record<string, string>): string {
+  const catalog = catalogs[locale] ?? catalogs.ru;
+  let s = catalog[key] ?? catalogs.ru[key] ?? key;
+  if (vars) {
+    s = s.replace(/\{(\w+)\}/g, (_, k: string) => vars[k] ?? `{${k}}`);
+  }
+  return s;
+}
+
+/** Live hand label for hero */
 export function describeHandStrength(
   hole: Card[],
   board: Card[],
+  locale: Locale = "ru",
 ): string | null {
   if (hole.length < 2) return null;
   const cards = [...hole, ...board];
   if (cards.length < 5) {
-    // Preflop / incomplete board — pair in hole only
     const r0 = hole[0].slice(0, -1);
     const r1 = hole[1].slice(0, -1);
-    if (r0 === r1) return `Пара, ${RANK_RU[r0]}${RANK_RU[r1]}`;
+    if (r0 === r1) {
+      return tr(locale, "handPair", { rank: RANK[r0] ?? r0 });
+    }
     return null;
   }
   try {
     const h = evaluateBest(cards);
-    return localizeHand(h.name, h.values);
+    return localizeHand(h.name, h.values, locale);
   } catch {
     return null;
   }
 }
 
-function localizeHand(name: string, values: number[]): string {
+function localizeHand(name: string, values: number[], locale: Locale): string {
   const face = (v: number) => {
     const map: Record<number, string> = {
       14: "A",
@@ -53,35 +70,55 @@ function localizeHand(name: string, values: number[]): string {
 
   switch (name) {
     case "Royal Flush":
-      return "Роял-флеш";
+      return tr(locale, "handRoyalFlush");
     case "Straight Flush":
-      return `Стрит-флеш, ${face(values[0])}`;
+      return tr(locale, "handStraightFlush", { rank: face(values[0]) });
     case "Four of a Kind":
-      return `Каре, ${face(values[0])}`;
+      return tr(locale, "handFourKind", { rank: face(values[0]) });
     case "Full House":
-      return `Фулл-хаус, ${face(values[0])}ы`;
+      return tr(locale, "handFullHouse", { rank: face(values[0]) });
     case "Flush":
-      return "Флеш";
+      return tr(locale, "handFlush");
     case "Straight":
-      return `Стрит, ${face(values[0])}`;
+      return tr(locale, "handStraight", { rank: face(values[0]) });
     case "Three of a Kind":
-      return `Сет, ${face(values[0])}`;
+      return tr(locale, "handThreeKind", { rank: face(values[0]) });
     case "Two Pair":
-      return `Две пары, ${face(values[0])}${face(values[1])}`;
+      return tr(locale, "handTwoPair", {
+        a: face(values[0]),
+        b: face(values[1]),
+      });
     case "One Pair":
-      return `Пара, ${face(values[0])}${face(values[0])}`;
+      return tr(locale, "handOnePair", { rank: face(values[0]) });
     case "High Card":
-      return `Старшая, ${face(values[0])}`;
+      return tr(locale, "handHighCard", { rank: face(values[0]) });
     default:
       return name;
   }
 }
 
+export function actionLabel(
+  action: string,
+  locale: Locale = "ru",
+): string | null {
+  const keyMap: Record<string, MessageKey> = {
+    fold: "actionFold",
+    check: "actionCheck",
+    call: "actionCall",
+    bet: "actionBet",
+    raise: "actionRaise",
+    "all-in": "actionAllIn",
+  };
+  const key = keyMap[action];
+  return key ? tr(locale, key) : null;
+}
+
+/** @deprecated use actionLabel(locale) */
 export const ACTION_LABEL_RU: Record<string, string> = {
-  fold: "ФОЛД",
-  check: "ЧЕК",
-  call: "КОЛЛ",
-  bet: "СТАВКА",
-  raise: "РЕЙЗ",
-  "all-in": "ОЛЛ-ИН",
+  fold: ru.actionFold,
+  check: ru.actionCheck,
+  call: ru.actionCall,
+  bet: ru.actionBet,
+  raise: ru.actionRaise,
+  "all-in": ru.actionAllIn,
 };

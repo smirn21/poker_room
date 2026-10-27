@@ -12,7 +12,9 @@ import { seatLayout } from "./cardUtils";
 import { PlayingCard, CardBack } from "./PlayingCard";
 import { ChipStack } from "./ChipStack";
 import { amountToChips } from "./chips";
-import { ACTION_LABEL_RU, describeHandStrength } from "./handStrength";
+import { actionLabel, describeHandStrength } from "./handStrength";
+import { useI18n } from "./i18n";
+import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
 
 const WS = import.meta.env.VITE_WS_URL ?? "http://localhost:3001";
 const REACTIONS = ["😀", "😂", "🔥", "👏", "😎", "😱", "💪", "🎉"];
@@ -39,6 +41,7 @@ interface FloatReact {
 }
 
 export function TableView({ tableId, user, onBack, onUser }: Props) {
+  const { t, locale } = useI18n();
   const [state, setState] = useState<PublicTableState | null>(null);
   const [messages, setMessages] = useState<ChatMessageDTO[]>([]);
   const [chatText, setChatText] = useState("");
@@ -226,18 +229,24 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
       const w = state.winners?.find((x) => x.seatIndex === mySeat.seatIndex);
       if (w?.handName) return w.handName;
     }
-    return describeHandStrength(mySeat.holeCards, state?.board ?? []);
-  }, [mySeat, state?.board, state?.status, state?.winners]);
+    return describeHandStrength(mySeat.holeCards, state?.board ?? [], locale);
+  }, [mySeat, state?.board, state?.status, state?.winners, locale]);
 
   const isMyTurn = Boolean(mySeat?.isTurn);
-  const streetLabel =
-    state?.street && state.street !== "showdown"
-      ? state.street.toUpperCase()
-      : state?.status === "hand_over"
-        ? "SHOWDOWN"
-        : state?.status === "waiting"
-          ? "WAITING"
-          : "";
+  const streetLabel = (() => {
+    if (state?.street && state.street !== "showdown") {
+      const map: Record<string, string> = {
+        preflop: t("streetPreflop"),
+        flop: t("streetFlop"),
+        turn: t("streetTurn"),
+        river: t("streetRiver"),
+      };
+      return map[state.street] ?? state.street.toUpperCase();
+    }
+    if (state?.status === "hand_over") return t("streetShowdown");
+    if (state?.status === "waiting") return t("streetWaiting");
+    return "";
+  })();
 
   function act(
     action: "fold" | "check" | "call" | "bet" | "raise" | "all-in",
@@ -253,7 +262,7 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
       onUser(r.user);
       onBack();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Leave failed");
+      setError(e instanceof Error ? e.message : t("errLeave"));
     }
   }
 
@@ -279,7 +288,7 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
       ?.map((w) => {
         const name =
           state.seats.find((s) => s.seatIndex === w.seatIndex)?.name ??
-          `Seat ${w.seatIndex + 1}`;
+          t("seatN", { n: w.seatIndex + 1 });
         return `${name} +${w.amount}${w.handName ? ` · ${w.handName}` : ""}`;
       })
       .join(" · ") ?? "";
@@ -289,8 +298,8 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
     if (!pos) return null;
     const isWinner = winningSeatIndexes.has(seat.seatIndex);
     const winInfo = state?.winners?.find((w) => w.seatIndex === seat.seatIndex);
-    const actionRu = seat.lastAction
-      ? ACTION_LABEL_RU[seat.lastAction]
+    const actionText = seat.lastAction
+      ? actionLabel(seat.lastAction, locale)
       : null;
     const badges = [
       seat.isDealer ? "D" : null,
@@ -306,7 +315,7 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
               {b}
             </span>
           ))}
-          {isWinner && <span className="badge badge-win">WIN</span>}
+          {isWinner && <span className="badge badge-win">{t("win")}</span>}
         </div>
         {seat.avatarUrl ? (
           <img className="avatar" src={seat.avatarUrl} alt="" />
@@ -323,11 +332,11 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
         )}
         <div className="seat-meta">
           <div className="name">{seat.name}</div>
-          {actionRu && !seat.isTurn && (
+          {actionText && !seat.isTurn && (
             <div
               className={`action-tag action-${seat.lastAction ?? "fold"}`}
             >
-              {actionRu}
+              {actionText}
             </div>
           )}
           {winInfo?.handName && (
@@ -392,13 +401,14 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
     <div className="table-screen">
       <div className="table-topbar">
         <button type="button" className="secondary" onClick={onBack}>
-          Lobby
+          {t("lobby")}
         </button>
         <div className="table-status">
           <span className="street-pill">{streetLabel || "—"}</span>
-          <span className="hint">Hand #{state?.handNo ?? 0}</span>
+          <span className="hint">{t("handNo", { n: state?.handNo ?? 0 })}</span>
         </div>
         <div className="top-tools">
+          <LanguageSwitcher className="lang-switch-compact" />
           <button
             type="button"
             className="icon-btn"
@@ -408,7 +418,7 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
             😊
           </button>
           <button type="button" className="secondary" onClick={leave}>
-            Leave
+            {t("leave")}
           </button>
         </div>
       </div>
@@ -433,15 +443,18 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
             {potDisplay > 0 ? (
               <ChipStack amount={potDisplay} size="md" />
             ) : (
-              <div className="pot-empty">Pot 0</div>
+              <div className="pot-empty">{t("potZero")}</div>
             )}
             {state?.rakeTaken ? (
               <div className="hint" style={{ marginTop: 4, opacity: 0.85 }}>
-                Rake {state.rakeTaken}
+                {t("rakeTaken", { amount: state.rakeTaken })}
               </div>
             ) : state?.rakePercent ? (
               <div className="hint" style={{ marginTop: 4, opacity: 0.55 }}>
-                Rake {state.rakePercent}% / {state.rakeCapBb}BB
+                {t("rakeRule", {
+                  percent: state.rakePercent,
+                  cap: state.rakeCapBb,
+                })}
               </div>
             ) : null}
           </div>
@@ -536,11 +549,11 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
               if (state?.status === "waiting") await api.startHand(tableId);
               else await nextHand();
             } catch (e) {
-              setError(e instanceof Error ? e.message : "Start failed");
+              setError(e instanceof Error ? e.message : t("errStart"));
             }
           }}
         >
-          {state?.status === "waiting" ? "Start hand" : "Next hand"}
+          {state?.status === "waiting" ? t("startHand") : t("nextHand")}
         </button>
       )}
 
@@ -551,7 +564,7 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
             disabled={!state?.legalActions.includes("fold")}
             onClick={() => act("fold")}
           >
-            Fold
+            {t("fold")}
           </button>
           <button
             type="button"
@@ -563,14 +576,16 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
             }
             onClick={() => act(state?.canCheck ? "check" : "call")}
           >
-            {state?.canCheck ? "Check" : `Call ${state?.callAmount ?? 0}`}
+            {state?.canCheck
+              ? t("check")
+              : t("callAmount", { amount: state?.callAmount ?? 0 })}
           </button>
           <button
             type="button"
             disabled={!state?.legalActions.includes("all-in")}
             onClick={() => act("all-in")}
           >
-            All-in
+            {t("allIn")}
           </button>
           <input
             type="number"
@@ -593,7 +608,7 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
               )
             }
           >
-            Bet/Raise
+            {t("betRaise")}
           </button>
         </div>
       )}
@@ -610,10 +625,10 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
           <input
             value={chatText}
             onChange={(e) => setChatText(e.target.value)}
-            placeholder="Message the table…"
+            placeholder={t("chatPlaceholder")}
             style={{ margin: 0, flex: 1 }}
           />
-          <button type="submit">Send</button>
+          <button type="submit">{t("send")}</button>
         </form>
       </div>
     </div>
