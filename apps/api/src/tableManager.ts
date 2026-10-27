@@ -300,6 +300,8 @@ export class TableManager {
         where: { id: tableId },
         data: { createdById: nextHost },
       });
+      // Broadcast so the new host sees invite UI immediately (leave/rebuy call this outside withTable).
+      this.emit(tableId, live.engine);
     }
   }
 
