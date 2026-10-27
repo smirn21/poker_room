@@ -1,9 +1,9 @@
 ---
-description: After every change or deploy, run full verification yourself
+description: После правок — проверка, commit на русском, push; сломанное чинить или удалять
 alwaysApply: true
 ---
 
-# Post-change / post-deploy verification
+# Post-change / post-deploy verification + git
 
 Follow [AGENTS.md](../../AGENTS.md). After any code, config, or deploy change:
 
@@ -13,4 +13,11 @@ Follow [AGENTS.md](../../AGENTS.md). After any code, config, or deploy change:
 4. If WS/table touched — Socket.IO against current public URL
 5. Confirm UI respects Telegram chrome + iPhone safe areas
 
-Use subagents, Computer Use (PA dashboard), and browser as needed. Fix failures before reporting done. Quick tunnel URL changes on always-on restart → re-run `pa_point_web_at_tunnel.sh`.
+If something breaks after your edits: **fix it** or **remove/revert** the breaking change — do not leave a broken state or ask the user to check.
+
+When the work (or a finished slice) is ready:
+
+1. **git commit** with a message **in Russian**
+2. **git push** to the current branch remote
+
+Do not commit secrets (`.env`, tokens). Use subagents, Computer Use (PA dashboard), and browser as needed. Quick tunnel URL changes on always-on restart → re-run `pa_point_web_at_tunnel.sh`.

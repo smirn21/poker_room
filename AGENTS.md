@@ -2,6 +2,21 @@
 
 Always apply. After **any** code change, config change, or deploy, run a **full verification** yourself before telling the user it’s done. Do not ask the user to “check if it works.”
 
+## Git: commit + push
+
+После любой своей работы (код, конфиг, деплой-скрипты, правила, доки):
+
+1. Сделай **git commit** с сообщением **на русском языке** (кратко: зачем, не «что построчно»).
+2. Сразу сделай **git push** в текущую ветку (обычно `main` / tracking remote).
+3. Не оставляй незакоммиченные правки «на потом», если задача завершена или её часть уже готова к сохранению.
+4. Секреты (`.env`, токены, ключи) в коммит **не** клади.
+
+## Если после правок что-то сломалось
+
+- Не оставляй в сломанном состоянии: **исправь** до зелёной проверки по чеклисту ниже.
+- Если фикс не выходит быстро или правка оказалась вредной — **откати / удали** сломанное изменение (revert файлов, убери фичу, верни рабочий деплой), снова проверь, закоммить и запушь.
+- Сообщать «не работает, проверь сам» нельзя — либо починил, либо убрал.
+
 ## Full verification checklist
 
 1. **API health** — public HTTPS `/health` returns `{"ok":true}` (tunnel or current public URL in `~/poker_room_api_url.txt` / always-on log).
@@ -10,7 +25,7 @@ Always apply. After **any** code change, config change, or deploy, run a **full 
 4. **Realtime** — if table/WS touched: Socket.IO connects against the same public URL as `VITE_WS_URL`.
 5. **UI smoke** — screenshot or browser snapshot; content clears Telegram chrome + iPhone notch/home indicator (safe-area).
 
-If any step fails, fix it (restart always-on, re-run `deploy/pa_point_web_at_tunnel.sh`, rebuild, etc.) and re-run the checklist.
+If any step fails, fix it (restart always-on, re-run `deploy/pa_point_web_at_tunnel.sh`, rebuild, etc.) or remove the breaking change, then re-run the checklist. Then commit (RU) + push.
 
 ## Tools you may use
 
