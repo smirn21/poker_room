@@ -28,7 +28,8 @@ if [[ -f "${HOME}/poker_room/.env" ]]; then
 fi
 export DEV_BYPASS_AUTH=1
 export PORT=18765
-npx prisma generate >/dev/null
+# Don't block always-on forever if generate is flaky — client is usually already present.
+npx prisma generate >/dev/null 2>&1 || echo "prisma_generate_skip" >&2
 node dist/index.js >>"${HOME}/poker_api.log" 2>&1 &
 API_PID=$!
 
