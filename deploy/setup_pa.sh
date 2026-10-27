@@ -46,5 +46,4 @@ rm -rf "$HOME/poker_room_static"/*
 cp -R "$ROOT/apps/web/dist/." "$HOME/poker_room_static/"
 echo "==> Static Mini App copied to $HOME/poker_room_static"
 echo "==> Done. Next: fill apps/api/.env, then start API (always-on):"
-echo "    cd $ROOT/apps/api && npx tsx src/index.ts"
-echo "    or: node dist/index.js  (after build, with .env loaded)"
+echo "    bash -lc 'export NVM_DIR=\"\$HOME/.nvm\"; . \"\$NVM_DIR/nvm.sh\"; nvm use 20; cd $ROOT/apps/api && npx prisma generate && exec node dist/index.js'"

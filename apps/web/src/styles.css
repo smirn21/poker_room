@@ -11,6 +11,32 @@
   --font-display: "Segoe UI", "Helvetica Neue", sans-serif;
   --font-body: "Segoe UI", system-ui, sans-serif;
   --font-card: "Georgia", "Times New Roman", serif;
+
+  /*
+   * Device notch / home indicator (iOS) + Telegram Mini App chrome
+   * (close, back, ⋯ menu, minimize). TG may inject --tg-* vars; JS
+   * in telegram.ts also writes them from safeAreaInset / contentSafeAreaInset.
+   */
+  --safe-top: max(
+    env(safe-area-inset-top, 0px),
+    var(--tg-safe-area-inset-top, 0px),
+    var(--tg-content-safe-area-inset-top, 0px)
+  );
+  --safe-bottom: max(
+    env(safe-area-inset-bottom, 0px),
+    var(--tg-safe-area-inset-bottom, 0px),
+    var(--tg-content-safe-area-inset-bottom, 0px)
+  );
+  --safe-left: max(
+    env(safe-area-inset-left, 0px),
+    var(--tg-safe-area-inset-left, 0px),
+    var(--tg-content-safe-area-inset-left, 0px)
+  );
+  --safe-right: max(
+    env(safe-area-inset-right, 0px),
+    var(--tg-safe-area-inset-right, 0px),
+    var(--tg-content-safe-area-inset-right, 0px)
+  );
 }
 
 * {
@@ -63,8 +89,13 @@ button.primary-wide {
 .app-shell {
   max-width: 440px;
   margin: 0 auto;
-  padding: 0.75rem 0.75rem 2rem;
+  /* Extra 0.35rem under TG header controls; keep side/bottom clear of notch & home bar */
+  padding-top: calc(var(--safe-top) + 0.75rem);
+  padding-right: calc(var(--safe-right) + 0.75rem);
+  padding-bottom: calc(var(--safe-bottom) + 1.25rem);
+  padding-left: calc(var(--safe-left) + 0.75rem);
   min-height: 100dvh;
+  min-height: 100svh;
 }
 
 .brand {
@@ -172,6 +203,21 @@ input {
   align-items: center;
   justify-content: space-between;
   gap: 0.4rem;
+  /* Leave horizontal room for TG close (L) and ⋯ / minimize (R) when insets are thin */
+  min-height: 2.5rem;
+  padding-right: 0.15rem;
+}
+
+.table-topbar .tg-native-back-hint {
+  font-size: 0.72rem;
+  color: var(--muted);
+  opacity: 0.85;
+}
+
+body.has-tg-back .table-topbar > button.secondary:first-child,
+body.has-tg-back .app-shell > button.secondary:last-child {
+  /* Native Telegram BackButton is visible — hide duplicate in-app Back */
+  display: none;
 }
 
 .table-status {
@@ -567,7 +613,10 @@ input {
 /* Narrow single-column (demo iframes) */
 @media (max-width: 380px) {
   .app-shell {
-    padding: 0.45rem 0.4rem 1.2rem;
+    padding-top: calc(var(--safe-top) + 0.45rem);
+    padding-right: calc(var(--safe-right) + 0.4rem);
+    padding-bottom: calc(var(--safe-bottom) + 1rem);
+    padding-left: calc(var(--safe-left) + 0.4rem);
   }
 
   .felt {

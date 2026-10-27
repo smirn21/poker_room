@@ -12,8 +12,19 @@ await app.register(cors, { origin: config.corsOrigin, credentials: true });
 await app.register(jwt, { secret: config.jwtSecret });
 
 app.setErrorHandler((err, _req, reply) => {
-  if (err instanceof HttpError) {
-    return reply.status(err.statusCode).send({ error: err.message });
+  if (
+    err instanceof HttpError ||
+    (err &&
+      typeof err === "object" &&
+      "statusCode" in err &&
+      typeof (err as HttpError).statusCode === "number" &&
+      (err as HttpError).statusCode >= 400 &&
+      (err as HttpError).statusCode < 600)
+  ) {
+    const status = (err as HttpError).statusCode;
+    const message =
+      err instanceof Error ? err.message : "Request failed";
+    return reply.status(status).send({ error: message });
   }
   if ((err as { validation?: unknown }).validation) {
     return reply.status(400).send({ error: "Validation error", details: err });

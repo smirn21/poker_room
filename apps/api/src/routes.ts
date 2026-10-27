@@ -42,7 +42,16 @@ async function requireUser(app: FastifyInstance, request: { headers: { authoriza
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   app.post("/auth/telegram", async (req, reply) => {
     const body = z.object({ initData: z.string().min(1) }).parse(req.body);
-    const tg = validateInitData(body.initData);
+    let tg;
+    try {
+      tg = validateInitData(body.initData);
+    } catch (e) {
+      // Reply directly — avoids HttpError instanceof issues across builds
+      // and maps invalid/missing Telegram hash to 401 (not 500).
+      return reply.status(401).send({
+        error: e instanceof Error ? e.message : "Invalid Telegram auth",
+      });
+    }
     const telegramId = String(tg.id);
     const isAdmin = config.adminTelegramIds.includes(telegramId);
     const name = [tg.first_name, tg.last_name].filter(Boolean).join(" ");

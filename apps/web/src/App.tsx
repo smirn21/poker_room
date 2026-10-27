@@ -2,34 +2,18 @@ import { useEffect, useState } from "react";
 import type { UserDTO } from "@poker/shared";
 import { api, getToken, setToken } from "./api";
 import { TableView } from "./TableView";
+import { bindTelegramBackButton, initTelegramChrome } from "./telegram";
 
 type Screen = "boot" | "invite" | "lobby" | "table" | "wallet" | "admin";
 
 function resolveInitData(): string {
-  const tg = window.Telegram?.WebApp;
-  if (tg?.initData) {
-    tg.ready();
-    tg.expand();
-    return tg.initData;
-  }
+  const tg = initTelegramChrome();
+  if (tg?.initData) return tg.initData;
   // Local/dev: pick player via query ?dev=2 or default admin 1
   const params = new URLSearchParams(window.location.search);
   const id = params.get("dev") ?? "1";
   const name = params.get("name") ?? `Player${id}`;
   return `dev:${id}:${name}`;
-}
-
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp?: {
-        initData: string;
-        ready: () => void;
-        expand: () => void;
-        colorScheme?: string;
-      };
-    };
-  }
 }
 
 export function App() {
@@ -66,11 +50,36 @@ export function App() {
   const [depositRef, setDepositRef] = useState<string | null>(null);
 
   useEffect(() => {
+    initTelegramChrome();
     const params = new URLSearchParams(window.location.search);
     const pre = params.get("invite");
     if (pre) setInviteCode(pre);
     void boot();
   }, []);
+
+  // Telegram native Back (clears TG header left control) on nested screens
+  useEffect(() => {
+    if (screen === "lobby" || screen === "boot" || screen === "invite") {
+      document.body.classList.remove("has-tg-back");
+      return;
+    }
+    const goBack = () => {
+      if (screen === "table") {
+        setTableId(null);
+        void refreshTables().then(() => setScreen("lobby"));
+        return;
+      }
+      setScreen("lobby");
+    };
+    const unbind = bindTelegramBackButton(goBack);
+    if (window.Telegram?.WebApp?.BackButton) {
+      document.body.classList.add("has-tg-back");
+    }
+    return () => {
+      unbind();
+      document.body.classList.remove("has-tg-back");
+    };
+  }, [screen]);
 
   async function boot() {
     try {

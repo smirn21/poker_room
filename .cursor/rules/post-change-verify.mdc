@@ -1,0 +1,16 @@
+---
+description: After every change or deploy, run full verification yourself
+alwaysApply: true
+---
+
+# Post-change / post-deploy verification
+
+Follow [AGENTS.md](../../AGENTS.md). After any code, config, or deploy change:
+
+1. Verify public API `/health` → `{"ok":true}`
+2. Verify Mini App static loads on kiosk host
+3. Smoke auth/boot (`?dev=1` or Telegram) — no 5xx
+4. If WS/table touched — Socket.IO against current public URL
+5. Confirm UI respects Telegram chrome + iPhone safe areas
+
+Use subagents, Computer Use (PA dashboard), and browser as needed. Fix failures before reporting done. Quick tunnel URL changes on always-on restart → re-run `pa_point_web_at_tunnel.sh`.

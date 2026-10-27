@@ -11,7 +11,11 @@ export interface TelegramWebAppUser {
 }
 
 export function validateInitData(initData: string): TelegramWebAppUser {
-  if (config.devBypassAuth && initData.startsWith("dev:")) {
+  // Allow Mini App ?dev=1 probes. Read env directly as well as config —
+  // always-on restarts can race dotenv vs process env.
+  const bypass =
+    config.devBypassAuth || process.env.DEV_BYPASS_AUTH === "1";
+  if (bypass && initData.startsWith("dev:")) {
     // format: dev:<telegramId>:<name>
     const parts = initData.split(":");
     const id = Number(parts[1] || 1);
