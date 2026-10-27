@@ -47,7 +47,9 @@ html,
 body,
 #root {
   margin: 0;
+  height: 100%;
   min-height: 100%;
+  overflow: hidden;
   font-family: var(--font-body);
   color: var(--ink);
   background:
@@ -89,13 +91,281 @@ button.primary-wide {
 .app-shell {
   max-width: 440px;
   margin: 0 auto;
-  /* Extra 0.35rem under TG header controls; keep side/bottom clear of notch & home bar */
-  padding-top: calc(var(--safe-top) + 0.75rem);
-  padding-right: calc(var(--safe-right) + 0.75rem);
-  padding-bottom: calc(var(--safe-bottom) + 1.25rem);
-  padding-left: calc(var(--safe-left) + 0.75rem);
+  /* Extra under TG chrome + notch / home indicator */
+  padding-top: calc(var(--safe-top) + 0.55rem);
+  padding-right: calc(var(--safe-right) + 0.65rem);
+  padding-bottom: calc(var(--safe-bottom) + 0.65rem);
+  padding-left: calc(var(--safe-left) + 0.65rem);
   min-height: 100dvh;
   min-height: 100svh;
+  box-sizing: border-box;
+}
+
+.app-shell-fit {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  height: 100svh;
+  overflow: hidden;
+}
+
+.app-shell-nav {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  height: 100svh;
+  overflow: hidden;
+  padding-bottom: calc(var(--safe-bottom) + 4.1rem);
+}
+
+.app-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  min-height: 2.4rem;
+  margin-bottom: 0.35rem;
+}
+
+.app-main {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-pane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  overflow: hidden;
+}
+
+.brand-sm {
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+.balance-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(212, 168, 75, 0.45);
+  color: var(--ink);
+}
+
+.balance-chip-label {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.balance-chip .balance {
+  font-size: 0.95rem;
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0;
+  width: min(440px, 100%);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.15rem;
+  padding: 0.35rem 0.45rem calc(var(--safe-bottom) + 0.35rem);
+  background: rgba(8, 40, 32, 0.96);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 40;
+  box-sizing: border-box;
+}
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.35rem 0.2rem;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.bottom-nav-item.active {
+  color: var(--gold-soft);
+  background: rgba(212, 168, 75, 0.12);
+}
+
+.bottom-nav-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.panel-compact {
+  padding: 0.75rem;
+  margin-bottom: 0;
+}
+
+.pane-title {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--gold-soft);
+}
+
+.lobby-hello {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.lobby-toolbar {
+  flex-shrink: 0;
+}
+
+.inline-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.inline-field input {
+  width: 5.5rem;
+  margin: 0;
+  padding: 0.4rem 0.5rem;
+}
+
+.table-list-fit {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.table-item-compact {
+  padding: 0.55rem 0.65rem;
+}
+
+.btn-compact {
+  padding: 0.45rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+.create-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.create-grid label {
+  margin: 0;
+}
+
+.create-grid input {
+  margin-top: 0.2rem;
+}
+
+.hint-tight {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.center-hint {
+  text-align: center;
+}
+
+.balance-line {
+  margin: 0;
+}
+
+.profile-pane {
+  justify-content: flex-start;
+  gap: 0.75rem;
+}
+
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.profile-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(212, 168, 75, 0.45);
+  flex-shrink: 0;
+}
+
+.profile-avatar-fallback {
+  display: grid;
+  place-items: center;
+  background: #234;
+  color: var(--gold-soft);
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.profile-name {
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.gear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--gold-soft);
+  border: 1px solid rgba(212, 168, 75, 0.4);
+}
+
+.admin-cards {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  overflow: hidden;
+}
+
+.admin-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  overflow: hidden;
+}
+
+.admin-card .card-title {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--gold-soft);
+}
+
+.admin-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
 }
 
 .shell-header {
