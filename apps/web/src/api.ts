@@ -89,6 +89,11 @@ export const api = {
     }),
   leaveTable: (id: string) =>
     request<{ user: UserDTO }>(`/tables/${id}/leave`, { method: "POST" }),
+  rebuyTable: (id: string, buyIn: number) =>
+    request<{ user: UserDTO }>(`/tables/${id}/rebuy`, {
+      method: "POST",
+      body: JSON.stringify({ buyIn }),
+    }),
   nextHand: (id: string) =>
     request(`/tables/${id}/next-hand`, { method: "POST" }),
   startHand: (id: string) =>

@@ -129,6 +129,13 @@ export function App() {
           const r = await api.redeemInvite(pre.trim());
           setUser(r.user);
           await refreshTables();
+          const tableParam = new URLSearchParams(window.location.search).get(
+            "table",
+          );
+          if (tableParam) {
+            await openTableFromLink(tableParam, r.user);
+            return;
+          }
           setGate("app");
           setTab("lobby");
           return;
@@ -137,6 +144,13 @@ export function App() {
         return;
       }
       await refreshTables();
+      const tableParam = new URLSearchParams(window.location.search).get(
+        "table",
+      );
+      if (tableParam) {
+        await openTableFromLink(tableParam, u);
+        return;
+      }
       setGate("app");
       setTab("lobby");
     } catch (e) {
@@ -156,6 +170,13 @@ export function App() {
       const r = await api.redeemInvite(inviteCode.trim());
       setUser(r.user);
       await refreshTables();
+      const tableParam = new URLSearchParams(window.location.search).get(
+        "table",
+      );
+      if (tableParam) {
+        await openTableFromLink(tableParam, r.user);
+        return;
+      }
       setGate("app");
       setTab("lobby");
     } catch (e) {
@@ -180,15 +201,37 @@ export function App() {
     }
   }
 
-  async function join(id: string) {
+  async function join(id: string, buyInOverride?: number) {
     try {
       setError(null);
-      const r = await api.joinTable(id, buyIn);
+      const r = await api.joinTable(id, buyInOverride ?? buyIn);
       setUser(r.user);
       setTableId(id);
       setGate("table");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errJoin"));
+    }
+  }
+
+  /** Open table from ?table= deep link (invite). */
+  async function openTableFromLink(id: string, u: UserDTO) {
+    try {
+      setError(null);
+      if (u.balance <= 0) {
+        setGate("app");
+        setTab("wallet");
+        setError(t("errJoin"));
+        return;
+      }
+      const amount = Math.min(buyIn, u.balance);
+      const r = await api.joinTable(id, amount);
+      setUser(r.user);
+      setTableId(id);
+      setGate("table");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("errJoin"));
+      setGate("app");
+      setTab("lobby");
     }
   }
 

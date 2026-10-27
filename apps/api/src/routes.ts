@@ -304,6 +304,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       }
       const left = engine.leave(user.id);
       cashOut = left?.stack ?? seat.stack;
+      tableManager.clearRebuy(id, user.id);
     });
 
     await prisma.$transaction(async (tx) => {
@@ -322,8 +323,62 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       });
     });
 
+    await tableManager.maybeTransferHost(id);
+
     const fresh = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
     return { user: toUserDTO(fresh) };
+  });
+
+  /** Top-up stack at table after bust (or voluntary rebuy between hands). */
+  app.post("/tables/:id/rebuy", async (req) => {
+    const user = await requireUser(app, req);
+    if (!user.whitelisted) throw httpError.forbidden("Not whitelisted");
+    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const body = z
+      .object({ buyIn: z.number().int().positive() })
+      .parse(req.body);
+
+    const seat = await prisma.tableSeat.findUnique({
+      where: { tableId_userId: { tableId: id, userId: user.id } },
+    });
+    if (!seat) throw httpError.badRequest("Not seated");
+    if (user.balance < body.buyIn) {
+      throw httpError.badRequest("Insufficient balance");
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: { balance: { decrement: body.buyIn } },
+      });
+      await tx.ledgerEntry.create({
+        data: {
+          userId: user.id,
+          kind: "buy_in",
+          amount: -body.buyIn,
+          meta: JSON.stringify({ tableId: id, rebuy: true }),
+        },
+      });
+      await tx.tableSeat.update({
+        where: { id: seat.id },
+        data: {
+          stack: { increment: body.buyIn },
+          sittingOut: false,
+        },
+      });
+    });
+
+    await tableManager.withTable(id, (engine) => {
+      engine.addStack(user.id, body.buyIn);
+      tableManager.clearRebuy(id, user.id);
+    });
+    await tableManager.maybeTransferHost(id);
+
+    const fresh = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    return {
+      user: toUserDTO(fresh),
+      state: tableManager.getState(id, user.id),
+    };
   });
 
   app.post("/tables/:id/next-hand", async (req) => {

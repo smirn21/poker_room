@@ -79,6 +79,8 @@ export interface PublicSeat {
   inHand: boolean;
   lastAction: SeatActionLabel;
   holeCards?: Card[] | null;
+  /** Unix ms — busted player must rebuy before this or is removed */
+  rebuyDeadlineAt?: number | null;
 }
 
 export interface PublicTableState {
@@ -100,6 +102,8 @@ export interface PublicTableState {
   rakeCapBb: number;
   /** Rake taken from pot this hand (chips → owner) */
   rakeTaken?: number;
+  /** Current table host (can share invite link) */
+  createdById?: string | null;
   winners?: {
     seatIndex: number;
     amount: number;

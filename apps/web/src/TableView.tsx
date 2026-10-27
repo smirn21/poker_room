@@ -67,6 +67,9 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
   const [turnLeft, setTurnLeft] = useState(1);
   const [showEmoji, setShowEmoji] = useState(false);
   const [floats, setFloats] = useState<FloatReact[]>([]);
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const [rebuyAmt, setRebuyAmt] = useState(2000);
+  const [rebuyLeft, setRebuyLeft] = useState<number | null>(null);
   const feltRef = useRef<HTMLDivElement>(null);
   const prevBoardLen = useRef(0);
   const prevHandNo = useRef(0);
@@ -280,6 +283,60 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
     }
   }
 
+  const tableInviteUrl = useMemo(() => {
+    const u = new URL(window.location.href);
+    u.searchParams.delete("dev");
+    u.searchParams.set("table", tableId);
+    // keep name if present for friendlier multi-tab
+    return u.toString();
+  }, [tableId]);
+
+  const isHost = Boolean(state?.createdById && state.createdById === user.id);
+  const mySeatLive = state?.seats.find((s) => s.userId === user.id);
+  const needsRebuy = Boolean(
+    mySeatLive &&
+      mySeatLive.stack <= 0 &&
+      state &&
+      state.status !== "playing",
+  );
+
+  useEffect(() => {
+    if (!needsRebuy || !mySeatLive?.rebuyDeadlineAt) {
+      setRebuyLeft(null);
+      return;
+    }
+    const tick = () => {
+      const left = Math.max(
+        0,
+        Math.ceil((mySeatLive.rebuyDeadlineAt! - Date.now()) / 1000),
+      );
+      setRebuyLeft(left);
+    };
+    tick();
+    const id = window.setInterval(tick, 250);
+    return () => window.clearInterval(id);
+  }, [needsRebuy, mySeatLive?.rebuyDeadlineAt]);
+
+  async function copyTableInvite() {
+    try {
+      await navigator.clipboard.writeText(tableInviteUrl);
+      setInviteCopied(true);
+      window.setTimeout(() => setInviteCopied(false), 2000);
+    } catch {
+      setError(t("copyFailed"));
+    }
+  }
+
+  async function doRebuy() {
+    try {
+      setError(null);
+      const r = await api.rebuyTable(tableId, rebuyAmt);
+      onUser(r.user);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("errRebuy"));
+    }
+  }
+
   async function nextHand() {
     celebratedHand.current = -1;
     await api.nextHand(tableId);
@@ -443,6 +500,65 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
       </div>
 
       {error && <p className="error">{error}</p>}
+
+      {isHost && (
+        <div className="table-invite-bar">
+          <span className="host-pill">{t("hostBadge")}</span>
+          <button
+            type="button"
+            className="invite-link-btn"
+            onClick={() => void copyTableInvite()}
+            title={t("inviteTableHint")}
+          >
+            <span className="invite-link-label">{t("inviteTable")}</span>
+            <span className="invite-link-url">{tableInviteUrl}</span>
+          </button>
+          <span className="hint">
+            {inviteCopied ? t("inviteTableCopied") : t("inviteTableHint")}
+          </span>
+        </div>
+      )}
+
+      {needsRebuy && (
+        <div className="rebuy-overlay" role="dialog" aria-labelledby="rebuy-title">
+          <div className="rebuy-card panel panel-compact">
+            <h2 id="rebuy-title" className="pane-title">
+              {t("rebuyTitle")}
+            </h2>
+            <p className="hint hint-tight">
+              {t("rebuyHint", { sec: rebuyLeft ?? "…" })}
+            </p>
+            <label htmlFor="rebuy-amt">
+              {t("buyIn")}
+              <input
+                id="rebuy-amt"
+                type="number"
+                min={1}
+                value={rebuyAmt}
+                onChange={(e) => setRebuyAmt(Number(e.target.value))}
+              />
+            </label>
+            <p className="hint">
+              {t("balanceShort")}: {user.balance}
+            </p>
+            <button
+              type="button"
+              className="primary-wide"
+              onClick={() => void doRebuy()}
+              disabled={rebuyAmt <= 0 || rebuyAmt > user.balance}
+            >
+              {t("rebuyAction")}
+            </button>
+            <button
+              type="button"
+              className="secondary primary-wide"
+              onClick={() => void leave()}
+            >
+              {t("rebuyLeave")}
+            </button>
+          </div>
+        </div>
+      )}
 
       {showEmoji && (
         <div className="emoji-bar">

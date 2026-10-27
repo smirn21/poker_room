@@ -120,6 +120,19 @@ export class HoldEmTable {
     return p;
   }
 
+  /** Add chips between hands (rebuy). Clears sit-out. */
+  addStack(userId: string, chips: number): number {
+    if (chips <= 0) throw new Error("Need positive chips");
+    if (this.status === "playing") {
+      throw new Error("Finish the hand first");
+    }
+    const seat = this.seats.find((s) => s.player?.userId === userId);
+    if (!seat?.player) throw new Error("Not seated");
+    seat.player.stack += chips;
+    seat.player.sittingOut = false;
+    return seat.player.stack;
+  }
+
   tryStartHand(): boolean {
     if (this.status === "playing") return false;
     const active = this.occupiedSeats().filter(

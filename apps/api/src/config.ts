@@ -14,4 +14,6 @@ export const config = {
     .filter(Boolean),
   corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
   databaseUrl: process.env.DATABASE_URL ?? "file:./dev.db",
+  /** Seconds a busted player has to rebuy before being removed */
+  rebuyGraceSeconds: Number(process.env.REBUY_GRACE_SECONDS ?? 300),
 };

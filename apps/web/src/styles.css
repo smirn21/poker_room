@@ -170,6 +170,81 @@ button.primary-wide {
   font-size: 0.95rem;
 }
 
+.table-invite-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.25rem 0 0.4rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(212, 168, 75, 0.35);
+}
+
+.host-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #1a1206;
+  background: var(--gold);
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+}
+
+.invite-link-btn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.35rem 0.55rem;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--ink);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: left;
+}
+
+.invite-link-label {
+  font-size: 0.68rem;
+  color: var(--gold-soft);
+  font-weight: 650;
+}
+
+.invite-link-url {
+  font-size: 0.72rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.rebuy-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: calc(var(--safe-top) + 1rem) 1rem calc(var(--safe-bottom) + 1rem);
+  background: rgba(0, 20, 14, 0.72);
+}
+
+.rebuy-card {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.rebuy-card label {
+  margin: 0;
+}
+
+.rebuy-card input {
+  margin-top: 0.25rem;
+}
+
 .bottom-nav {
   position: fixed;
   left: 50%;

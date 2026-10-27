@@ -1,6 +1,7 @@
 import { HoldEmTable } from "@poker/poker-engine";
 import type { PlayerAction, PublicTableState } from "@poker/shared";
 import { prisma } from "./db.js";
+import { config } from "./config.js";
 
 class AsyncMutex {
   private chain: Promise<void> = Promise.resolve();
@@ -19,6 +20,10 @@ interface LiveTable {
   engine: HoldEmTable;
   mutex: AsyncMutex;
   turnTimer: NodeJS.Timeout | null;
+  createdById: string;
+  /** userId → unix ms deadline */
+  rebuyDeadlines: Map<string, number>;
+  rebuyTimers: Map<string, NodeJS.Timeout>;
 }
 
 export class TableManager {
@@ -39,7 +44,7 @@ export class TableManager {
   }
 
   private emit(tableId: string, engine: HoldEmTable): void {
-    const base = engine.getPublicState();
+    const base = this.enrichState(tableId, engine.getPublicState());
     for (const fn of this.listeners) fn(tableId, undefined, base);
   }
 
@@ -47,9 +52,17 @@ export class TableManager {
     return this.tables.get(tableId)?.engine;
   }
 
+  getCreatedById(tableId: string): string | undefined {
+    return this.tables.get(tableId)?.createdById;
+  }
+
   invalidate(tableId: string): void {
     const live = this.tables.get(tableId);
     if (live?.turnTimer) clearTimeout(live.turnTimer);
+    if (live) {
+      for (const t of live.rebuyTimers.values()) clearTimeout(t);
+      live.rebuyTimers.clear();
+    }
     this.tables.delete(tableId);
   }
 
@@ -86,6 +99,9 @@ export class TableManager {
       engine,
       mutex: new AsyncMutex(),
       turnTimer: null,
+      createdById: row.createdById,
+      rebuyDeadlines: new Map(),
+      rebuyTimers: new Map(),
     });
     return engine;
   }
@@ -111,7 +127,13 @@ export class TableManager {
         await this.persistHand(live.engine);
       }
       await this.persistSeats(live.engine);
+      if (live.engine.status === "hand_over" || live.engine.status === "waiting") {
+        this.syncBustedPlayers(tableId);
+        await this.maybeTransferHost(tableId);
+      }
       this.scheduleTurnTimer(tableId);
+      // re-emit after host/rebuy enrichment
+      this.emit(tableId, live.engine);
       return result;
     });
   }
@@ -123,7 +145,7 @@ export class TableManager {
   ): Promise<PublicTableState> {
     return this.withTable(tableId, (engine) => {
       engine.applyAction(userId, action);
-      return engine.getPublicState(userId);
+      return this.enrichState(tableId, engine.getPublicState(userId));
     });
   }
 
@@ -144,7 +166,141 @@ export class TableManager {
   getState(tableId: string, userId?: string): PublicTableState | null {
     const engine = this.tables.get(tableId)?.engine;
     if (!engine) return null;
-    return engine.getPublicState(userId);
+    return this.enrichState(tableId, engine.getPublicState(userId));
+  }
+
+  private enrichState(
+    tableId: string,
+    state: PublicTableState,
+  ): PublicTableState {
+    const live = this.tables.get(tableId);
+    if (!live) return state;
+    return {
+      ...state,
+      createdById: live.createdById,
+      seats: state.seats.map((s) => ({
+        ...s,
+        rebuyDeadlineAt: s.userId
+          ? (live.rebuyDeadlines.get(s.userId) ?? null)
+          : null,
+      })),
+    };
+  }
+
+  clearRebuy(tableId: string, userId: string): void {
+    const live = this.tables.get(tableId);
+    if (!live) return;
+    live.rebuyDeadlines.delete(userId);
+    const t = live.rebuyTimers.get(userId);
+    if (t) {
+      clearTimeout(t);
+      live.rebuyTimers.delete(userId);
+    }
+  }
+
+  /**
+   * After hand / waiting: start rebuy grace for stack=0 seats.
+   * Clear grace if they somehow have chips again.
+   */
+  private syncBustedPlayers(tableId: string): void {
+    const live = this.tables.get(tableId);
+    if (!live) return;
+    const { engine } = live;
+    if (engine.status === "playing") return;
+
+    const seatedIds = new Set<string>();
+    for (const seat of engine.seats) {
+      if (!seat.player) continue;
+      const uid = seat.player.userId;
+      seatedIds.add(uid);
+      if (seat.player.stack > 0) {
+        this.clearRebuy(tableId, uid);
+        continue;
+      }
+      // stack 0 — sit out and start grace if needed
+      seat.player.sittingOut = true;
+      if (!live.rebuyDeadlines.has(uid)) {
+        const deadline = Date.now() + config.rebuyGraceSeconds * 1000;
+        live.rebuyDeadlines.set(uid, deadline);
+        const timer = setTimeout(() => {
+          void this.kickBusted(tableId, uid);
+        }, config.rebuyGraceSeconds * 1000 + 50);
+        live.rebuyTimers.set(uid, timer);
+      }
+    }
+
+    for (const uid of [...live.rebuyDeadlines.keys()]) {
+      if (!seatedIds.has(uid)) this.clearRebuy(tableId, uid);
+    }
+  }
+
+  private async kickBusted(tableId: string, userId: string): Promise<void> {
+    const live = this.tables.get(tableId);
+    if (!live) return;
+    const deadline = live.rebuyDeadlines.get(userId);
+    if (!deadline || Date.now() < deadline - 100) return;
+
+    try {
+      await this.withTable(tableId, (engine) => {
+        if (engine.status === "playing") {
+          // retry shortly after hand
+          const retry = setTimeout(() => {
+            void this.kickBusted(tableId, userId);
+          }, 2000);
+          live.rebuyTimers.set(userId, retry);
+          return;
+        }
+        const seat = engine.seats.find((s) => s.player?.userId === userId);
+        if (!seat?.player || seat.player.stack > 0) {
+          this.clearRebuy(tableId, userId);
+          return;
+        }
+        engine.leave(userId);
+        this.clearRebuy(tableId, userId);
+      });
+
+      const dbSeat = await prisma.tableSeat.findUnique({
+        where: { tableId_userId: { tableId, userId } },
+      });
+      if (dbSeat) {
+        await prisma.tableSeat.delete({ where: { id: dbSeat.id } });
+      }
+      await this.maybeTransferHost(tableId);
+      this.emit(tableId, live.engine);
+    } catch {
+      /* leave may fail mid-hand; timer retries above */
+    }
+  }
+
+  /** Host leaves or sole funded player remains → transfer createdById */
+  async maybeTransferHost(tableId: string): Promise<void> {
+    const live = this.tables.get(tableId);
+    if (!live) return;
+    const funded = live.engine.seats
+      .filter((s) => s.player && s.player.stack > 0)
+      .map((s) => s.player!.userId);
+    const seated = live.engine.seats
+      .filter((s) => s.player)
+      .map((s) => s.player!.userId);
+
+    let nextHost: string | null = null;
+    const hostStillSeated = seated.includes(live.createdById);
+
+    if (funded.length === 1 && funded[0] !== live.createdById) {
+      nextHost = funded[0];
+    } else if (!hostStillSeated && funded.length >= 1) {
+      nextHost = funded[0];
+    } else if (!hostStillSeated && seated.length >= 1) {
+      nextHost = seated[0];
+    }
+
+    if (nextHost && nextHost !== live.createdById) {
+      live.createdById = nextHost;
+      await prisma.pokerTable.update({
+        where: { id: tableId },
+        data: { createdById: nextHost },
+      });
+    }
   }
 
   private scheduleTurnTimer(tableId: string): void {
@@ -211,6 +367,17 @@ export class TableManager {
   }
 
   private async persistSeats(engine: HoldEmTable): Promise<void> {
+    const liveIds = new Set(
+      engine.seats.filter((s) => s.player).map((s) => s.player!.userId),
+    );
+    const dbSeats = await prisma.tableSeat.findMany({
+      where: { tableId: engine.tableId },
+    });
+    for (const row of dbSeats) {
+      if (!liveIds.has(row.userId)) {
+        await prisma.tableSeat.delete({ where: { id: row.id } });
+      }
+    }
     for (const seat of engine.seats) {
       if (!seat.player) continue;
       await prisma.tableSeat.updateMany({
