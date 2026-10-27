@@ -308,7 +308,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   margin: 0.35rem 0 0.5rem;
   width: 100%;
   aspect-ratio: 1 / 1.05;
-  max-height: min(52vh, 420px);
+  max-height: min(48dvh, 400px);
   border-radius: 50% / 44%;
   background:
     radial-gradient(ellipse at 50% 40%, #1a7055 0%, var(--felt-deep) 72%);
@@ -317,6 +317,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     inset 0 0 48px rgba(0, 0, 0, 0.4),
     0 8px 24px rgba(0, 0, 0, 0.35);
   overflow: visible;
+  isolation: isolate;
 }
 
 .felt-rail {
@@ -330,13 +331,13 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 .board-zone {
   position: absolute;
   left: 50%;
-  top: 42%;
+  top: 46%;
   transform: translate(-50%, -50%);
-  z-index: 4;
+  z-index: 12;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.28rem;
   width: min(92%, 280px);
   pointer-events: none;
 }
@@ -508,14 +509,14 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 /* —— Seats —— */
 .seat {
   position: absolute;
-  width: 4.8rem;
+  width: 4.6rem;
   transform: translate(-50%, -50%);
   text-align: center;
   z-index: 5;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.15rem;
+  gap: 0.1rem;
 }
 
 .seat.hero {
@@ -636,6 +637,23 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   margin-top: 0.1rem;
 }
 
+/* Opponent hole cards sit above the seat so they don't cover the board */
+.hole-opp {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.15rem);
+  transform: translateX(-50%);
+  margin: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.hole-opp .pcard-sm {
+  width: 1.55rem;
+  height: 2.15rem;
+  font-size: 0.55rem;
+}
+
 .hole-hero {
   margin-top: 0.25rem;
   gap: 4px;
@@ -676,7 +694,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   font-weight: 600;
 }
 
-/* Narrow single-column (demo iframes) */
+/* Narrow phones */
 @media (max-width: 380px) {
   .app-shell {
     padding-top: calc(var(--safe-top) + 0.45rem);
@@ -685,8 +703,12 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     padding-left: calc(var(--safe-left) + 0.4rem);
   }
 
+  .brand {
+    font-size: 1.35rem;
+  }
+
   .felt {
-    max-height: 46vh;
+    max-height: 42dvh;
     border-width: 6px;
   }
 
@@ -708,8 +730,68 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     max-width: 3.8rem;
   }
 
+  .table-topbar {
+    flex-wrap: wrap;
+    row-gap: 0.35rem;
+  }
+
+  .table-status {
+    order: 3;
+    width: 100%;
+    flex-direction: row;
+    justify-content: center;
+    gap: 0.45rem;
+  }
+
   .chat {
     max-height: 72px;
+  }
+
+  .actions button {
+    padding: 0.55rem 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  .hole-opp .pcard-sm {
+    width: 1.35rem;
+    height: 1.9rem;
+  }
+}
+
+/* Short viewports (Telegram Mini App on compact phones) */
+@media (max-height: 700px) {
+  .felt {
+    max-height: 38dvh;
+    aspect-ratio: 1 / 0.95;
+  }
+
+  .hero-zone {
+    padding: 0.4rem 0.5rem;
+    margin: 0.15rem 0 0.3rem;
+  }
+
+  .chat {
+    max-height: 56px;
+  }
+
+  .primary-wide {
+    margin-bottom: 0.4rem;
+    padding: 0.55rem 0.75rem;
+  }
+
+  .board-zone {
+    top: 48%;
+    gap: 0.18rem;
+  }
+}
+
+@media (max-height: 600px) {
+  .felt {
+    max-height: 34dvh;
+  }
+
+  .chat-panel {
+    display: none;
   }
 }
 
@@ -841,7 +923,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
 /* —— Winner / highlight —— */
 .seat.winner {
-  z-index: 8;
+  z-index: 7; /* keep below .board-zone (12) so cards don't cover the board */
 }
 
 .seat.winner .avatar {
@@ -862,6 +944,77 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   color: #ffd54f;
   font-weight: 700;
   white-space: nowrap;
+  max-width: 4.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pot-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.pot-caption {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--gold-soft);
+  background: rgba(0, 0, 0, 0.45);
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.pot-rake {
+  margin-top: 0.15rem;
+  opacity: 0.85;
+  font-size: 0.65rem;
+}
+
+.pot-rake-dim {
+  opacity: 0.55;
+}
+
+.invite-code-block {
+  margin-top: 0.75rem;
+}
+
+.invite-code-btn {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px dashed rgba(212, 168, 75, 0.55);
+  color: var(--ink);
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+}
+
+.invite-code-btn:active {
+  border-style: solid;
+  background: rgba(212, 168, 75, 0.12);
+}
+
+.invite-code-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.invite-code-value {
+  font-size: 1.15rem;
+  letter-spacing: 0.06em;
+  color: var(--gold-soft);
+  word-break: break-all;
+}
+
+.invite-copy-hint {
+  margin: 0.4rem 0 0;
+  text-align: center;
 }
 
 .winner-banner-glow {

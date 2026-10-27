@@ -32,8 +32,18 @@ export function formatCard(card: Card): { label: string; red: boolean } {
   };
 }
 
+/** Fixed rim slots — never dead-center over the board. */
+const OPP_SLOTS: { left: number; top: number }[] = [
+  { left: 16, top: 18 },
+  { left: 84, top: 18 },
+  { left: 6, top: 42 },
+  { left: 94, top: 42 },
+  { left: 22, top: 12 },
+  { left: 78, top: 12 },
+];
+
 /**
- * Hero at bottom; others along the top arc so they don't cover the board.
+ * Hero in bottom strip; opponents on the rim so they don't cover the board.
  */
 export function seatLayout(
   seats: { seatIndex: number; userId: string | null }[],
@@ -47,24 +57,16 @@ export function seatLayout(
     occupied.find((s) => s.userId === myUserId) ?? occupied[0];
   const others = occupied.filter((s) => s.seatIndex !== hero.seatIndex);
 
-  // Hero is rendered in the bottom strip, not on the felt oval
   map.set(hero.seatIndex, { left: "50%", top: "88%", isHero: true });
 
-  const n = others.length;
-  if (n === 0) return map;
-
-  const start = (-Math.PI * 5) / 6;
-  const end = -Math.PI / 6;
-  for (let i = 0; i < n; i++) {
-    const t = n === 1 ? 0.5 : i / (n - 1);
-    const angle = start + t * (end - start);
-    const x = 50 + 41 * Math.cos(angle);
-    const y = 44 + 34 * Math.sin(angle);
-    map.set(others[i].seatIndex, {
-      left: `${x}%`,
-      top: `${Math.max(12, Math.min(58, y))}%`,
+  others.forEach((seat, i) => {
+    const slot = OPP_SLOTS[i % OPP_SLOTS.length];
+    map.set(seat.seatIndex, {
+      left: `${slot.left}%`,
+      top: `${slot.top}%`,
       isHero: false,
     });
-  }
+  });
+
   return map;
 }

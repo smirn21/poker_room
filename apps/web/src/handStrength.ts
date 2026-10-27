@@ -113,6 +113,28 @@ export function actionLabel(
   return key ? tr(locale, key) : null;
 }
 
+/** Localize English engine hand names from the server (no rank detail). */
+export function localizeHandName(
+  name: string | undefined | null,
+  locale: Locale = "ru",
+): string {
+  if (!name) return "";
+  const map: Record<string, MessageKey> = {
+    "Royal Flush": "handRoyalFlush",
+    "Straight Flush": "handStraightFlushShort",
+    "Four of a Kind": "handFourKindShort",
+    "Full House": "handFullHouseShort",
+    Flush: "handFlush",
+    Straight: "handStraightShort",
+    "Three of a Kind": "handThreeKindShort",
+    "Two Pair": "handTwoPairShort",
+    "One Pair": "handOnePairShort",
+    "High Card": "handHighCardShort",
+  };
+  const key = map[name];
+  return key ? tr(locale, key) : name;
+}
+
 /** @deprecated use actionLabel(locale) */
 export const ACTION_LABEL_RU: Record<string, string> = {
   fold: ru.actionFold,

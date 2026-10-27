@@ -12,9 +12,21 @@ import { seatLayout } from "./cardUtils";
 import { PlayingCard, CardBack } from "./PlayingCard";
 import { ChipStack } from "./ChipStack";
 import { amountToChips } from "./chips";
-import { actionLabel, describeHandStrength } from "./handStrength";
+import {
+  actionLabel,
+  describeHandStrength,
+  localizeHandName,
+} from "./handStrength";
 import { useI18n } from "./i18n";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
+
+function mapTableError(
+  msg: string,
+  t: (key: "errNeedPlayers") => string,
+): string {
+  if (/need at least 2 seated players/i.test(msg)) return t("errNeedPlayers");
+  return msg;
+}
 
 const WS = import.meta.env.VITE_WS_URL ?? "http://localhost:3001";
 const REACTIONS = ["😀", "😂", "🔥", "👏", "😎", "😱", "💪", "🎉"];
@@ -67,7 +79,9 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
     setSocket(s);
 
     s.on("table:state", (st: PublicTableState) => setState(st));
-    s.on("table:error", (e: { message: string }) => setError(e.message));
+    s.on("table:error", (e: { message: string }) =>
+      setError(mapTableError(e.message, t)),
+    );
     s.on("chat:message", (m: ChatMessageDTO) =>
       setMessages((prev) => [...prev, m]),
     );
@@ -227,7 +241,7 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
     if (!mySeat?.holeCards?.length) return null;
     if (state?.status === "hand_over") {
       const w = state.winners?.find((x) => x.seatIndex === mySeat.seatIndex);
-      if (w?.handName) return w.handName;
+      if (w?.handName) return localizeHandName(w.handName, locale);
     }
     return describeHandStrength(mySeat.holeCards, state?.board ?? [], locale);
   }, [mySeat, state?.board, state?.status, state?.winners, locale]);
@@ -289,18 +303,23 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
         const name =
           state.seats.find((s) => s.seatIndex === w.seatIndex)?.name ??
           t("seatN", { n: w.seatIndex + 1 });
-        return `${name} +${w.amount}${w.handName ? ` · ${w.handName}` : ""}`;
+        const hand = localizeHandName(w.handName, locale);
+        return `${name} +${w.amount}${hand ? ` · ${hand}` : ""}`;
       })
       .join(" · ") ?? "";
+
+  const isShowdown = state?.status === "hand_over";
 
   function renderSeat(seat: PublicSeat, onFelt: boolean) {
     const pos = layout.get(seat.seatIndex);
     if (!pos) return null;
     const isWinner = winningSeatIndexes.has(seat.seatIndex);
     const winInfo = state?.winners?.find((w) => w.seatIndex === seat.seatIndex);
-    const actionText = seat.lastAction
-      ? actionLabel(seat.lastAction, locale)
-      : null;
+    const actionText =
+      !isShowdown && seat.lastAction
+        ? actionLabel(seat.lastAction, locale)
+        : null;
+    const winHand = localizeHandName(winInfo?.handName, locale);
     const badges = [
       seat.isDealer ? "D" : null,
       seat.isSb ? "SB" : null,
@@ -339,10 +358,10 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
               {actionText}
             </div>
           )}
-          {winInfo?.handName && (
-            <div className="hand-name">{winInfo.handName}</div>
+          {winHand && onFelt && (
+            <div className="hand-name">{winHand}</div>
           )}
-          {seat.isTurn && (
+          {seat.isTurn && !isShowdown && (
             <div className="turn-bar">
               <div
                 className="turn-bar-fill"
@@ -352,13 +371,13 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
           )}
         </div>
         <ChipStack amount={seat.stack} size="sm" className="seat-chips" />
-        {seat.bet > 0 && (
+        {seat.bet > 0 && !isShowdown && (
           <div className={`bet-stack ${pos.isHero ? "bet-up" : "bet-down"}`}>
             <ChipStack amount={seat.bet} size="sm" />
           </div>
         )}
         {seat.holeCards && seat.holeCards.length > 0 && onFelt && (
-          <div className="hole">
+          <div className="hole hole-opp">
             {seat.holeCards.map((c) => (
               <PlayingCard
                 key={c}
@@ -441,16 +460,21 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
         <div className="board-zone">
           <div className="pot-area">
             {potDisplay > 0 ? (
-              <ChipStack amount={potDisplay} size="md" />
+              <div className="pot-stack">
+                <ChipStack amount={potDisplay} size="md" />
+                <div className="pot-caption">
+                  {t("potLabel", { amount: potDisplay })}
+                </div>
+              </div>
             ) : (
               <div className="pot-empty">{t("potZero")}</div>
             )}
             {state?.rakeTaken ? (
-              <div className="hint" style={{ marginTop: 4, opacity: 0.85 }}>
+              <div className="hint pot-rake">
                 {t("rakeTaken", { amount: state.rakeTaken })}
               </div>
             ) : state?.rakePercent ? (
-              <div className="hint" style={{ marginTop: 4, opacity: 0.55 }}>
+              <div className="hint pot-rake pot-rake-dim">
                 {t("rakeRule", {
                   percent: state.rakePercent,
                   cap: state.rakeCapBb,
@@ -458,7 +482,6 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
               </div>
             ) : null}
           </div>
-          {handLabel && <div className="strength-pill">{handLabel}</div>}
           <div className="board" key={boardAnimKey}>
             {revealedBoard.map((c, idx) => (
               <PlayingCard
@@ -549,7 +572,11 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
               if (state?.status === "waiting") await api.startHand(tableId);
               else await nextHand();
             } catch (e) {
-              setError(e instanceof Error ? e.message : t("errStart"));
+              setError(
+                e instanceof Error
+                  ? mapTableError(e.message, t)
+                  : t("errStart"),
+              );
             }
           }}
         >

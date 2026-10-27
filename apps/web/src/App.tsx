@@ -67,6 +67,7 @@ export function App() {
   const [buyIn, setBuyIn] = useState(2000);
   const [depositAmt, setDepositAmt] = useState(5000);
   const [inviteCreated, setInviteCreated] = useState<string | null>(null);
+  const [inviteCopied, setInviteCopied] = useState(false);
   const [pending, setPending] = useState<
     { id: string; amountChips: number; asset: string; user: { name: string } }[]
   >([]);
@@ -188,6 +189,18 @@ export function App() {
   async function createInvite() {
     const r = await api.createInvite(10);
     setInviteCreated(r.invite.code);
+    setInviteCopied(false);
+  }
+
+  async function copyInviteCode() {
+    if (!inviteCreated) return;
+    try {
+      await navigator.clipboard.writeText(inviteCreated);
+      setInviteCopied(true);
+      window.setTimeout(() => setInviteCopied(false), 2000);
+    } catch {
+      setError(t("copyFailed"));
+    }
   }
 
   async function loadAdmin() {
@@ -348,12 +361,20 @@ export function App() {
             {t("createInvite")}
           </button>
           {inviteCreated && (
-            <p className="hint" style={{ marginTop: 8 }}>
-              <RichText
-                template={t("code")}
-                values={{ code: <strong>{inviteCreated}</strong> }}
-              />
-            </p>
+            <div className="invite-code-block">
+              <button
+                type="button"
+                className="invite-code-btn"
+                onClick={() => void copyInviteCode()}
+                title={t("tapToCopy")}
+              >
+                <span className="invite-code-label">{t("inviteCode")}</span>
+                <strong className="invite-code-value">{inviteCreated}</strong>
+              </button>
+              <p className="hint invite-copy-hint">
+                {inviteCopied ? t("copied") : t("tapToCopy")}
+              </p>
+            </div>
           )}
         </div>
         <div className="panel">
