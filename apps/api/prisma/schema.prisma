@@ -38,6 +38,14 @@ model Invite {
   createdAt   DateTime  @default(now())
 }
 
+/** Singleton club rules (id always 1). Rake applies to every new/open table. */
+model ClubSettings {
+  id          Int      @id @default(1)
+  rakePercent Int      @default(5)
+  rakeCapBb   Int      @default(3)
+  updatedAt   DateTime @updatedAt
+}
+
 model PokerTable {
   id          String   @id @default(cuid())
   name        String

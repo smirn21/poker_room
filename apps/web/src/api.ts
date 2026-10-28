@@ -85,14 +85,23 @@ export const api = {
     name?: string;
     smallBlind?: number;
     bigBlind?: number;
-    rakePercent?: number;
-    rakeCapBb?: number;
     maxSeats?: number;
   }) =>
     request<{
       table: { id: string; name?: string; inviteCode?: string | null };
     }>("/tables", {
       method: "POST",
+      body: JSON.stringify(body),
+    }),
+  clubSettings: () =>
+    request<{ rakePercent: number; rakeCapBb: number }>("/club/settings"),
+  updateClubSettings: (body: { rakePercent: number; rakeCapBb: number }) =>
+    request<{
+      rakePercent: number;
+      rakeCapBb: number;
+      tablesUpdated: number;
+    }>("/admin/club/settings", {
+      method: "PATCH",
       body: JSON.stringify(body),
     }),
   renameTable: (id: string, name: string) =>

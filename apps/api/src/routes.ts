@@ -43,6 +43,14 @@ function newTableInviteCode(): string {
   return `TBL-${randomBytes(3).toString("hex").toUpperCase()}`;
 }
 
+async function getClubSettings() {
+  return prisma.clubSettings.upsert({
+    where: { id: 1 },
+    create: { id: 1, rakePercent: 5, rakeCapBb: 3 },
+    update: {},
+  });
+}
+
 /** Resolve table by cuid id or short inviteCode (case-insensitive). */
 async function findOpenTable(idOrCode: string) {
   const byId = await prisma.pokerTable.findUnique({
@@ -219,6 +227,54 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
+  app.get("/club/settings", async (req) => {
+    const user = await requireUser(app, req);
+    if (!user.whitelisted) throw httpError.forbidden("Not whitelisted");
+    const s = await getClubSettings();
+    return {
+      rakePercent: s.rakePercent,
+      rakeCapBb: s.rakeCapBb,
+    };
+  });
+
+  app.patch("/admin/club/settings", async (req) => {
+    const user = await requireUser(app, req);
+    if (user.role !== "admin") throw httpError.forbidden();
+    const body = z
+      .object({
+        rakePercent: z.number().int().min(0).max(20),
+        rakeCapBb: z.number().int().min(0).max(20),
+      })
+      .parse(req.body);
+
+    const s = await prisma.clubSettings.upsert({
+      where: { id: 1 },
+      create: {
+        id: 1,
+        rakePercent: body.rakePercent,
+        rakeCapBb: body.rakeCapBb,
+      },
+      update: {
+        rakePercent: body.rakePercent,
+        rakeCapBb: body.rakeCapBb,
+      },
+    });
+
+    const open = await prisma.pokerTable.findMany({
+      where: { status: "open" },
+      select: { id: true },
+    });
+    for (const t of open) {
+      await tableManager.setRake(t.id, s.rakePercent, s.rakeCapBb);
+    }
+
+    return {
+      rakePercent: s.rakePercent,
+      rakeCapBb: s.rakeCapBb,
+      tablesUpdated: open.length,
+    };
+  });
+
   app.post("/tables", async (req) => {
     const user = await requireUser(app, req);
     if (!user.whitelisted) throw httpError.forbidden("Not whitelisted");
@@ -227,10 +283,6 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
         name: z.string().min(1).max(40).optional(),
         smallBlind: z.number().int().positive().default(50),
         bigBlind: z.number().int().positive().default(100),
-        /** Pot rake % → owner. Scales with pot / stakes */
-        rakePercent: z.number().int().min(0).max(20).default(5),
-        /** Cap in big blinds (e.g. 3 → max 3×BB per hand) */
-        rakeCapBb: z.number().int().min(0).max(20).default(3),
         maxSeats: z.number().int().min(2).max(9).default(6),
       })
       .parse(req.body);
@@ -238,6 +290,8 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     if (body.bigBlind < body.smallBlind * 2) {
       throw httpError.badRequest("bigBlind should be >= 2 * smallBlind");
     }
+
+    const club = await getClubSettings();
 
     let inviteCode = newTableInviteCode();
     for (let i = 0; i < 5; i++) {
@@ -257,8 +311,8 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
         name,
         smallBlind: body.smallBlind,
         bigBlind: body.bigBlind,
-        rakePercent: body.rakePercent,
-        rakeCapBb: body.rakeCapBb,
+        rakePercent: club.rakePercent,
+        rakeCapBb: club.rakeCapBb,
         maxSeats: body.maxSeats,
         inviteCode,
         createdById: user.id,

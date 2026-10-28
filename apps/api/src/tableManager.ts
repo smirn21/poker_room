@@ -219,6 +219,24 @@ export class TableManager {
     }
   }
 
+  /** Apply club rake to one live table (DB + in-memory engine). */
+  async setRake(
+    tableId: string,
+    rakePercent: number,
+    rakeCapBb: number,
+  ): Promise<void> {
+    await prisma.pokerTable.update({
+      where: { id: tableId },
+      data: { rakePercent, rakeCapBb },
+    });
+    const live = this.tables.get(tableId);
+    if (live) {
+      live.engine.config.rakePercent = rakePercent;
+      live.engine.config.rakeCapBb = rakeCapBb;
+      this.emit(tableId, live.engine);
+    }
+  }
+
   /** Delete table from memory + DB when no seats remain. */
   async deleteIfEmpty(tableId: string): Promise<boolean> {
     const seats = await prisma.tableSeat.count({ where: { tableId } });

@@ -220,13 +220,28 @@ export function App() {
       const r = await api.createTable({
         smallBlind: 50,
         bigBlind: 100,
-        rakePercent: Math.max(0, Math.min(20, Math.floor(rakePercent))),
-        rakeCapBb: Math.max(0, Math.min(20, Math.floor(rakeCapBb))),
         maxSeats: 6,
       });
       await join(r.table.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errCreate"));
+    }
+  }
+
+  async function saveClubRake() {
+    try {
+      setError(null);
+      setAdjustMsg(null);
+      const r = await api.updateClubSettings({
+        rakePercent: Math.max(0, Math.min(20, Math.floor(rakePercent))),
+        rakeCapBb: Math.max(0, Math.min(20, Math.floor(rakeCapBb))),
+      });
+      setRakePercent(r.rakePercent);
+      setRakeCapBb(r.rakeCapBb);
+      setAdjustMsg(t("clubRakeSaved", { n: r.tablesUpdated }));
+      await refreshTables();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("errClubRake"));
     }
   }
 
@@ -307,9 +322,10 @@ export function App() {
     setAdjustMsg(null);
     setAdjustTarget(null);
     setGate("admin");
-    const [deps, house] = await Promise.all([
+    const [deps, house, club] = await Promise.all([
       api.pendingDeposits(),
       api.houseIncome(),
+      api.clubSettings(),
     ]);
     setPending(deps.deposits);
     setHouseStats({
@@ -317,6 +333,8 @@ export function App() {
       totalHouseFees: house.totalHouseFees,
       recent: house.recent,
     });
+    setRakePercent(club.rakePercent);
+    setRakeCapBb(club.rakeCapBb);
   }
 
   async function confirmDep(id: string) {
@@ -455,6 +473,41 @@ export function App() {
           <LanguageSwitcher className="lang-switch-compact" />
         </header>
         <div className="admin-cards">
+          <section className="panel panel-compact admin-card">
+            <h2 className="card-title">{t("cardClubRake")}</h2>
+            <p className="hint hint-tight">{t("clubRakeHint")}</p>
+            <label htmlFor="club-rake">
+              {t("rakePercent")}
+              <input
+                id="club-rake"
+                type="number"
+                min={0}
+                max={20}
+                value={rakePercent}
+                onChange={(e) => setRakePercent(Number(e.target.value))}
+              />
+            </label>
+            <label htmlFor="club-rakecap">
+              {t("rakeCap")}
+              <input
+                id="club-rakecap"
+                type="number"
+                min={0}
+                max={20}
+                value={rakeCapBb}
+                onChange={(e) => setRakeCapBb(Number(e.target.value))}
+              />
+            </label>
+            <p className="hint hint-tight">{t("rakeHintShort")}</p>
+            <button
+              type="button"
+              className="primary-wide"
+              onClick={() => void saveClubRake()}
+            >
+              {t("saveClubRake")}
+            </button>
+          </section>
+
           <section className="panel panel-compact admin-card">
             <h2 className="card-title">{t("cardBalanceAdjust")}</h2>
             <p className="hint hint-tight">{t("balanceAdjustHint")}</p>
@@ -736,29 +789,6 @@ export function App() {
               onChange={(e) => setBuyIn(Number(e.target.value))}
             />
           </label>
-          <label htmlFor="rake">
-            {t("rakePercent")}
-            <input
-              id="rake"
-              type="number"
-              min={0}
-              max={20}
-              value={rakePercent}
-              onChange={(e) => setRakePercent(Number(e.target.value))}
-            />
-          </label>
-          <label htmlFor="rakecap">
-            {t("rakeCap")}
-            <input
-              id="rakecap"
-              type="number"
-              min={0}
-              max={20}
-              value={rakeCapBb}
-              onChange={(e) => setRakeCapBb(Number(e.target.value))}
-            />
-          </label>
-          <p className="hint hint-tight">{t("rakeHintShort")}</p>
           <button type="button" className="primary-wide" onClick={createTable}>
             {t("createTableSit")}
           </button>
