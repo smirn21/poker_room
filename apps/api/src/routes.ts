@@ -651,6 +651,69 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
+  /** Lookup player by Telegram ID (admin). */
+  app.get("/admin/users/by-telegram/:telegramId", async (req) => {
+    const admin = await requireUser(app, req);
+    if (admin.role !== "admin") throw httpError.forbidden();
+    const { telegramId } = z
+      .object({ telegramId: z.string().min(1).max(32) })
+      .parse(req.params);
+    const target = await prisma.user.findUnique({
+      where: { telegramId: telegramId.trim() },
+    });
+    if (!target) throw httpError.notFound("User not found");
+    return { user: toUserDTO(target) };
+  });
+
+  /**
+   * Credit (+) or debit (−) chips by Telegram ID.
+   * Body: { telegramId, amount } where amount is chips to add (positive)
+   * or remove (negative). Absolute value must be ≥ 1.
+   */
+  app.post("/admin/wallet/adjust", async (req) => {
+    const admin = await requireUser(app, req);
+    if (admin.role !== "admin") throw httpError.forbidden();
+    const body = z
+      .object({
+        telegramId: z.string().min(1).max(32),
+        amount: z.number().int().refine((n) => n !== 0, "amount must be non-zero"),
+      })
+      .parse(req.body);
+
+    const telegramId = body.telegramId.trim();
+    const target = await prisma.user.findUnique({ where: { telegramId } });
+    if (!target) throw httpError.notFound("User not found");
+    if (target.telegramId === "house") {
+      throw httpError.badRequest("Cannot adjust house account this way");
+    }
+
+    if (body.amount < 0 && target.balance + body.amount < 0) {
+      throw httpError.badRequest("Insufficient balance");
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const u = await tx.user.update({
+        where: { id: target.id },
+        data: { balance: { increment: body.amount } },
+      });
+      await tx.ledgerEntry.create({
+        data: {
+          userId: u.id,
+          kind: body.amount > 0 ? "admin_credit" : "admin_debit",
+          amount: body.amount,
+          meta: JSON.stringify({
+            byAdminId: admin.id,
+            byAdminTg: admin.telegramId,
+            targetTelegramId: telegramId,
+          }),
+        },
+      });
+      return u;
+    });
+
+    return { user: toUserDTO(updated) };
+  });
+
   app.get("/tables/:id/chat", async (req) => {
     const user = await requireUser(app, req);
     if (!user.whitelisted) throw httpError.forbidden();

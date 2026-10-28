@@ -149,7 +149,7 @@ export const api = {
         id: string;
         amountChips: number;
         asset: string;
-        user: { name: string };
+        user: { name: string; telegramId: string };
       }[];
     }>("/admin/deposits"),
   confirmDeposit: (id: string) =>
@@ -161,6 +161,15 @@ export const api = {
       recent: { id: string; amount: number; at: string }[];
       note: string;
     }>("/admin/house"),
+  lookupUserByTelegram: (telegramId: string) =>
+    request<{ user: UserDTO }>(
+      `/admin/users/by-telegram/${encodeURIComponent(telegramId.trim())}`,
+    ),
+  adjustBalance: (telegramId: string, amount: number) =>
+    request<{ user: UserDTO }>("/admin/wallet/adjust", {
+      method: "POST",
+      body: JSON.stringify({ telegramId: telegramId.trim(), amount }),
+    }),
   chatHistory: (tableId: string) =>
     request<{
       messages: {

@@ -71,9 +71,18 @@ export function App() {
   const [inviteCreated, setInviteCreated] = useState<string | null>(null);
   const [inviteCopied, setInviteCopied] = useState(false);
   const [pending, setPending] = useState<
-    { id: string; amountChips: number; asset: string; user: { name: string } }[]
+    {
+      id: string;
+      amountChips: number;
+      asset: string;
+      user: { name: string; telegramId: string };
+    }[]
   >([]);
   const [depositRef, setDepositRef] = useState<string | null>(null);
+  const [adjustTgId, setAdjustTgId] = useState("");
+  const [adjustAmt, setAdjustAmt] = useState(1000);
+  const [adjustTarget, setAdjustTarget] = useState<UserDTO | null>(null);
+  const [adjustMsg, setAdjustMsg] = useState<string | null>(null);
 
   useEffect(() => {
     initTelegramChrome();
@@ -295,6 +304,8 @@ export function App() {
 
   async function openAdmin() {
     setError(null);
+    setAdjustMsg(null);
+    setAdjustTarget(null);
     setGate("admin");
     const [deps, house] = await Promise.all([
       api.pendingDeposits(),
@@ -314,6 +325,36 @@ export function App() {
     setPending(r.deposits);
     const me = await api.me();
     setUser(me.user);
+  }
+
+  async function lookupAdjustTarget() {
+    const id = adjustTgId.trim();
+    if (!id) return;
+    setError(null);
+    setAdjustMsg(null);
+    try {
+      const r = await api.lookupUserByTelegram(id);
+      setAdjustTarget(r.user);
+    } catch (e) {
+      setAdjustTarget(null);
+      setError(e instanceof Error ? e.message : t("errLookup"));
+    }
+  }
+
+  async function adjustBalance(sign: 1 | -1) {
+    const id = adjustTgId.trim();
+    const amt = Math.abs(Math.floor(adjustAmt));
+    if (!id || amt < 1) return;
+    setError(null);
+    setAdjustMsg(null);
+    try {
+      const r = await api.adjustBalance(id, sign * amt);
+      setAdjustTarget(r.user);
+      setAdjustMsg(t("adjustOk", { balance: r.user.balance }));
+      if (user && r.user.id === user.id) setUser(r.user);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("errAdjust"));
+    }
   }
 
   const gateHeader = (
@@ -415,6 +456,73 @@ export function App() {
         </header>
         <div className="admin-cards">
           <section className="panel panel-compact admin-card">
+            <h2 className="card-title">{t("cardBalanceAdjust")}</h2>
+            <p className="hint hint-tight">{t("balanceAdjustHint")}</p>
+            <label htmlFor="adj-tg">
+              {t("telegramIdLabel")}
+              <input
+                id="adj-tg"
+                inputMode="numeric"
+                autoComplete="off"
+                value={adjustTgId}
+                onChange={(e) => {
+                  setAdjustTgId(e.target.value.replace(/[^\d]/g, ""));
+                  setAdjustTarget(null);
+                  setAdjustMsg(null);
+                }}
+                placeholder="123456789"
+              />
+            </label>
+            <div className="row">
+              <button
+                type="button"
+                className="secondary btn-compact"
+                onClick={() => void lookupAdjustTarget()}
+                disabled={!adjustTgId.trim()}
+              >
+                {t("lookupPlayer")}
+              </button>
+            </div>
+            {adjustTarget && (
+              <p className="player-found">
+                {t("playerFound", {
+                  name: adjustTarget.name,
+                  balance: adjustTarget.balance,
+                })}
+              </p>
+            )}
+            <label htmlFor="adj-amt">
+              {t("adjustAmount")}
+              <input
+                id="adj-amt"
+                type="number"
+                min={1}
+                value={adjustAmt}
+                onChange={(e) => setAdjustAmt(Number(e.target.value))}
+              />
+            </label>
+            <div className="row adjust-actions">
+              <button
+                type="button"
+                className="btn-compact"
+                onClick={() => void adjustBalance(1)}
+                disabled={!adjustTgId.trim() || adjustAmt < 1}
+              >
+                {t("creditBalance")}
+              </button>
+              <button
+                type="button"
+                className="secondary btn-compact"
+                onClick={() => void adjustBalance(-1)}
+                disabled={!adjustTgId.trim() || adjustAmt < 1}
+              >
+                {t("debitBalance")}
+              </button>
+            </div>
+            {adjustMsg && <p className="ok-msg">{adjustMsg}</p>}
+          </section>
+
+          <section className="panel panel-compact admin-card">
             <h2 className="card-title">{t("cardInvites")}</h2>
             <button type="button" className="primary-wide" onClick={createInvite}>
               {t("createInvite")}
@@ -444,7 +552,12 @@ export function App() {
               {pending.slice(0, 4).map((d) => (
                 <div key={d.id} className="table-item table-item-compact">
                   <div>
-                    {d.user.name}: {d.amountChips} ({d.asset})
+                    <div>
+                      {d.user.name}: {d.amountChips} ({d.asset})
+                    </div>
+                    <div className="tg-id">
+                      {t("telegramIdShort", { id: d.user.telegramId })}
+                    </div>
                   </div>
                   <button type="button" onClick={() => confirmDep(d.id)}>
                     {t("confirm")}
@@ -528,7 +641,12 @@ export function App() {
     body = (
       <div className="tab-pane">
         <div className="lobby-hello">
-          <strong>{user.name}</strong>
+          <div className="user-identity">
+            <strong>{user.name}</strong>
+            <span className="tg-id" title={t("telegramIdLabel")}>
+              {t("telegramIdShort", { id: user.telegramId })}
+            </span>
+          </div>
           <span className="hint">{t("lobbyHint")}</span>
         </div>
         <div className="row spread lobby-toolbar">
@@ -705,6 +823,9 @@ export function App() {
           )}
           <div>
             <div className="profile-name">{user.name}</div>
+            <div className="tg-id" title={t("telegramIdLabel")}>
+              {t("telegramIdShort", { id: user.telegramId })}
+            </div>
             <div className="hint">
               {user.role === "admin" ? t("roleAdmin") : t("rolePlayer")}
             </div>

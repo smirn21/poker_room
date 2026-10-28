@@ -39,6 +39,11 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
 html,
 body,
 #root {
@@ -46,6 +51,7 @@ body,
   height: 100%;
   min-height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
   font-family: var(--font-body);
   color: var(--ink);
   background:
@@ -66,6 +72,31 @@ button {
   background: var(--gold);
   color: #1a1206;
   font-weight: 650;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: filter 0.12s ease, transform 0.12s ease, background 0.12s ease,
+    border-color 0.12s ease;
+}
+
+button:active:not(:disabled) {
+  filter: brightness(0.92);
+  transform: scale(0.98);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--gold-soft);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button:hover:not(:disabled) {
+    filter: brightness(1.06);
+  }
+
+  button.secondary:hover:not(:disabled) {
+    background: rgba(212, 168, 75, 0.12);
+  }
 }
 
 button.secondary {
@@ -380,6 +411,36 @@ button.primary-wide {
   gap: 0.15rem;
 }
 
+.user-identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.55rem;
+}
+
+.tg-id {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+
+.player-found {
+  margin: 0.15rem 0;
+  font-size: 0.88rem;
+  color: var(--gold-soft);
+}
+
+.ok-msg {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: #8fd9b0;
+}
+
+.adjust-actions {
+  margin-top: 0.15rem;
+}
+
 .lobby-toolbar {
   flex-shrink: 0;
 }
@@ -494,17 +555,17 @@ button.primary-wide {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
-  overflow: hidden;
+  gap: 0.55rem;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.35rem;
 }
 
 .admin-card {
-  flex: 1;
-  min-height: 0;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  overflow: hidden;
 }
 
 .admin-card .card-title {
@@ -635,6 +696,15 @@ input {
   background: rgba(0, 0, 0, 0.35);
   color: var(--ink);
   margin: 0.4rem 0 0.8rem;
+  /* ≥16px avoids iOS zoom-on-focus (mobile-native) */
+  font-size: 16px;
+  touch-action: manipulation;
+}
+
+input:focus-visible {
+  outline: 2px solid rgba(212, 168, 75, 0.65);
+  outline-offset: 1px;
+  border-color: rgba(212, 168, 75, 0.55);
 }
 
 .table-list {
