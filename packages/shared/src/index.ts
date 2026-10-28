@@ -102,6 +102,8 @@ export interface PublicTableState {
   rakeCapBb: number;
   /** Rake taken from pot this hand (chips → owner) */
   rakeTaken?: number;
+  /** Display name (e.g. Стол 3) */
+  name?: string | null;
   /** Current table host */
   createdById?: string | null;
   /** Short join code for copy/share (TBL-XXXXXX) */

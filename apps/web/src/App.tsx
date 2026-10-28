@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { UserDTO } from "@poker/shared";
-import { api, getToken, setToken } from "./api";
+import { api, setToken } from "./api";
 import { TableView } from "./TableView";
 import { bindTelegramBackButton, initTelegramChrome } from "./telegram";
 import { useI18n } from "./i18n";
@@ -115,47 +115,53 @@ export function App() {
     };
   }, [gate]);
 
+  async function afterInviteOrAuth(
+    u: UserDTO,
+    opts?: { tableId?: string | null },
+  ) {
+    setUser(u);
+    if (opts?.tableId) {
+      await openTableFromLink(opts.tableId, u);
+      return;
+    }
+    await refreshTables();
+    const tableParam = new URLSearchParams(window.location.search).get(
+      "table",
+    );
+    if (tableParam) {
+      await openTableFromLink(tableParam, u);
+      return;
+    }
+    setGate("app");
+    setTab("lobby");
+  }
+
   async function boot() {
     try {
       setError(null);
+      setGate("boot");
       const initData = resolveInitData();
       const { token, user: u } = await api.authTelegram(initData);
       setToken(token);
       setUser(u);
       if (!u.whitelisted) {
         const params = new URLSearchParams(window.location.search);
-        const pre = params.get("invite");
+        const pre = params.get("invite") ?? params.get("table");
         if (pre) {
           const r = await api.redeemInvite(pre.trim());
-          setUser(r.user);
-          await refreshTables();
-          const tableParam = new URLSearchParams(window.location.search).get(
-            "table",
-          );
-          if (tableParam) {
-            await openTableFromLink(tableParam, r.user);
-            return;
-          }
-          setGate("app");
-          setTab("lobby");
+          await afterInviteOrAuth(r.user, { tableId: r.tableId ?? null });
           return;
         }
         setGate("invite");
         return;
       }
-      await refreshTables();
-      const tableParam = new URLSearchParams(window.location.search).get(
-        "table",
-      );
-      if (tableParam) {
-        await openTableFromLink(tableParam, u);
-        return;
-      }
-      setGate("app");
-      setTab("lobby");
+      await afterInviteOrAuth(u);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("errBoot"));
-      setGate("invite");
+      const msg = e instanceof Error ? e.message : t("errBoot");
+      const net =
+        /failed to fetch|network|load failed|timeout|503|502|530/i.test(msg);
+      setError(net ? t("errBootNet") : msg || t("errBoot"));
+      setGate("boot");
     }
   }
 
@@ -168,19 +174,34 @@ export function App() {
     try {
       setError(null);
       const r = await api.redeemInvite(inviteCode.trim());
-      setUser(r.user);
-      await refreshTables();
-      const tableParam = new URLSearchParams(window.location.search).get(
-        "table",
-      );
-      if (tableParam) {
-        await openTableFromLink(tableParam, r.user);
-        return;
-      }
-      setGate("app");
-      setTab("lobby");
+      await afterInviteOrAuth(r.user, { tableId: r.tableId ?? null });
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errInvite"));
+    }
+  }
+
+  /** Lobby: sit by TBL- code (or club code that maps to a table). */
+  async function sitByCode() {
+    try {
+      setError(null);
+      const code = inviteCode.trim();
+      if (!code) return;
+      const r = await api.redeemInvite(code);
+      setUser(r.user);
+      if (r.tableId) {
+        await join(r.tableId);
+        return;
+      }
+      // Plain club invite — just refresh lobby
+      await refreshTables();
+      setInviteCode("");
+    } catch (e) {
+      // Fallback: try join endpoint directly (cuid / TBL-)
+      try {
+        await join(inviteCode.trim());
+      } catch {
+        setError(e instanceof Error ? e.message : t("errInvite"));
+      }
     }
   }
 
@@ -188,7 +209,6 @@ export function App() {
     try {
       setError(null);
       const r = await api.createTable({
-        name: t("tableNameNl"),
         smallBlind: 50,
         bigBlind: 100,
         rakePercent: Math.max(0, Math.min(20, Math.floor(rakePercent))),
@@ -198,6 +218,17 @@ export function App() {
       await join(r.table.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errCreate"));
+    }
+  }
+
+  async function adminDeleteTable(id: string) {
+    if (!window.confirm(t("confirmDeleteTable"))) return;
+    try {
+      setError(null);
+      await api.adminDeleteTable(id);
+      await refreshTables();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("errDeleteTable"));
     }
   }
 
@@ -297,7 +328,18 @@ export function App() {
       <div className="app-shell app-shell-fit">
         {gateHeader}
         <p className="sub">{t("openingRoom")}</p>
-        {error && <p className="error">{error}</p>}
+        {error && (
+          <>
+            <p className="error">{error}</p>
+            <button
+              type="button"
+              className="primary-wide"
+              onClick={() => void boot()}
+            >
+              {t("retryAuth")}
+            </button>
+          </>
+        )}
       </div>
     );
   }
@@ -313,21 +355,21 @@ export function App() {
             id="invite"
             value={inviteCode}
             onChange={(e) => setInviteCode(e.target.value)}
-            placeholder="CLUB-XXXXXX"
+            placeholder={`${t("tableCodePlaceholder")} / CLUB-…`}
+            autoCapitalize="characters"
+            autoCorrect="off"
           />
           <button type="button" onClick={redeem} className="primary-wide">
             {t("enter")}
           </button>
           {error && <p className="error">{error}</p>}
-          {!getToken() && (
-            <button
-              type="button"
-              className="secondary primary-wide"
-              onClick={boot}
-            >
-              {t("retryAuth")}
-            </button>
-          )}
+          <button
+            type="button"
+            className="secondary primary-wide"
+            onClick={() => void boot()}
+          >
+            {t("retryAuth")}
+          </button>
         </div>
       </div>
     );
@@ -503,6 +545,27 @@ export function App() {
             {t("refresh")}
           </button>
         </div>
+        <div className="lobby-code-row">
+          <label className="inline-field grow" htmlFor="table-code-lobby">
+            {t("tableCodeJoin")}
+            <input
+              id="table-code-lobby"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              placeholder={t("tableCodePlaceholder")}
+              autoCapitalize="characters"
+              autoCorrect="off"
+            />
+          </label>
+          <button
+            type="button"
+            className="btn-compact"
+            onClick={() => void sitByCode()}
+            disabled={!inviteCode.trim()}
+          >
+            {t("sitByCode")}
+          </button>
+        </div>
         <div className="table-list table-list-fit">
           {tables.map((tbl) => (
             <div key={tbl.id} className="table-item table-item-compact">
@@ -519,9 +582,21 @@ export function App() {
                   })}
                 </div>
               </div>
-              <button type="button" onClick={() => join(tbl.id)}>
-                {t("join")}
-              </button>
+              <div className="table-item-actions">
+                <button type="button" onClick={() => join(tbl.id)}>
+                  {t("join")}
+                </button>
+                {user.role === "admin" && (
+                  <button
+                    type="button"
+                    className="secondary btn-danger-text"
+                    onClick={() => void adminDeleteTable(tbl.id)}
+                    title={t("deleteTable")}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
           ))}
           {tables.length === 0 && <p className="hint center-hint">{t("noTables")}</p>}

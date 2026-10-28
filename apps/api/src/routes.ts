@@ -116,15 +116,47 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     return { token, user: toUserDTO(user) };
   });
 
-  app.post("/auth/invite", async (req, reply) => {
+  app.post("/auth/invite", async (req) => {
     const user = await requireUser(app, req);
     const body = z.object({ code: z.string().min(3) }).parse(req.body);
+    const code = body.code.trim().toUpperCase();
+
+    // Table invite (TBL-…) → whitelist if needed + return tableId for immediate seat
+    const tableByCode = await prisma.pokerTable.findFirst({
+      where: { inviteCode: code, status: "open" },
+      select: { id: true },
+    });
+    if (tableByCode) {
+      let u = user;
+      if (!user.whitelisted) {
+        u = await prisma.$transaction(async (tx) => {
+          const updated = await tx.user.update({
+            where: { id: user.id },
+            data: {
+              whitelisted: true,
+              balance: { increment: config.signupBonus },
+            },
+          });
+          await tx.ledgerEntry.create({
+            data: {
+              userId: updated.id,
+              kind: "signup_bonus",
+              amount: config.signupBonus,
+              meta: JSON.stringify({ tableInvite: code }),
+            },
+          });
+          return updated;
+        });
+      }
+      return { user: toUserDTO(u), tableId: tableByCode.id };
+    }
+
     if (user.whitelisted) {
       return { user: toUserDTO(user) };
     }
 
     const invite = await prisma.invite.findUnique({
-      where: { code: body.code.trim().toUpperCase() },
+      where: { code },
     });
     if (!invite) throw httpError.badRequest("Invalid invite");
     if (invite.expiresAt && invite.expiresAt < new Date()) {
@@ -192,7 +224,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     if (!user.whitelisted) throw httpError.forbidden("Not whitelisted");
     const body = z
       .object({
-        name: z.string().min(1).max(40).default("Hold'em"),
+        name: z.string().min(1).max(40).optional(),
         smallBlind: z.number().int().positive().default(50),
         bigBlind: z.number().int().positive().default(100),
         /** Pot rake % → owner. Scales with pot / stakes */
@@ -217,9 +249,12 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       inviteCode = newTableInviteCode();
     }
 
+    const seq = (await prisma.pokerTable.count()) + 1;
+    const name = (body.name?.trim() || `Стол ${seq}`).slice(0, 40);
+
     const table = await prisma.pokerTable.create({
       data: {
-        name: body.name,
+        name,
         smallBlind: body.smallBlind,
         bigBlind: body.bigBlind,
         rakePercent: body.rakePercent,
@@ -231,6 +266,36 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     });
     await tableManager.ensureLoaded(table.id);
     return { table };
+  });
+
+  app.patch("/tables/:id", async (req) => {
+    const user = await requireUser(app, req);
+    if (!user.whitelisted) throw httpError.forbidden("Not whitelisted");
+    const { id: idOrCode } = z.object({ id: z.string() }).parse(req.params);
+    const body = z
+      .object({ name: z.string().min(1).max(40) })
+      .parse(req.body);
+
+    const table = await findOpenTable(idOrCode);
+    if (!table) throw httpError.notFound("Table not found");
+    const isHost = table.createdById === user.id;
+    const isAdmin = user.role === "admin";
+    if (!isHost && !isAdmin) throw httpError.forbidden("Only host can rename");
+
+    const name = body.name.trim().slice(0, 40);
+    await tableManager.ensureLoaded(table.id);
+    await tableManager.setName(table.id, name);
+    return { table: { id: table.id, name } };
+  });
+
+  app.delete("/admin/tables/:id", async (req) => {
+    const user = await requireUser(app, req);
+    if (user.role !== "admin") throw httpError.forbidden();
+    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const table = await findOpenTable(id);
+    if (!table) throw httpError.notFound("Table not found");
+    await tableManager.forceDelete(table.id);
+    return { ok: true };
   });
 
   app.post("/tables/:id/join", async (req) => {
@@ -353,10 +418,11 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       });
     });
 
-    await tableManager.maybeTransferHost(id);
+    const deleted = await tableManager.deleteIfEmpty(id);
+    if (!deleted) await tableManager.maybeTransferHost(id);
 
     const fresh = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
-    return { user: toUserDTO(fresh) };
+    return { user: toUserDTO(fresh), tableDeleted: deleted };
   });
 
   /** Top-up stack at table after bust (or voluntary rebuy between hands). */

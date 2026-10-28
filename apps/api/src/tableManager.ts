@@ -21,6 +21,7 @@ interface LiveTable {
   engine: HoldEmTable;
   mutex: AsyncMutex;
   turnTimer: NodeJS.Timeout | null;
+  name: string;
   createdById: string;
   inviteCode: string | null;
   /** userId → unix ms deadline */
@@ -114,6 +115,7 @@ export class TableManager {
       engine,
       mutex: new AsyncMutex(),
       turnTimer: null,
+      name: row.name,
       createdById: row.createdById,
       inviteCode,
       rebuyDeadlines: new Map(),
@@ -193,6 +195,7 @@ export class TableManager {
     if (!live) return state;
     return {
       ...state,
+      name: live.name,
       createdById: live.createdById,
       inviteCode: live.inviteCode,
       seats: state.seats.map((s) => ({
@@ -202,6 +205,61 @@ export class TableManager {
           : null,
       })),
     };
+  }
+
+  async setName(tableId: string, name: string): Promise<void> {
+    const live = this.tables.get(tableId);
+    await prisma.pokerTable.update({
+      where: { id: tableId },
+      data: { name },
+    });
+    if (live) {
+      live.name = name;
+      this.emit(tableId, live.engine);
+    }
+  }
+
+  /** Delete table from memory + DB when no seats remain. */
+  async deleteIfEmpty(tableId: string): Promise<boolean> {
+    const seats = await prisma.tableSeat.count({ where: { tableId } });
+    if (seats > 0) return false;
+    this.invalidate(tableId);
+    try {
+      await prisma.pokerTable.delete({ where: { id: tableId } });
+    } catch {
+      /* already gone */
+    }
+    return true;
+  }
+
+  async forceDelete(tableId: string): Promise<void> {
+    const live = this.tables.get(tableId);
+    if (live) {
+      // Cash out seated stacks back to balances before wipe
+      for (const seat of live.engine.seats) {
+        const p = seat.player;
+        if (!p) continue;
+        const stack = p.stack;
+        live.engine.leave(p.userId);
+        if (stack > 0) {
+          await prisma.user.update({
+            where: { id: p.userId },
+            data: { balance: { increment: stack } },
+          });
+          await prisma.ledgerEntry.create({
+            data: {
+              userId: p.userId,
+              kind: "cash_out",
+              amount: stack,
+              meta: JSON.stringify({ tableId, reason: "admin_delete" }),
+            },
+          });
+        }
+      }
+    }
+    this.invalidate(tableId);
+    await prisma.tableSeat.deleteMany({ where: { tableId } });
+    await prisma.pokerTable.delete({ where: { id: tableId } }).catch(() => undefined);
   }
 
   clearRebuy(tableId: string, userId: string): void {
@@ -282,8 +340,12 @@ export class TableManager {
       if (dbSeat) {
         await prisma.tableSeat.delete({ where: { id: dbSeat.id } });
       }
-      await this.maybeTransferHost(tableId);
-      this.emit(tableId, live.engine);
+      const gone = await this.deleteIfEmpty(tableId);
+      if (!gone) {
+        await this.maybeTransferHost(tableId);
+        const still = this.tables.get(tableId);
+        if (still) this.emit(tableId, still.engine);
+      }
     } catch {
       /* leave may fail mid-hand; timer retries above */
     }

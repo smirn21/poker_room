@@ -7,8 +7,13 @@ import { tableManager } from "./tableManager.js";
 import { config } from "./config.js";
 
 export function setupSocket(httpServer: HttpServer, app: FastifyInstance): Server {
+  const corsOrigins = [
+    config.corsOrigin,
+    "https://kiosk-hedgehog22.eu.pythonanywhere.com",
+    "http://localhost:5173",
+  ].filter(Boolean);
   const io = new Server(httpServer, {
-    cors: { origin: config.corsOrigin, credentials: true },
+    cors: { origin: corsOrigins, credentials: true },
   });
 
   tableManager.onState((tableId, _userId, baseState) => {

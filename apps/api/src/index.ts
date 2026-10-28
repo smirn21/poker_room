@@ -8,7 +8,25 @@ import { HttpError } from "./errors.js";
 
 const app = Fastify({ logger: true });
 
-await app.register(cors, { origin: config.corsOrigin, credentials: true });
+const corsAllow = new Set(
+  [
+    config.corsOrigin,
+    "https://kiosk-hedgehog22.eu.pythonanywhere.com",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+  ].filter(Boolean),
+);
+await app.register(cors, {
+  origin: (origin, cb) => {
+    // Non-browser / same-origin / Telegram WebView occasionally omits Origin
+    if (!origin || corsAllow.has(origin)) {
+      cb(null, true);
+      return;
+    }
+    cb(null, false);
+  },
+  credentials: true,
+});
 await app.register(jwt, { secret: config.jwtSecret });
 
 app.setErrorHandler((err, _req, reply) => {

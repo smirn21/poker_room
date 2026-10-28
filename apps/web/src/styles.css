@@ -166,21 +166,99 @@ button.primary-wide {
   font-size: 0.95rem;
 }
 
-.table-invite-bar {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.35rem;
-  margin: 0.25rem 0 0.4rem;
-  padding: 0.4rem 0.55rem;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(212, 168, 75, 0.35);
+.invite-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  max-width: 7.2rem;
+  padding: 0.28rem 0.45rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(212, 168, 75, 0.45);
+  color: var(--gold-soft);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.invite-chip-code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.invite-chip-ok {
+  border-color: #6dcea0;
+  color: #b8f0d0;
+}
+
+.host-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--gold);
   flex-shrink: 0;
 }
 
-.table-invite-code {
+.table-name-chip {
+  max-width: 5.5rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table-name-chip:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.table-rename-row {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.table-rename-row input {
+  flex: 1;
+  min-width: 0;
   margin: 0;
+  padding: 0.4rem 0.5rem;
+}
+
+.lobby-code-row {
+  display: flex;
+  gap: 0.45rem;
+  align-items: flex-end;
+  margin-bottom: 0.55rem;
+}
+
+.lobby-code-row .grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.table-item-actions {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.btn-danger-text {
+  padding: 0.45rem 0.55rem;
+  min-width: 2.2rem;
+  color: #f0a8a0;
+  border-color: rgba(232, 93, 76, 0.45);
 }
 
 .host-pill {
@@ -607,7 +685,24 @@ input {
 .table-screen {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.35rem;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.table-screen-playing .felt {
+  max-height: min(42dvh, 360px);
+  margin: 0.2rem 0 0.35rem;
+}
+
+.table-screen-turn .felt {
+  max-height: min(36dvh, 320px);
+}
+
+.table-screen-turn .actions-live {
+  flex-shrink: 0;
+  z-index: 2;
 }
 
 .table-topbar {
@@ -1008,13 +1103,19 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 .actions {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.4rem;
-  margin-bottom: 0.5rem;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+  flex-shrink: 0;
 }
 
 .actions button {
-  padding: 0.7rem 0.35rem;
-  font-size: 0.82rem;
+  padding: 0.65rem 0.3rem;
+  font-size: 0.8rem;
+}
+
+.actions-live input[type="number"] {
+  min-height: 2.4rem;
+  margin: 0;
 }
 
 .chat-panel {

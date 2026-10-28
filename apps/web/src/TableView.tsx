@@ -68,6 +68,8 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
   const [showEmoji, setShowEmoji] = useState(false);
   const [floats, setFloats] = useState<FloatReact[]>([]);
   const [inviteCopied, setInviteCopied] = useState(false);
+  const [tableNameDraft, setTableNameDraft] = useState("");
+  const [editingName, setEditingName] = useState(false);
   const [rebuyAmt, setRebuyAmt] = useState(2000);
   const [rebuyLeft, setRebuyLeft] = useState<number | null>(null);
   const feltRef = useRef<HTMLDivElement>(null);
@@ -286,7 +288,10 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
   const isHost = Boolean(state?.createdById && state.createdById === user.id);
   const mySeatLive = state?.seats.find((s) => s.userId === user.id);
   const tableInviteCode = state?.inviteCode ?? null;
-  const showTableInvite = Boolean(mySeatLive && tableInviteCode);
+  const tableName = state?.name ?? null;
+  const playing = state?.status === "playing";
+  /** Compact chip in topbar — never a tall banner that pushes actions off-screen */
+  const showTableInvite = Boolean(mySeatLive && tableInviteCode && !playing);
   const needsRebuy = Boolean(
     mySeatLive &&
       mySeatLive.stack <= 0 &&
@@ -319,6 +324,25 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
       window.setTimeout(() => setInviteCopied(false), 2000);
     } catch {
       setError(t("copyFailed"));
+    }
+  }
+
+  useEffect(() => {
+    if (tableName) setTableNameDraft(tableName);
+  }, [tableName]);
+
+  async function saveTableName() {
+    const next = tableNameDraft.trim();
+    if (!next || next === tableName) {
+      setEditingName(false);
+      return;
+    }
+    try {
+      setError(null);
+      await api.renameTable(tableId, next);
+      setEditingName(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("errRename"));
     }
   }
 
@@ -469,16 +493,38 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
   }
 
   return (
-    <div className="table-screen">
+    <div className={`table-screen${playing ? " table-screen-playing" : ""}${isMyTurn ? " table-screen-turn" : ""}`}>
       <div className="table-topbar">
         <button type="button" className="secondary" onClick={onBack}>
           {t("lobby")}
         </button>
         <div className="table-status">
+          {tableName && (
+            <button
+              type="button"
+              className="table-name-chip"
+              onClick={() => isHost && setEditingName(true)}
+              disabled={!isHost}
+              title={isHost ? t("renameTable") : tableName}
+            >
+              {tableName}
+            </button>
+          )}
           <span className="street-pill">{streetLabel || "—"}</span>
           <span className="hint">{t("handNo", { n: state?.handNo ?? 0 })}</span>
         </div>
         <div className="top-tools">
+          {showTableInvite && (
+            <button
+              type="button"
+              className={`invite-chip${inviteCopied ? " invite-chip-ok" : ""}`}
+              onClick={() => void copyTableInvite()}
+              title={inviteCopied ? t("inviteTableCopied") : t("inviteTableHint")}
+            >
+              {isHost && <span className="host-dot" aria-hidden />}
+              <span className="invite-chip-code">{tableInviteCode}</span>
+            </button>
+          )}
           <LanguageSwitcher className="lang-switch-compact" />
           <button
             type="button"
@@ -496,23 +542,27 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
 
       {error && <p className="error">{error}</p>}
 
-      {showTableInvite && (
-        <div className="table-invite-bar">
-          {isHost && <span className="host-pill">{t("hostBadge")}</span>}
-          <div className="invite-code-block table-invite-code">
-            <button
-              type="button"
-              className="invite-code-btn"
-              onClick={() => void copyTableInvite()}
-              title={t("tapToCopy")}
-            >
-              <span className="invite-code-label">{t("inviteTable")}</span>
-              <strong className="invite-code-value">{tableInviteCode}</strong>
-            </button>
-            <p className="hint invite-copy-hint">
-              {inviteCopied ? t("inviteTableCopied") : t("inviteTableHint")}
-            </p>
-          </div>
+      {editingName && isHost && (
+        <div className="table-rename-row">
+          <input
+            value={tableNameDraft}
+            onChange={(e) => setTableNameDraft(e.target.value)}
+            maxLength={40}
+            aria-label={t("renameTable")}
+          />
+          <button type="button" className="btn-compact" onClick={() => void saveTableName()}>
+            {t("renameSave")}
+          </button>
+          <button
+            type="button"
+            className="secondary btn-compact"
+            onClick={() => {
+              setEditingName(false);
+              setTableNameDraft(tableName ?? "");
+            }}
+          >
+            {t("back")}
+          </button>
         </div>
       )}
 
@@ -753,24 +803,26 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
         </div>
       )}
 
-      <div className="panel chat-panel">
-        <div className="chat">
-          {messages.map((m) => (
-            <div key={m.id} className="msg">
-              <strong>{m.name}</strong>: {m.text}
-            </div>
-          ))}
+      {!isMyTurn && (
+        <div className="panel chat-panel">
+          <div className="chat">
+            {messages.map((m) => (
+              <div key={m.id} className="msg">
+                <strong>{m.name}</strong>: {m.text}
+              </div>
+            ))}
+          </div>
+          <form className="row" onSubmit={sendChat}>
+            <input
+              value={chatText}
+              onChange={(e) => setChatText(e.target.value)}
+              placeholder={t("chatPlaceholder")}
+              style={{ margin: 0, flex: 1 }}
+            />
+            <button type="submit">{t("send")}</button>
+          </form>
         </div>
-        <form className="row" onSubmit={sendChat}>
-          <input
-            value={chatText}
-            onChange={(e) => setChatText(e.target.value)}
-            placeholder={t("chatPlaceholder")}
-            style={{ margin: 0, flex: 1 }}
-          />
-          <button type="submit">{t("send")}</button>
-        </form>
-      </div>
+      )}
     </div>
   );
 }

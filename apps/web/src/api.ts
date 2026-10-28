@@ -52,7 +52,7 @@ export const api = {
       body: JSON.stringify({ initData }),
     }),
   redeemInvite: (code: string) =>
-    request<{ user: UserDTO }>("/auth/invite", {
+    request<{ user: UserDTO; tableId?: string }>("/auth/invite", {
       method: "POST",
       body: JSON.stringify({ code }),
     }),
@@ -78,9 +78,23 @@ export const api = {
     rakeCapBb?: number;
     maxSeats?: number;
   }) =>
-    request<{ table: { id: string; inviteCode?: string | null } }>("/tables", {
+    request<{
+      table: { id: string; name?: string; inviteCode?: string | null };
+    }>("/tables", {
       method: "POST",
       body: JSON.stringify(body),
+    }),
+  renameTable: (id: string, name: string) =>
+    request<{ table: { id: string; name: string } }>(
+      `/tables/${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ name }),
+      },
+    ),
+  adminDeleteTable: (id: string) =>
+    request<{ ok: boolean }>(`/admin/tables/${encodeURIComponent(id)}`, {
+      method: "DELETE",
     }),
   joinTable: (id: string, buyIn: number, seatIndex?: number) =>
     request<{ seatIndex: number; user: UserDTO; tableId?: string }>(
@@ -91,7 +105,10 @@ export const api = {
       },
     ),
   leaveTable: (id: string) =>
-    request<{ user: UserDTO }>(`/tables/${id}/leave`, { method: "POST" }),
+    request<{ user: UserDTO; tableDeleted?: boolean }>(
+      `/tables/${id}/leave`,
+      { method: "POST" },
+    ),
   rebuyTable: (id: string, buyIn: number) =>
     request<{ user: UserDTO }>(`/tables/${id}/rebuy`, {
       method: "POST",
