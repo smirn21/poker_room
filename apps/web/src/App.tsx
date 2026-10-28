@@ -206,14 +206,14 @@ export function App() {
       setError(null);
       const r = await api.joinTable(id, buyInOverride ?? buyIn);
       setUser(r.user);
-      setTableId(id);
+      setTableId(r.tableId ?? id);
       setGate("table");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errJoin"));
     }
   }
 
-  /** Open table from ?table= deep link (invite). */
+  /** Open table from ?table= deep link (cuid or TBL- code). */
   async function openTableFromLink(id: string, u: UserDTO) {
     try {
       setError(null);
@@ -226,7 +226,7 @@ export function App() {
       const amount = Math.min(buyIn, u.balance);
       const r = await api.joinTable(id, amount);
       setUser(r.user);
-      setTableId(id);
+      setTableId(r.tableId ?? id);
       setGate("table");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errJoin"));

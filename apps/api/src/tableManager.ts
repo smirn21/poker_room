@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { HoldEmTable } from "@poker/poker-engine";
 import type { PlayerAction, PublicTableState } from "@poker/shared";
 import { prisma } from "./db.js";
@@ -21,9 +22,14 @@ interface LiveTable {
   mutex: AsyncMutex;
   turnTimer: NodeJS.Timeout | null;
   createdById: string;
+  inviteCode: string | null;
   /** userId → unix ms deadline */
   rebuyDeadlines: Map<string, number>;
   rebuyTimers: Map<string, NodeJS.Timeout>;
+}
+
+function newTableInviteCode(): string {
+  return `TBL-${randomBytes(3).toString("hex").toUpperCase()}`;
 }
 
 export class TableManager {
@@ -95,11 +101,21 @@ export class TableManager {
       });
     }
 
+    let inviteCode = row.inviteCode;
+    if (!inviteCode) {
+      inviteCode = newTableInviteCode();
+      await prisma.pokerTable.update({
+        where: { id: tableId },
+        data: { inviteCode },
+      });
+    }
+
     this.tables.set(tableId, {
       engine,
       mutex: new AsyncMutex(),
       turnTimer: null,
       createdById: row.createdById,
+      inviteCode,
       rebuyDeadlines: new Map(),
       rebuyTimers: new Map(),
     });
@@ -178,6 +194,7 @@ export class TableManager {
     return {
       ...state,
       createdById: live.createdById,
+      inviteCode: live.inviteCode,
       seats: state.seats.map((s) => ({
         ...s,
         rebuyDeadlineAt: s.userId

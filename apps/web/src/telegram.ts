@@ -11,6 +11,7 @@ type TgWebApp = {
   initData: string;
   ready: () => void;
   expand: () => void;
+  requestFullscreen?: () => void;
   colorScheme?: string;
   setHeaderColor?: (color: string) => void;
   setBackgroundColor?: (color: string) => void;
@@ -46,33 +47,28 @@ export function applyTelegramSafeAreaVars(tg?: TgWebApp | null): void {
   const safe = tg?.safeAreaInset;
   const content = tg?.contentSafeAreaInset;
 
-  // Device notch / home indicator
-  if (safe) {
-    root.style.setProperty("--tg-safe-area-inset-top", insetPx(safe.top));
-    root.style.setProperty("--tg-safe-area-inset-bottom", insetPx(safe.bottom));
-    root.style.setProperty("--tg-safe-area-inset-left", insetPx(safe.left));
-    root.style.setProperty("--tg-safe-area-inset-right", insetPx(safe.right));
-  }
+  // Always define vars (0px when TG omits insets) so calc() in CSS is stable.
+  root.style.setProperty("--tg-safe-area-inset-top", insetPx(safe?.top));
+  root.style.setProperty("--tg-safe-area-inset-bottom", insetPx(safe?.bottom));
+  root.style.setProperty("--tg-safe-area-inset-left", insetPx(safe?.left));
+  root.style.setProperty("--tg-safe-area-inset-right", insetPx(safe?.right));
 
-  // Extra inset for TG close / back / ⋯ / minimize chrome
-  if (content) {
-    root.style.setProperty(
-      "--tg-content-safe-area-inset-top",
-      insetPx(content.top),
-    );
-    root.style.setProperty(
-      "--tg-content-safe-area-inset-bottom",
-      insetPx(content.bottom),
-    );
-    root.style.setProperty(
-      "--tg-content-safe-area-inset-left",
-      insetPx(content.left),
-    );
-    root.style.setProperty(
-      "--tg-content-safe-area-inset-right",
-      insetPx(content.right),
-    );
-  }
+  root.style.setProperty(
+    "--tg-content-safe-area-inset-top",
+    insetPx(content?.top),
+  );
+  root.style.setProperty(
+    "--tg-content-safe-area-inset-bottom",
+    insetPx(content?.bottom),
+  );
+  root.style.setProperty(
+    "--tg-content-safe-area-inset-left",
+    insetPx(content?.left),
+  );
+  root.style.setProperty(
+    "--tg-content-safe-area-inset-right",
+    insetPx(content?.right),
+  );
 }
 
 export function initTelegramChrome(): TgWebApp | null {
@@ -81,6 +77,11 @@ export function initTelegramChrome(): TgWebApp | null {
 
   tg.ready();
   tg.expand();
+  try {
+    tg.requestFullscreen?.();
+  } catch {
+    /* optional Bot API 8.0 — chat-list opens often need this for content insets */
+  }
   try {
     tg.setHeaderColor?.(FELT_HEADER);
     tg.setBackgroundColor?.(FELT_BG);
@@ -95,6 +96,11 @@ export function initTelegramChrome(): TgWebApp | null {
   tg.onEvent?.("safeAreaChanged", sync);
   tg.onEvent?.("contentSafeAreaChanged", sync);
   tg.onEvent?.("viewportChanged", sync);
+  tg.onEvent?.("fullscreenChanged", sync);
+
+  // Insets often arrive a tick after expand/fullscreen from chat list.
+  window.setTimeout(sync, 50);
+  window.setTimeout(sync, 300);
 
   return tg;
 }

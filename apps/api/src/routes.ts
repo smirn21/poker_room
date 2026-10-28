@@ -39,6 +39,24 @@ async function requireUser(app: FastifyInstance, request: { headers: { authoriza
   return user;
 }
 
+function newTableInviteCode(): string {
+  return `TBL-${randomBytes(3).toString("hex").toUpperCase()}`;
+}
+
+/** Resolve table by cuid id or short inviteCode (case-insensitive). */
+async function findOpenTable(idOrCode: string) {
+  const byId = await prisma.pokerTable.findUnique({
+    where: { id: idOrCode },
+    include: { seats: true },
+  });
+  if (byId) return byId;
+  const code = idOrCode.trim().toUpperCase();
+  return prisma.pokerTable.findFirst({
+    where: { inviteCode: code },
+    include: { seats: true },
+  });
+}
+
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   app.post("/auth/telegram", async (req, reply) => {
     const body = z.object({ initData: z.string().min(1) }).parse(req.body);
@@ -189,6 +207,16 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       throw httpError.badRequest("bigBlind should be >= 2 * smallBlind");
     }
 
+    let inviteCode = newTableInviteCode();
+    for (let i = 0; i < 5; i++) {
+      const clash = await prisma.pokerTable.findFirst({
+        where: { inviteCode },
+        select: { id: true },
+      });
+      if (!clash) break;
+      inviteCode = newTableInviteCode();
+    }
+
     const table = await prisma.pokerTable.create({
       data: {
         name: body.name,
@@ -197,6 +225,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
         rakePercent: body.rakePercent,
         rakeCapBb: body.rakeCapBb,
         maxSeats: body.maxSeats,
+        inviteCode,
         createdById: user.id,
       },
     });
@@ -207,7 +236,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   app.post("/tables/:id/join", async (req) => {
     const user = await requireUser(app, req);
     if (!user.whitelisted) throw httpError.forbidden("Not whitelisted");
-    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const { id: idOrCode } = z.object({ id: z.string() }).parse(req.params);
     const body = z
       .object({
         buyIn: z.number().int().positive(),
@@ -215,10 +244,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       })
       .parse(req.body);
 
-    const table = await prisma.pokerTable.findUniqueOrThrow({
-      where: { id },
-      include: { seats: true },
-    });
+    const table = await findOpenTable(idOrCode);
+    if (!table) throw httpError.notFound("Table not found");
+    const id = table.id;
     if (table.status !== "open") throw httpError.badRequest("Table closed");
 
     const existing = table.seats.find((s) => s.userId === user.id);
@@ -226,6 +254,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       await tableManager.ensureLoaded(id);
       const fresh = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
       return {
+        tableId: id,
         seatIndex: existing.seatIndex,
         user: toUserDTO(fresh),
         state: tableManager.getState(id, user.id),
@@ -282,6 +311,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
     const fresh = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
     return {
+      tableId: id,
       seatIndex,
       user: toUserDTO(fresh),
       state: tableManager.getState(id, user.id),

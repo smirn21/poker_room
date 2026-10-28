@@ -78,15 +78,18 @@ export const api = {
     rakeCapBb?: number;
     maxSeats?: number;
   }) =>
-    request<{ table: { id: string } }>("/tables", {
+    request<{ table: { id: string; inviteCode?: string | null } }>("/tables", {
       method: "POST",
       body: JSON.stringify(body),
     }),
   joinTable: (id: string, buyIn: number, seatIndex?: number) =>
-    request<{ seatIndex: number; user: UserDTO }>(`/tables/${id}/join`, {
-      method: "POST",
-      body: JSON.stringify({ buyIn, seatIndex }),
-    }),
+    request<{ seatIndex: number; user: UserDTO; tableId?: string }>(
+      `/tables/${encodeURIComponent(id)}/join`,
+      {
+        method: "POST",
+        body: JSON.stringify({ buyIn, seatIndex }),
+      },
+    ),
   leaveTable: (id: string) =>
     request<{ user: UserDTO }>(`/tables/${id}/leave`, { method: "POST" }),
   rebuyTable: (id: string, buyIn: number) =>

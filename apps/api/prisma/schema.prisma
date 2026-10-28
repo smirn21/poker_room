@@ -49,6 +49,8 @@ model PokerTable {
   rakeCapBb   Int      @default(3)
   maxSeats    Int      @default(6)
   status      String   @default("open") // open | closed
+  /** Short shareable join code (TBL-XXXXXX), like club invite UX */
+  inviteCode  String?  @unique
   createdById String
   createdBy   User     @relation("TableCreator", fields: [createdById], references: [id])
   createdAt   DateTime @default(now())

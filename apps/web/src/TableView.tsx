@@ -283,16 +283,10 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
     }
   }
 
-  const tableInviteUrl = useMemo(() => {
-    const u = new URL(window.location.href);
-    u.searchParams.delete("dev");
-    u.searchParams.set("table", tableId);
-    // keep name if present for friendlier multi-tab
-    return u.toString();
-  }, [tableId]);
-
   const isHost = Boolean(state?.createdById && state.createdById === user.id);
   const mySeatLive = state?.seats.find((s) => s.userId === user.id);
+  const tableInviteCode = state?.inviteCode ?? null;
+  const showTableInvite = Boolean(mySeatLive && tableInviteCode);
   const needsRebuy = Boolean(
     mySeatLive &&
       mySeatLive.stack <= 0 &&
@@ -318,8 +312,9 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
   }, [needsRebuy, mySeatLive?.rebuyDeadlineAt]);
 
   async function copyTableInvite() {
+    if (!tableInviteCode) return;
     try {
-      await navigator.clipboard.writeText(tableInviteUrl);
+      await navigator.clipboard.writeText(tableInviteCode);
       setInviteCopied(true);
       window.setTimeout(() => setInviteCopied(false), 2000);
     } catch {
@@ -501,21 +496,23 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
 
       {error && <p className="error">{error}</p>}
 
-      {isHost && (
+      {showTableInvite && (
         <div className="table-invite-bar">
-          <span className="host-pill">{t("hostBadge")}</span>
-          <button
-            type="button"
-            className="invite-link-btn"
-            onClick={() => void copyTableInvite()}
-            title={t("inviteTableHint")}
-          >
-            <span className="invite-link-label">{t("inviteTable")}</span>
-            <span className="invite-link-url">{tableInviteUrl}</span>
-          </button>
-          <span className="hint">
-            {inviteCopied ? t("inviteTableCopied") : t("inviteTableHint")}
-          </span>
+          {isHost && <span className="host-pill">{t("hostBadge")}</span>}
+          <div className="invite-code-block table-invite-code">
+            <button
+              type="button"
+              className="invite-code-btn"
+              onClick={() => void copyTableInvite()}
+              title={t("tapToCopy")}
+            >
+              <span className="invite-code-label">{t("inviteTable")}</span>
+              <strong className="invite-code-value">{tableInviteCode}</strong>
+            </button>
+            <p className="hint invite-copy-hint">
+              {inviteCopied ? t("inviteTableCopied") : t("inviteTableHint")}
+            </p>
+          </div>
         </div>
       )}
 

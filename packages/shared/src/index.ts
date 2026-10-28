@@ -102,8 +102,10 @@ export interface PublicTableState {
   rakeCapBb: number;
   /** Rake taken from pot this hand (chips → owner) */
   rakeTaken?: number;
-  /** Current table host (can share invite link) */
+  /** Current table host */
   createdById?: string | null;
+  /** Short join code for copy/share (TBL-XXXXXX) */
+  inviteCode?: string | null;
   winners?: {
     seatIndex: number;
     amount: number;
