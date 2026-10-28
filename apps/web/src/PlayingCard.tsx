@@ -38,10 +38,19 @@ export function PlayingCard({
   );
 }
 
-export function CardBack({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
+export function CardBack({
+  size = "md",
+  className = "",
+  dealDelayMs = 0,
+}: {
+  size?: "sm" | "md" | "lg" | "hero";
+  className?: string;
+  dealDelayMs?: number;
+}) {
   return (
     <div
-      className={`pcard pcard-${size} pcard-back`}
+      className={`pcard pcard-${size} pcard-back ${className}`}
+      style={{ animationDelay: `${dealDelayMs}ms` }}
       aria-hidden
     />
   );

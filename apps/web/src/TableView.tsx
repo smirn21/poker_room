@@ -161,12 +161,14 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
     prevBoardLen.current = board.length;
     setBoardAnimKey((k) => k + 1);
     setRevealedBoard(board.slice(0, from));
+    // Focal moment: stagger street cards (flop 3, then turn/river one-by-one)
+    const gap = board.length - from >= 3 ? 160 : 220;
     board.slice(from).forEach((card, i) => {
       window.setTimeout(() => {
         setRevealedBoard((prev) =>
           prev.includes(card) ? prev : [...prev, card],
         );
-      }, 180 + i * 280);
+      }, 120 + i * gap);
     });
   }, [state]);
 
@@ -454,12 +456,13 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
         )}
         {seat.holeCards && seat.holeCards.length > 0 && onFelt && (
           <div className="hole hole-opp">
-            {seat.holeCards.map((c) => (
+            {seat.holeCards.map((c, i) => (
               <PlayingCard
-                key={c}
+                key={`${state?.handNo}-opp-${seat.seatIndex}-${c}`}
                 card={c}
                 size="sm"
-                className="deal-in"
+                className="street-reveal"
+                dealDelayMs={i * 100}
                 highlight={showdownHighlight && winningCards.has(c)}
                 dimmed={
                   showdownHighlight && isWinner && !winningCards.has(c)
@@ -645,13 +648,14 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
               </div>
             ) : null}
           </div>
-          <div className="board" key={boardAnimKey}>
+          <div className="board street-pulse" key={boardAnimKey}>
             {revealedBoard.map((c, idx) => (
               <PlayingCard
                 key={`${state?.handNo}-${idx}-${c}`}
                 card={c}
                 size="lg"
-                className="deal-in"
+                className="street-reveal"
+                dealDelayMs={0}
                 highlight={showdownHighlight && winningCards.has(c)}
                 dimmed={showdownHighlight && !winningCards.has(c)}
               />
@@ -700,12 +704,13 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
         >
           {renderSeat(mySeat, false)}
           <div className="hero-cards">
-            {mySeat.holeCards?.map((c) => (
+            {mySeat.holeCards?.map((c, i) => (
               <PlayingCard
-                key={c}
+                key={`${state?.handNo}-hole-${c}`}
                 card={c}
                 size="hero"
-                className="deal-in"
+                className="hole-deal"
+                dealDelayMs={i * 130}
                 highlight={showdownHighlight && winningCards.has(c)}
                 dimmed={
                   showdownHighlight &&
@@ -716,8 +721,8 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
             ))}
             {mySeat.inHand && !mySeat.holeCards && (
               <>
-                <CardBack size="lg" />
-                <CardBack size="lg" />
+                <CardBack size="lg" className="hole-deal" dealDelayMs={0} />
+                <CardBack size="lg" className="hole-deal" dealDelayMs={130} />
               </>
             )}
           </div>
