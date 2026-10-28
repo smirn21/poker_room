@@ -26,6 +26,9 @@ await app.register(cors, {
     cb(null, false);
   },
   credentials: true,
+  // Default @fastify/cors is GET,HEAD,POST only — browser blocks DELETE/PATCH
+  // (admin delete table, host rename) as a failed fetch → "No connection to API".
+  methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 });
 await app.register(jwt, { secret: config.jwtSecret });
 
