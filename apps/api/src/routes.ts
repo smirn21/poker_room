@@ -403,7 +403,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     });
 
     await prisma.$transaction(async (tx) => {
-      await tx.tableSeat.delete({ where: { id: seat.id } });
+      await tx.tableSeat.deleteMany({
+        where: { tableId: id, userId: user.id },
+      });
       await tx.user.update({
         where: { id: user.id },
         data: { balance: { increment: cashOut } },
