@@ -5,6 +5,19 @@ import { TableView } from "./TableView";
 import { bindTelegramBackButton, initTelegramChrome } from "./telegram";
 import { useI18n } from "./i18n";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
+import { LobbyFaceCards } from "./LobbyFaceCards";
+import {
+  IconArrowRight,
+  IconChip,
+  IconLobby,
+  IconProfile,
+  IconRefresh,
+  IconSpadeMark,
+  IconTables,
+  IconTrash,
+  IconUsers,
+  IconWallet,
+} from "./Icons";
 
 type Gate = "boot" | "invite" | "app" | "table" | "admin";
 type Tab = "lobby" | "tables" | "wallet" | "profile";
@@ -653,11 +666,19 @@ export function App() {
         onClick={() => setTab("wallet")}
         title={t("wallet")}
       >
+        <IconChip size={16} className="balance-chip-ico" />
         <span className="balance-chip-label">{t("balanceShort")}</span>
         <span className="balance">{user.balance}</span>
       </button>
     </header>
   );
+
+  const navIcon = {
+    lobby: IconLobby,
+    tables: IconTables,
+    wallet: IconWallet,
+    profile: IconProfile,
+  } as const;
 
   const bottomNav = (
     <nav className="bottom-nav" aria-label="Main">
@@ -668,40 +689,62 @@ export function App() {
           ["wallet", t("navWallet")],
           ["profile", t("navProfile")],
         ] as const
-      ).map(([id, label]) => (
-        <button
-          key={id}
-          type="button"
-          className={tab === id ? "bottom-nav-item active" : "bottom-nav-item"}
-          onClick={() => {
-            setTab(id);
-            setError(null);
-            if (id === "lobby") void refreshTables();
-          }}
-        >
-          <span className="bottom-nav-icon" aria-hidden>
-            {id === "lobby" ? "♠" : id === "tables" ? "+" : id === "wallet" ? "◎" : "☺"}
-          </span>
-          <span>{label}</span>
-        </button>
-      ))}
+      ).map(([id, label]) => {
+        const Icon = navIcon[id];
+        return (
+          <button
+            key={id}
+            type="button"
+            className={tab === id ? "bottom-nav-item active" : "bottom-nav-item"}
+            onClick={() => {
+              setTab(id);
+              setError(null);
+              if (id === "lobby") void refreshTables();
+            }}
+          >
+            <span className="bottom-nav-icon" aria-hidden>
+              <Icon size={22} />
+            </span>
+            <span>{label}</span>
+          </button>
+        );
+      })}
     </nav>
   );
 
   let body: ReactNode = null;
 
   if (tab === "lobby") {
+    const openCount = tables.length;
+    const seatedSum = tables.reduce((n, tbl) => n + tbl.seated, 0);
     body = (
       <div className="tab-pane">
         <div className="lobby-hello">
-          <div className="user-identity">
-            <strong>{user.name}</strong>
-            <span className="tg-id" title={t("telegramIdLabel")}>
-              {t("telegramIdShort", { id: user.telegramId })}
+          <div className="lobby-brand-row">
+            <span className="brand-mark" aria-hidden>
+              <IconSpadeMark size={18} />
             </span>
+            <div className="user-identity">
+              <strong>{user.name}</strong>
+              <span className="tg-id" title={t("telegramIdLabel")}>
+                {t("telegramIdShort", { id: user.telegramId })}
+              </span>
+            </div>
           </div>
           <span className="hint">{t("lobbyHint")}</span>
         </div>
+
+        <div className="lobby-stats" aria-label={t("lobbyStats")}>
+          <div className="lobby-stat">
+            <IconUsers size={14} />
+            <span>{t("lobbySeated", { n: seatedSum })}</span>
+          </div>
+          <div className="lobby-stat">
+            <IconTables size={14} />
+            <span>{t("lobbyTablesOpen", { n: openCount })}</span>
+          </div>
+        </div>
+
         <div className="row spread lobby-toolbar">
           <label className="inline-field" htmlFor="buyin-lobby">
             {t("buyIn")}
@@ -712,8 +755,14 @@ export function App() {
               onChange={(e) => setBuyIn(Number(e.target.value))}
             />
           </label>
-          <button type="button" className="secondary btn-compact" onClick={() => void refreshTables()}>
-            {t("refresh")}
+          <button
+            type="button"
+            className="secondary btn-compact btn-icon"
+            onClick={() => void refreshTables()}
+            aria-label={t("refresh")}
+            title={t("refresh")}
+          >
+            <IconRefresh size={18} />
           </button>
         </div>
         <div className="lobby-code-row">
@@ -738,36 +787,55 @@ export function App() {
           </button>
         </div>
         <div className="table-list table-list-fit">
-          {tables.map((tbl) => (
-            <div key={tbl.id} className="table-item table-item-compact">
-              <div>
-                <strong>{tbl.name}</strong>
-                <div className="hint">
-                  {t("tableMeta", {
-                    sb: tbl.smallBlind,
-                    bb: tbl.bigBlind,
-                    rake: tbl.rakePercent,
-                    cap: tbl.rakeCapBb,
-                    seated: tbl.seated,
-                    max: tbl.maxSeats,
-                  })}
+          {tables.map((tbl, i) => (
+            <div
+              key={tbl.id}
+              className={`table-card table-card-${i % 2 === 0 ? "teal" : "amber"}`}
+            >
+              <div className="table-card-main">
+                <div className="table-card-top">
+                  <strong className="table-card-name">{tbl.name}</strong>
+                  <span className="table-status-pill">{t("tableActive")}</span>
                 </div>
-              </div>
-              <div className="table-item-actions">
-                <button type="button" onClick={() => join(tbl.id)}>
-                  {t("join")}
-                </button>
-                {user.role === "admin" && (
+                <div className="table-card-meta">
+                  {t("tableBlinds", { sb: tbl.smallBlind, bb: tbl.bigBlind })}
+                </div>
+                <div className="table-card-facts">
+                  <span>
+                    <IconUsers size={13} />{" "}
+                    {t("tablePlayers", {
+                      seated: tbl.seated,
+                      max: tbl.maxSeats,
+                    })}
+                  </span>
+                  <span>
+                    <IconChip size={13} />{" "}
+                    {t("tableBuyInHint", { amount: buyIn })}
+                  </span>
+                </div>
+                <div className="table-card-actions">
                   <button
                     type="button"
-                    className="secondary btn-danger-text"
-                    onClick={() => void adminDeleteTable(tbl.id)}
-                    title={t("deleteTable")}
+                    className="table-enter-btn"
+                    onClick={() => join(tbl.id)}
                   >
-                    ✕
+                    {t("enterTable")}
+                    <IconArrowRight size={16} />
                   </button>
-                )}
+                  {user.role === "admin" && (
+                    <button
+                      type="button"
+                      className="secondary btn-icon btn-danger-text"
+                      onClick={() => void adminDeleteTable(tbl.id)}
+                      title={t("deleteTable")}
+                      aria-label={t("deleteTable")}
+                    >
+                      <IconTrash size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
+              <LobbyFaceCards tableId={tbl.id} />
             </div>
           ))}
           {tables.length === 0 && <p className="hint center-hint">{t("noTables")}</p>}
