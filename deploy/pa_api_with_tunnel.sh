@@ -65,8 +65,21 @@ stdbuf -oL -eL "${CF}" tunnel --no-autoupdate --url "http://127.0.0.1:${PORT}" 2
   | while IFS= read -r line; do
       echo "${line}"
       if [[ "${line}" =~ https://[a-zA-Z0-9-]+\.trycloudflare\.com ]]; then
-        echo "${BASH_REMATCH[0]}" > "${URL_FILE}"
-        echo "TUNNEL_URL ${BASH_REMATCH[0]}" >&2
+        NEW_URL="${BASH_REMATCH[0]}"
+        OLD_URL=""
+        [[ -f "${URL_FILE}" ]] && OLD_URL="$(cat "${URL_FILE}" 2>/dev/null || true)"
+        echo "${NEW_URL}" > "${URL_FILE}"
+        echo "TUNNEL_URL ${NEW_URL}" >&2
+        # Rebuild Mini App when tunnel URL changes (phone otherwise keeps dead VITE_*).
+        if [[ "${NEW_URL}" != "${OLD_URL}" ]]; then
+          echo "tunnel_url_changed — scheduling pa_point_web_at_tunnel.sh" >&2
+          (
+            sleep 3
+            bash "${HOME}/poker_room/deploy/pa_point_web_at_tunnel.sh" \
+              >>"${HOME}/poker_point_web.log" 2>&1 \
+              || echo "point_web_failed" >&2
+          ) &
+        fi
       fi
     done
 # If the pipe ends, exit so always-on restarts us.

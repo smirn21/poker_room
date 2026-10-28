@@ -35,7 +35,18 @@ async function request<T>(
     }
   }
 
-  const res = await fetch(`${API}${path}`, { ...opts, headers, body });
+  let res: Response;
+  try {
+    res = await fetch(`${API}${path}`, { ...opts, headers, body });
+  } catch {
+    let host = API;
+    try {
+      host = new URL(API).host;
+    } catch {
+      /* keep raw */
+    }
+    throw new Error(`No connection to API (${host})`);
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(
