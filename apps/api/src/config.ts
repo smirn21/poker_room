@@ -3,11 +3,9 @@ import { readFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-/** Resolve live public API base (env or PA tunnel file). Safe to call anytime. */
+/** Resolve live public API base. Prefer PA tunnel file — env often goes stale after restart. */
 export function resolvePublicApiUrl(): string {
-  const fromEnv = (process.env.PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
-  if (fromEnv) return fromEnv;
-  // PA always-on writes the live tunnel here after cloudflared starts.
+  // PA always-on / pa_point_web write the live tunnel here.
   const candidates = [
     join(homedir(), "poker_room_api_url.txt"),
     join(process.cwd(), "..", "..", "poker_room_api_url.txt"),
@@ -21,7 +19,7 @@ export function resolvePublicApiUrl(): string {
       /* ignore */
     }
   }
-  return "";
+  return (process.env.PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
 }
 
 export const config = {
