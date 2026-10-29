@@ -162,6 +162,21 @@ def main() -> int:
     except urllib.error.HTTPError as e:
         print("BAD_SIG_STATUS", e.code)
 
+    # Final good delivery clears lastError left by the intentional bad-sig probe.
+    event2 = dict(event)
+    event2["event_id"] = "verify-" + uuid.uuid4().hex
+    event2["tx_id"] = "verifytx" + uuid.uuid4().hex[:48]
+    raw2 = json.dumps(event2, separators=(",", ":")).encode()
+    sig2 = hmac.new(secret.encode(), raw2, hashlib.sha256).hexdigest()
+    good2 = urllib.request.Request(
+        webhook,
+        data=raw2,
+        method="POST",
+        headers={"Content-Type": "application/json", "X-Signature": sig2},
+    )
+    with urllib.request.urlopen(good2, timeout=20, context=ctx) as resp:
+        print("WEBHOOK_STATUS2", resp.status, resp.read().decode()[:200])
+
     h2 = json.load(urllib.request.urlopen(live + "/health", timeout=15, context=ctx))
     th2 = h2.get("tronhooks", {})
     print(
@@ -180,8 +195,13 @@ def main() -> int:
         timeout=15,
         context=ctx,
     )
-    html = static.read(200).decode("utf-8", "ignore")
-    print("STATIC_STATUS", static.status, "has_root", "<div id=\"root\">" in html or "root" in html)
+    html = static.read().decode("utf-8", "ignore")
+    print(
+        "STATIC_STATUS",
+        static.status,
+        "has_root",
+        '<div id="root">' in html,
+    )
 
     ok = (
         h.get("ok")
