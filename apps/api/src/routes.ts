@@ -13,6 +13,12 @@ import {
   formatUsdtMicro,
 } from "./depositService.js";
 import { pollTronUsdtDeposits, tronWatchStatus } from "./tronWatcher.js";
+import {
+  expectedWebhookUrl,
+  listTronhooksWatches,
+  registerTronhooksWatch,
+  tronhooksStatus,
+} from "./tronhooks.js";
 
 function toUserDTO(u: {
   id: string;
@@ -765,8 +771,59 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
           d.amountUsdtMicro != null ? formatUsdtMicro(d.amountUsdtMicro) : null,
       })),
       watch: tronWatchStatus(),
+      tronhooks: tronhooksStatus(),
       payAddress: config.tronUsdtAddress || null,
       chipsPerUsdt: config.chipsPerUsdt,
+    };
+  });
+
+  app.post("/admin/deposits/tronhooks/register", async (req) => {
+    const user = await requireUser(app, req);
+    if (user.role !== "admin") throw httpError.forbidden();
+    const body = z
+      .object({ forceRecreate: z.boolean().optional() })
+      .parse(req.body ?? {});
+    try {
+      const result = await registerTronhooksWatch({
+        forceRecreate: body.forceRecreate === true,
+      });
+      return {
+        ok: true,
+        ...result,
+        hint: result.secret
+          ? "Save TRONHOOKS_WEBHOOK_SECRET now (shown once), then restart API."
+          : result.reused
+            ? "Watch already points at this webhook URL."
+            : null,
+        tronhooks: tronhooksStatus(),
+      };
+    } catch (e) {
+      throw httpError.badRequest(
+        e instanceof Error ? e.message : "TronHooks register failed",
+      );
+    }
+  });
+
+  app.get("/admin/deposits/tronhooks", async (req) => {
+    const user = await requireUser(app, req);
+    if (user.role !== "admin") throw httpError.forbidden();
+    let watches: unknown[] = [];
+    try {
+      if (config.tronhooksApiKey) {
+        watches = await listTronhooksWatches();
+      }
+    } catch (e) {
+      return {
+        tronhooks: tronhooksStatus(),
+        expectedWebhookUrl: expectedWebhookUrl(),
+        watches: [],
+        error: e instanceof Error ? e.message : String(e),
+      };
+    }
+    return {
+      tronhooks: tronhooksStatus(),
+      expectedWebhookUrl: expectedWebhookUrl(),
+      watches,
     };
   });
 

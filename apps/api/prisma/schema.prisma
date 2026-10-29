@@ -144,6 +144,14 @@ model UnmatchedDeposit {
   updatedAt       DateTime @updatedAt
 }
 
+/** Durable webhook inbox (e.g. TronHooks event_id) for at-least-once deliveries. */
+model WebhookInbox {
+  id        String   @id
+  source    String   @default("tronhooks")
+  txid      String?
+  createdAt DateTime @default(now())
+}
+
 model ChatMessage {
   id        String   @id @default(cuid())
   tableId   String

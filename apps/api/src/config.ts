@@ -27,13 +27,30 @@ export const config = {
   trongridBase: (
     process.env.TRONGRID_BASE_URL ?? "https://api.trongrid.io"
   ).replace(/\/$/, ""),
+  /**
+   * Public HTTPS base of this API (cloudflare tunnel URL).
+   * Used to register TronHooks webhook: {PUBLIC_API_URL}/webhooks/tronhooks
+   */
+  publicApiUrl: (process.env.PUBLIC_API_URL ?? "").trim().replace(/\/$/, ""),
+  /** TronHooks API key (tw_live_…) — create/list watches */
+  tronhooksApiKey: (process.env.TRONHOOKS_API_KEY ?? "").trim(),
+  /** whsec_… shown once when watch is created — verify X-Signature */
+  tronhooksWebhookSecret: (process.env.TRONHOOKS_WEBHOOK_SECRET ?? "").trim(),
+  /**
+   * Accept TronHooks webhooks (needs TRONHOOKS_WEBHOOK_SECRET + TRON_USDT_ADDRESS).
+   * Default ON when secret is present.
+   */
+  tronhooksEnabled:
+    process.env.TRONHOOKS_ENABLED === "1" ||
+    (process.env.TRONHOOKS_ENABLED !== "0" &&
+      Boolean((process.env.TRONHOOKS_WEBHOOK_SECRET ?? "").trim())),
   /** How many chips one whole USDT buys */
   chipsPerUsdt: Number(process.env.CHIPS_PER_USDT ?? 100),
   depositTtlMinutes: Number(process.env.DEPOSIT_TTL_MINUTES ?? 60),
   /**
-   * Poll TronGrid for incoming USDT (needs TRON_USDT_ADDRESS).
-   * Works without API key at low volume; set TRONGRID_API_KEY when available.
+   * Optional TronGrid poll fallback. Prefer TronHooks webhooks.
+   * Set TRON_WATCH_ENABLED=1 only if you need poll backup.
    */
   tronWatchEnabled: process.env.TRON_WATCH_ENABLED === "1",
-  tronWatchIntervalMs: Number(process.env.TRON_WATCH_INTERVAL_MS ?? 20_000),
+  tronWatchIntervalMs: Number(process.env.TRON_WATCH_INTERVAL_MS ?? 60_000),
 };

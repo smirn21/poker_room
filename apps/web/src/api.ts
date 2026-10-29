@@ -219,9 +219,31 @@ export const api = {
         lastOkAt: string | null;
         lastError: string | null;
       };
+      tronhooks?: {
+        enabled: boolean;
+        hasApiKey: boolean;
+        hasSecret: boolean;
+        webhookUrl: string | null;
+        lastEventAt: string | null;
+        lastError: string | null;
+        lastResult: string | null;
+      };
       payAddress: string | null;
       chipsPerUsdt: number;
     }>("/admin/deposits"),
+  registerTronhooksWatch: (forceRecreate = false) =>
+    request<{
+      ok: boolean;
+      watchId: string;
+      webhookUrl: string;
+      secret: string | null;
+      created: boolean;
+      reused: boolean;
+      hint: string | null;
+    }>("/admin/deposits/tronhooks/register", {
+      method: "POST",
+      body: JSON.stringify({ forceRecreate }),
+    }),
   unmatchedDeposits: () =>
     request<{
       unmatched: {

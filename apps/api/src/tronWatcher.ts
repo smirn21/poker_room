@@ -1,10 +1,6 @@
 import { config } from "./config.js";
-import { prisma } from "./db.js";
-import {
-  confirmDepositIntent,
-  expireStaleDeposits,
-  formatUsdtMicro,
-} from "./depositService.js";
+import { applyIncomingUsdtBatch } from "./depositMatch.js";
+import { expireStaleDeposits } from "./depositService.js";
 
 type Trc20Tx = {
   transaction_id: string;
@@ -76,92 +72,35 @@ export async function pollTronUsdtDeposits(log?: {
   warn: (o: unknown, msg?: string) => void;
   error: (o: unknown, msg?: string) => void;
 }): Promise<{ matched: number; unmatched: number; expired: number }> {
-  const expired = await expireStaleDeposits();
   if (!config.tronUsdtAddress) {
+    const expired = await expireStaleDeposits();
     return { matched: 0, unmatched: 0, expired };
   }
 
   const txs = await fetchIncomingUsdt();
-  let matched = 0;
-  let unmatched = 0;
   const now = Date.now();
   const lookbackMs = Math.max(config.depositTtlMinutes, 60) * 60_000 * 2;
 
-  for (const tx of txs) {
-    if (!tx.transaction_id || !tx.value) continue;
-    if (tx.to && tx.to !== config.tronUsdtAddress) continue;
-    if (now - (tx.block_timestamp || 0) > lookbackMs) continue;
+  const batch = txs
+    .filter((tx) => {
+      if (!tx.transaction_id || !tx.value) return false;
+      if (tx.to && tx.to !== config.tronUsdtAddress) return false;
+      if (now - (tx.block_timestamp || 0) > lookbackMs) return false;
+      const micro = Number(tx.value);
+      return Number.isFinite(micro) && micro > 0;
+    })
+    .map((tx) => ({
+      txid: tx.transaction_id,
+      amountUsdtMicro: Number(tx.value),
+      fromAddress: tx.from,
+      toAddress: tx.to,
+    }));
 
-    const already = await prisma.depositIntent.findFirst({
-      where: { txid: tx.transaction_id },
-      select: { id: true },
-    });
-    if (already) continue;
-
-    const knownUnmatched = await prisma.unmatchedDeposit.findUnique({
-      where: { txid: tx.transaction_id },
-    });
-    if (knownUnmatched) continue;
-
-    let micro = 0;
-    try {
-      micro = Number(tx.value);
-    } catch {
-      continue;
-    }
-    if (!Number.isFinite(micro) || micro <= 0) continue;
-
-    const intent = await prisma.depositIntent.findFirst({
-      where: {
-        status: "pending",
-        asset: "USDT",
-        network: "TRC20",
-        amountUsdtMicro: micro,
-        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-      },
-      orderBy: { createdAt: "asc" },
-    });
-
-    if (intent) {
-      try {
-        await confirmDepositIntent(intent.id, {
-          txid: tx.transaction_id,
-          confirmedBy: "auto",
-        });
-        matched += 1;
-        log?.info?.(
-          {
-            intentId: intent.id,
-            txid: tx.transaction_id,
-            usdt: formatUsdtMicro(micro),
-          },
-          "deposit_auto_confirmed",
-        );
-      } catch (e) {
-        log?.warn?.(
-          { err: e instanceof Error ? e.message : e, txid: tx.transaction_id },
-          "deposit_auto_confirm_failed",
-        );
-      }
-      continue;
-    }
-
-    await prisma.unmatchedDeposit.create({
-      data: {
-        txid: tx.transaction_id,
-        amountUsdtMicro: micro,
-        fromAddress: tx.from,
-        toAddress: tx.to,
-        note: `No pending intent for ${formatUsdtMicro(micro)} USDT`,
-      },
-    });
-    unmatched += 1;
-  }
-
-  lastMatched = matched;
+  const result = await applyIncomingUsdtBatch(batch, log);
+  lastMatched = result.matched;
   lastOkAt = new Date().toISOString();
   lastError = null;
-  return { matched, unmatched, expired };
+  return result;
 }
 
 export function startTronWatcher(log: {

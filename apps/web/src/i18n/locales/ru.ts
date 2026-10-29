@@ -86,12 +86,18 @@ export const ru = {
   depositAddress: "Адрес",
   depositClubAddress: "Адрес клуба",
   depositAdminHint:
-    "Ожидающие заявки с уникальной суммой. Авто-поиск в Tron или ручное подтверждение.",
-  depositWatchStatus: "Watcher: {on} · последний опрос: {at} · ошибка: {err}",
+    "Авто: TronHooks webhook по уникальной сумме. Админ — только unmatched / споры.",
+  depositWatchStatus: "TronGrid poll: {on} · опрос: {at} · ошибка: {err}",
+  depositHooksStatus:
+    "TronHooks: {on} · webhook: {url} · событие: {at} · {result} · ошибка: {err}",
   depositPollOk:
     "Опрос: зачислено {matched}, без пары {unmatched}, истекло {expired}",
   errDepositPoll: "Не удалось опросить Tron",
-  pollTronNow: "Проверить Tron сейчас",
+  pollTronNow: "Проверить TronGrid сейчас",
+  registerTronhooks: "Зарегистрировать TronHooks watch",
+  errTronhooksRegister: "Не удалось зарегистрировать TronHooks",
+  tronhooksSecretOnce:
+    "Скопируй SECRET в .env как TRONHOOKS_WEBHOOK_SECRET и перезапусти API: {secret}",
   unmatchedDeposits: "Переводы без заявки",
   expiresAt: "до {t}",
   copy: "Копировать",

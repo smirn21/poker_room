@@ -32,12 +32,17 @@ VITE_API_URL=${URL}
 VITE_WS_URL=${URL}
 EOF
 
-# Keep API CORS on the Mini App origin
+# Keep API CORS on the Mini App origin + public API URL for TronHooks
 if [[ -f "${ROOT}/.env" ]]; then
   if grep -q '^CORS_ORIGIN=' "${ROOT}/.env"; then
     sed -i 's|^CORS_ORIGIN=.*|CORS_ORIGIN=https://kiosk-hedgehog22.eu.pythonanywhere.com|' "${ROOT}/.env"
   else
     echo 'CORS_ORIGIN=https://kiosk-hedgehog22.eu.pythonanywhere.com' >> "${ROOT}/.env"
+  fi
+  if grep -q '^PUBLIC_API_URL=' "${ROOT}/.env"; then
+    sed -i "s|^PUBLIC_API_URL=.*|PUBLIC_API_URL=${URL}|" "${ROOT}/.env"
+  else
+    echo "PUBLIC_API_URL=${URL}" >> "${ROOT}/.env"
   fi
 fi
 ln -sfn "${ROOT}/.env" "${ROOT}/apps/api/.env"

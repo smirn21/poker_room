@@ -109,6 +109,15 @@ export function App() {
     lastOkAt: string | null;
     lastError: string | null;
   } | null>(null);
+  const [tronhooksInfo, setTronhooksInfo] = useState<{
+    enabled: boolean;
+    hasApiKey: boolean;
+    hasSecret: boolean;
+    webhookUrl: string | null;
+    lastEventAt: string | null;
+    lastError: string | null;
+    lastResult: string | null;
+  } | null>(null);
   const [depositPayAddress, setDepositPayAddress] = useState<string | null>(
     null,
   );
@@ -374,6 +383,7 @@ export function App() {
     ]);
     setPending(deps.deposits);
     setDepositWatch(deps.watch);
+    setTronhooksInfo(deps.tronhooks ?? null);
     setDepositPayAddress(deps.payAddress);
     setUnmatched(um.unmatched);
   }
@@ -408,6 +418,7 @@ export function App() {
     ]);
     setPending(deps.deposits);
     setDepositWatch(deps.watch);
+    setTronhooksInfo(deps.tronhooks ?? null);
     setDepositPayAddress(deps.payAddress);
     setUnmatched(um.unmatched);
     setHouseStats({
@@ -445,6 +456,21 @@ export function App() {
       await refreshAdminDeposits();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errDepositPoll"));
+    }
+  }
+
+  async function registerTronhooksNow() {
+    try {
+      setError(null);
+      const r = await api.registerTronhooksWatch(false);
+      if (r.secret) {
+        setAdjustMsg(t("tronhooksSecretOnce", { secret: r.secret }));
+      } else {
+        setAdjustMsg(r.hint ?? t("registerTronhooks"));
+      }
+      await refreshAdminDeposits();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("errTronhooksRegister"));
     }
   }
 
@@ -711,6 +737,19 @@ export function App() {
                 {t("depositClubAddress")}: <strong>{depositPayAddress}</strong>
               </p>
             )}
+            {tronhooksInfo && (
+              <p className="hint hint-tight mono-wrap">
+                {t("depositHooksStatus", {
+                  on: tronhooksInfo.enabled ? t("on") : t("off"),
+                  url: tronhooksInfo.webhookUrl ?? "—",
+                  at: tronhooksInfo.lastEventAt
+                    ? new Date(tronhooksInfo.lastEventAt).toLocaleString()
+                    : "—",
+                  result: tronhooksInfo.lastResult ?? "—",
+                  err: tronhooksInfo.lastError ?? "—",
+                })}
+              </p>
+            )}
             {depositWatch && (
               <p className="hint hint-tight">
                 {t("depositWatchStatus", {
@@ -722,6 +761,13 @@ export function App() {
                 })}
               </p>
             )}
+            <button
+              type="button"
+              className="secondary primary-wide"
+              onClick={() => void registerTronhooksNow()}
+            >
+              {t("registerTronhooks")}
+            </button>
             <button
               type="button"
               className="secondary primary-wide"
