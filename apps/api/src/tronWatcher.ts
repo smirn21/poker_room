@@ -23,7 +23,7 @@ let lastMatched = 0;
 export function tronWatchStatus() {
   return {
     enabled: config.tronWatchEnabled && Boolean(config.tronUsdtAddress),
-    provider: config.tronProvider,
+    provider: "trongrid" as const,
     address: config.tronUsdtAddress || null,
     contract: config.tronUsdtContract,
     intervalMs: config.tronWatchIntervalMs,
@@ -33,60 +33,8 @@ export function tronWatchStatus() {
   };
 }
 
-async function fetchFromTronScan(): Promise<Trc20Tx[]> {
-  const url = new URL(
-    `${config.tronscanBase}/api/token_trc20/transfers-with-status`,
-  );
-  url.searchParams.set("limit", "50");
-  url.searchParams.set("start", "0");
-  url.searchParams.set("address", config.tronUsdtAddress);
-  url.searchParams.set("trc20Id", config.tronUsdtContract);
-  url.searchParams.set("direction", "2"); // incoming only
-  url.searchParams.set("reverse", "true");
-
-  const headers: Record<string, string> = { Accept: "application/json" };
-  if (config.tronscanApiKey) {
-    headers["TRON-PRO-API-KEY"] = config.tronscanApiKey;
-  }
-
-  const res = await fetch(url, { headers });
-  if (!res.ok) {
-    throw new Error(`TronScan ${res.status}: ${await res.text()}`);
-  }
-  const json = (await res.json()) as {
-    code?: number;
-    data?: Array<{
-      hash?: string;
-      from?: string;
-      to?: string;
-      amount?: string;
-      block_timestamp?: number;
-      confirmed?: number | boolean;
-      final_result?: string;
-      revert?: number | boolean;
-    }>;
-  };
-  if (json.code != null && json.code !== 200) {
-    throw new Error(`TronScan code ${json.code}`);
-  }
-
-  return (json.data ?? [])
-    .filter((row) => {
-      if (!row.hash || !row.amount) return false;
-      if (row.revert === 1 || row.revert === true) return false;
-      if (row.final_result && row.final_result !== "SUCCESS") return false;
-      return true;
-    })
-    .map((row) => ({
-      transaction_id: row.hash!,
-      from: row.from ?? "",
-      to: row.to ?? "",
-      value: row.amount!,
-      block_timestamp: Number(row.block_timestamp ?? 0),
-    }));
-}
-
-async function fetchFromTronGrid(): Promise<Trc20Tx[]> {
+async function fetchIncomingUsdt(): Promise<Trc20Tx[]> {
+  if (!config.tronUsdtAddress) return [];
   const url = new URL(
     `${config.trongridBase}/v1/accounts/${config.tronUsdtAddress}/transactions/trc20`,
   );
@@ -121,14 +69,6 @@ async function fetchFromTronGrid(): Promise<Trc20Tx[]> {
       value: row.value!,
       block_timestamp: Number(row.block_timestamp ?? 0),
     }));
-}
-
-async function fetchIncomingUsdt(): Promise<Trc20Tx[]> {
-  if (!config.tronUsdtAddress) return [];
-  if (config.tronProvider === "tronscan") {
-    return fetchFromTronScan();
-  }
-  return fetchFromTronGrid();
 }
 
 export async function pollTronUsdtDeposits(log?: {
@@ -237,9 +177,6 @@ export function startTronWatcher(log: {
     log.warn({}, "tron_watch_enabled_but_no_address");
     return;
   }
-  if (config.tronProvider === "tronscan" && !config.tronscanApiKey) {
-    log.warn({}, "tron_watch_tronscan_without_api_key");
-  }
   if (timer) return;
 
   const tick = async () => {
@@ -262,9 +199,10 @@ export function startTronWatcher(log: {
   timer = setInterval(() => void tick(), config.tronWatchIntervalMs);
   log.info(
     {
-      provider: config.tronProvider,
+      provider: "trongrid",
       address: config.tronUsdtAddress,
       intervalMs: config.tronWatchIntervalMs,
+      hasApiKey: Boolean(config.trongridApiKey),
     },
     "tron_watch_started",
   );
