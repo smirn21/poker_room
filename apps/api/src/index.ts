@@ -61,4 +61,7 @@ await registerRoutes(app);
 await app.listen({ port: config.port, host: "0.0.0.0" });
 setupSocket(app.server, app);
 
+const { startTronWatcher } = await import("./tronWatcher.js");
+startTronWatcher(app.log);
+
 app.log.info(`API on :${config.port} (devBypass=${config.devBypassAuth})`);

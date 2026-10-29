@@ -87,11 +87,43 @@ export function App() {
     {
       id: string;
       amountChips: number;
+      amountUsdt: string | null;
       asset: string;
+      network?: string;
+      expiresAt?: string | null;
       user: { name: string; telegramId: string };
     }[]
   >([]);
-  const [depositRef, setDepositRef] = useState<string | null>(null);
+  const [unmatched, setUnmatched] = useState<
+    {
+      id: string;
+      txid: string;
+      amountUsdt: string;
+      fromAddress: string | null;
+      note: string | null;
+    }[]
+  >([]);
+  const [depositWatch, setDepositWatch] = useState<{
+    enabled: boolean;
+    address: string | null;
+    lastOkAt: string | null;
+    lastError: string | null;
+  } | null>(null);
+  const [depositPayAddress, setDepositPayAddress] = useState<string | null>(
+    null,
+  );
+  const [depositInstr, setDepositInstr] = useState<{
+    address: string;
+    amountUsdt: string;
+    amountChips: number;
+    reference: string | null;
+    expiresAt: string | null;
+    note: string;
+    intentId: string;
+  } | null>(null);
+  const [depositCopied, setDepositCopied] = useState<"addr" | "amt" | null>(
+    null,
+  );
   const [adjustTgId, setAdjustTgId] = useState("");
   const [adjustAmt, setAdjustAmt] = useState(1000);
   const [adjustTarget, setAdjustTarget] = useState<UserDTO | null>(null);
@@ -306,11 +338,44 @@ export function App() {
   async function makeDeposit() {
     try {
       setError(null);
+      setDepositCopied(null);
       const r = await api.deposit(depositAmt, "USDT");
-      setDepositRef(r.intent.externalRef);
+      setDepositInstr({
+        address: r.instructions.address,
+        amountUsdt: r.instructions.amountUsdt,
+        amountChips: r.instructions.amountChips,
+        reference: r.instructions.reference,
+        expiresAt: r.instructions.expiresAt,
+        note: r.instructions.note,
+        intentId: r.intent.id,
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errDeposit"));
     }
+  }
+
+  async function copyDepositField(kind: "addr" | "amt") {
+    if (!depositInstr) return;
+    const text =
+      kind === "addr" ? depositInstr.address : depositInstr.amountUsdt;
+    try {
+      await navigator.clipboard.writeText(text);
+      setDepositCopied(kind);
+      window.setTimeout(() => setDepositCopied(null), 2000);
+    } catch {
+      setError(t("copyFailed"));
+    }
+  }
+
+  async function refreshAdminDeposits() {
+    const [deps, um] = await Promise.all([
+      api.pendingDeposits(),
+      api.unmatchedDeposits().catch(() => ({ unmatched: [] })),
+    ]);
+    setPending(deps.deposits);
+    setDepositWatch(deps.watch);
+    setDepositPayAddress(deps.payAddress);
+    setUnmatched(um.unmatched);
   }
 
   async function createInvite() {
@@ -335,12 +400,16 @@ export function App() {
     setAdjustMsg(null);
     setAdjustTarget(null);
     setGate("admin");
-    const [deps, house, club] = await Promise.all([
+    const [deps, house, club, um] = await Promise.all([
       api.pendingDeposits(),
       api.houseIncome(),
       api.clubSettings(),
+      api.unmatchedDeposits().catch(() => ({ unmatched: [] })),
     ]);
     setPending(deps.deposits);
+    setDepositWatch(deps.watch);
+    setDepositPayAddress(deps.payAddress);
+    setUnmatched(um.unmatched);
     setHouseStats({
       balance: house.balance,
       totalHouseFees: house.totalHouseFees,
@@ -352,10 +421,31 @@ export function App() {
 
   async function confirmDep(id: string) {
     await api.confirmDeposit(id);
-    const r = await api.pendingDeposits();
-    setPending(r.deposits);
+    await refreshAdminDeposits();
     const me = await api.me();
     setUser(me.user);
+  }
+
+  async function cancelDep(id: string) {
+    await api.cancelDeposit(id);
+    await refreshAdminDeposits();
+  }
+
+  async function pollDepsNow() {
+    try {
+      setError(null);
+      const r = await api.pollDeposits();
+      setAdjustMsg(
+        t("depositPollOk", {
+          matched: r.matched,
+          unmatched: r.unmatched,
+          expired: r.expired,
+        }),
+      );
+      await refreshAdminDeposits();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("errDepositPoll"));
+    }
   }
 
   async function lookupAdjustTarget() {
@@ -613,24 +703,96 @@ export function App() {
 
           <section className="panel panel-compact admin-card">
             <h2 className="card-title">{t("cardDeposits")}</h2>
+            <p className="hint hint-tight">
+              {t("depositAdminHint")}
+            </p>
+            {depositPayAddress && (
+              <p className="hint hint-tight mono-wrap">
+                {t("depositClubAddress")}: <strong>{depositPayAddress}</strong>
+              </p>
+            )}
+            {depositWatch && (
+              <p className="hint hint-tight">
+                {t("depositWatchStatus", {
+                  on: depositWatch.enabled ? t("on") : t("off"),
+                  at: depositWatch.lastOkAt
+                    ? new Date(depositWatch.lastOkAt).toLocaleString()
+                    : "—",
+                  err: depositWatch.lastError ?? "—",
+                })}
+              </p>
+            )}
+            <button
+              type="button"
+              className="secondary primary-wide"
+              onClick={() => void pollDepsNow()}
+            >
+              {t("pollTronNow")}
+            </button>
             {pending.length === 0 && <p className="hint">{t("none")}</p>}
             <div className="admin-list">
-              {pending.slice(0, 4).map((d) => (
+              {pending.slice(0, 8).map((d) => (
                 <div key={d.id} className="table-item table-item-compact">
                   <div>
                     <div>
-                      {d.user.name}: {d.amountChips} ({d.asset})
+                      {d.user.name}: {d.amountChips} {t("chips")}
+                      {d.amountUsdt ? ` · ${d.amountUsdt} USDT` : ""}
                     </div>
                     <div className="tg-id">
                       {t("telegramIdShort", { id: d.user.telegramId })}
+                      {d.expiresAt
+                        ? ` · ${t("expiresAt", {
+                            t: new Date(d.expiresAt).toLocaleTimeString(),
+                          })}`
+                        : ""}
                     </div>
                   </div>
-                  <button type="button" onClick={() => confirmDep(d.id)}>
-                    {t("confirm")}
-                  </button>
+                  <div className="row">
+                    <button type="button" onClick={() => void confirmDep(d.id)}>
+                      {t("confirm")}
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => void cancelDep(d.id)}
+                    >
+                      {t("cancel")}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
+            {unmatched.length > 0 && (
+              <>
+                <h3 className="card-title" style={{ marginTop: 12 }}>
+                  {t("unmatchedDeposits")}
+                </h3>
+                <div className="admin-list">
+                  {unmatched.slice(0, 6).map((u) => (
+                    <div key={u.id} className="table-item table-item-compact">
+                      <div>
+                        <div>
+                          {u.amountUsdt} USDT
+                        </div>
+                        <div className="hint mono-wrap">{u.txid}</div>
+                        {u.note && <div className="hint">{u.note}</div>}
+                      </div>
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() =>
+                          void api
+                            .ignoreUnmatchedDeposit(u.id)
+                            .then(() => refreshAdminDeposits())
+                        }
+                      >
+                        {t("ignore")}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </section>
 
           <section className="panel panel-compact admin-card">
@@ -877,7 +1039,7 @@ export function App() {
           />
         </p>
         <div className="panel panel-compact">
-          <p className="hint hint-tight">{t("walletHintShort")}</p>
+          <p className="hint hint-tight">{t("walletHintUsdt")}</p>
           <label htmlFor="dep">
             {t("chipsToBuy")}
             <input
@@ -887,16 +1049,59 @@ export function App() {
               onChange={(e) => setDepositAmt(Number(e.target.value))}
             />
           </label>
-          <button type="button" className="primary-wide" onClick={makeDeposit}>
+          <button
+            type="button"
+            className="primary-wide"
+            onClick={() => void makeDeposit()}
+          >
             {t("createUsdtDeposit")}
           </button>
-          {depositRef && (
-            <p className="hint" style={{ marginTop: 8 }}>
-              <RichText
-                template={t("reference")}
-                values={{ ref: <strong>{depositRef}</strong> }}
-              />
-            </p>
+          {depositInstr && (
+            <div className="deposit-paybox">
+              <p className="hint hint-tight">{t("depositExactHint")}</p>
+              <div className="deposit-row">
+                <span className="deposit-label">{t("depositNetwork")}</span>
+                <strong>USDT · TRC20</strong>
+              </div>
+              <div className="deposit-row">
+                <span className="deposit-label">{t("depositAmount")}</span>
+                <strong className="mono">{depositInstr.amountUsdt}</strong>
+                <button
+                  type="button"
+                  className="secondary btn-compact"
+                  onClick={() => void copyDepositField("amt")}
+                >
+                  {depositCopied === "amt" ? t("copied") : t("copy")}
+                </button>
+              </div>
+              <div className="deposit-row">
+                <span className="deposit-label">{t("depositAddress")}</span>
+                <strong className="mono mono-wrap">{depositInstr.address}</strong>
+                <button
+                  type="button"
+                  className="secondary btn-compact"
+                  onClick={() => void copyDepositField("addr")}
+                >
+                  {depositCopied === "addr" ? t("copied") : t("copy")}
+                </button>
+              </div>
+              {depositInstr.expiresAt && (
+                <p className="hint">
+                  {t("expiresAt", {
+                    t: new Date(depositInstr.expiresAt).toLocaleString(),
+                  })}
+                </p>
+              )}
+              {depositInstr.reference && (
+                <p className="hint">
+                  <RichText
+                    template={t("reference")}
+                    values={{ ref: <strong>{depositInstr.reference}</strong> }}
+                  />
+                </p>
+              )}
+              <p className="hint hint-tight">{depositInstr.note}</p>
+            </div>
           )}
         </div>
         {error && <p className="error">{error}</p>}

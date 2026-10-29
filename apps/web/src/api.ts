@@ -138,13 +138,60 @@ export const api = {
     request(`/tables/${id}/next-hand`, { method: "POST" }),
   startHand: (id: string) =>
     request(`/tables/${id}/start`, { method: "POST" }),
-  deposit: (amountChips: number, asset: "USDT" | "TON" = "USDT") =>
+  depositConfig: () =>
     request<{
-      intent: { id: string; externalRef: string | null };
-      instructions: { note: string; reference: string | null };
+      enabled: boolean;
+      network: string;
+      asset: string;
+      address: string | null;
+      chipsPerUsdt: number;
+      ttlMinutes: number;
+      watchEnabled: boolean;
+    }>("/wallet/deposit/config"),
+  deposit: (amountChips: number, asset: "USDT" = "USDT") =>
+    request<{
+      intent: {
+        id: string;
+        status: string;
+        amountChips: number;
+        amountUsdt: string;
+        amountUsdtMicro: number | null;
+        asset: string;
+        network: string;
+        payAddress: string | null;
+        externalRef: string | null;
+        expiresAt: string | null;
+      };
+      instructions: {
+        network: string;
+        asset: string;
+        address: string;
+        amountUsdt: string;
+        amountChips: number;
+        reference: string | null;
+        expiresAt: string | null;
+        note: string;
+      };
     }>("/wallet/deposit", {
       method: "POST",
       body: JSON.stringify({ amountChips, asset }),
+    }),
+  myDeposits: () =>
+    request<{
+      deposits: {
+        id: string;
+        status: string;
+        amountChips: number;
+        amountUsdt: string | null;
+        payAddress: string | null;
+        txid: string | null;
+        expiresAt: string | null;
+        createdAt: string;
+      }[];
+    }>("/wallet/deposits"),
+  cancelMyDeposit: (id: string) =>
+    request<{ ok: boolean }>(`/wallet/deposits/${encodeURIComponent(id)}/cancel`, {
+      method: "POST",
     }),
   ledger: () => request<{ entries: unknown[] }>("/wallet/ledger"),
   createInvite: (maxUses = 5) =>
@@ -157,12 +204,60 @@ export const api = {
       deposits: {
         id: string;
         amountChips: number;
+        amountUsdt: string | null;
         asset: string;
+        network: string;
+        status: string;
+        payAddress: string | null;
+        expiresAt: string | null;
+        txid: string | null;
         user: { name: string; telegramId: string };
       }[];
+      watch: {
+        enabled: boolean;
+        address: string | null;
+        lastOkAt: string | null;
+        lastError: string | null;
+      };
+      payAddress: string | null;
+      chipsPerUsdt: number;
     }>("/admin/deposits"),
-  confirmDeposit: (id: string) =>
-    request(`/admin/deposits/${id}/confirm`, { method: "POST" }),
+  unmatchedDeposits: () =>
+    request<{
+      unmatched: {
+        id: string;
+        txid: string;
+        amountUsdt: string;
+        fromAddress: string | null;
+        note: string | null;
+        createdAt: string;
+      }[];
+    }>("/admin/deposits/unmatched"),
+  pollDeposits: () =>
+    request<{
+      ok: boolean;
+      matched: number;
+      unmatched: number;
+      expired: number;
+    }>("/admin/deposits/poll", { method: "POST" }),
+  confirmDeposit: (id: string, txid?: string) =>
+    request(`/admin/deposits/${encodeURIComponent(id)}/confirm`, {
+      method: "POST",
+      body: JSON.stringify(txid ? { txid } : {}),
+    }),
+  cancelDeposit: (id: string) =>
+    request(`/admin/deposits/${encodeURIComponent(id)}/cancel`, {
+      method: "POST",
+    }),
+  ignoreUnmatchedDeposit: (id: string) =>
+    request(`/admin/deposits/unmatched/${encodeURIComponent(id)}/ignore`, {
+      method: "POST",
+    }),
+  linkUnmatchedDeposit: (id: string, intentId: string) =>
+    request(`/admin/deposits/unmatched/${encodeURIComponent(id)}/link`, {
+      method: "POST",
+      body: JSON.stringify({ intentId }),
+    }),
   houseIncome: () =>
     request<{
       balance: number;

@@ -16,4 +16,20 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL ?? "file:./dev.db",
   /** Seconds a busted player has to rebuy before being removed */
   rebuyGraceSeconds: Number(process.env.REBUY_GRACE_SECONDS ?? 300),
+
+  /** USDT TRC20 club receive address (Trust Wallet / your wallet). */
+  tronUsdtAddress: (process.env.TRON_USDT_ADDRESS ?? "").trim(),
+  tronUsdtContract: (
+    process.env.TRON_USDT_CONTRACT ?? "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
+  ).trim(),
+  trongridApiKey: (process.env.TRONGRID_API_KEY ?? "").trim(),
+  trongridBase: (
+    process.env.TRONGRID_BASE_URL ?? "https://api.trongrid.io"
+  ).replace(/\/$/, ""),
+  /** How many chips one whole USDT buys */
+  chipsPerUsdt: Number(process.env.CHIPS_PER_USDT ?? 100),
+  depositTtlMinutes: Number(process.env.DEPOSIT_TTL_MINUTES ?? 60),
+  /** Poll TronGrid for incoming USDT (needs TRON_USDT_ADDRESS) */
+  tronWatchEnabled: process.env.TRON_WATCH_ENABLED === "1",
+  tronWatchIntervalMs: Number(process.env.TRON_WATCH_INTERVAL_MS ?? 20_000),
 };

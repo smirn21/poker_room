@@ -7,6 +7,12 @@ import { validateInitData } from "./telegramAuth.js";
 import { tableManager } from "./tableManager.js";
 import { httpError } from "./errors.js";
 import type { UserDTO } from "@poker/shared";
+import {
+  allocateUniqueUsdtMicro,
+  confirmDepositIntent,
+  formatUsdtMicro,
+} from "./depositService.js";
+import { pollTronUsdtDeposits, tronWatchStatus } from "./tronWatcher.js";
 
 function toUserDTO(u: {
   id: string;
@@ -563,32 +569,82 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     return { entries };
   });
 
+  app.get("/wallet/deposit/config", async (req) => {
+    await requireUser(app, req);
+    const configured = Boolean(config.tronUsdtAddress);
+    return {
+      enabled: configured,
+      network: "TRC20",
+      asset: "USDT",
+      address: configured ? config.tronUsdtAddress : null,
+      chipsPerUsdt: config.chipsPerUsdt,
+      ttlMinutes: config.depositTtlMinutes,
+      watchEnabled: config.tronWatchEnabled && configured,
+    };
+  });
+
   app.post("/wallet/deposit", async (req) => {
     const user = await requireUser(app, req);
     if (!user.whitelisted) throw httpError.forbidden();
+    if (!config.tronUsdtAddress) {
+      throw httpError.badRequest("USDT TRC20 deposits are not configured");
+    }
     const body = z
       .object({
         amountChips: z.number().int().positive().max(1_000_000),
-        asset: z.enum(["USDT", "TON"]).default("USDT"),
+        asset: z.enum(["USDT"]).default("USDT"),
       })
       .parse(req.body);
 
+    let amountUsdtMicro: number;
+    try {
+      amountUsdtMicro = await allocateUniqueUsdtMicro(body.amountChips);
+    } catch (e) {
+      throw httpError.badRequest(
+        e instanceof Error ? e.message : "Could not allocate amount",
+      );
+    }
+
+    const expiresAt = new Date(
+      Date.now() + config.depositTtlMinutes * 60_000,
+    );
+    const amountUsdt = formatUsdtMicro(amountUsdtMicro);
     const intent = await prisma.depositIntent.create({
       data: {
         userId: user.id,
         amountChips: body.amountChips,
-        asset: body.asset,
-        externalRef: `MANUAL-${randomBytes(4).toString("hex")}`,
+        amountUsdtMicro,
+        asset: "USDT",
+        network: "TRC20",
+        payAddress: config.tronUsdtAddress,
+        externalRef: `USDT-${randomBytes(3).toString("hex").toUpperCase()}`,
+        expiresAt,
       },
     });
 
     return {
-      intent,
-      instructions: {
-        note: "MVP: send crypto to club wallet, then ask admin to confirm this intent.",
-        reference: intent.externalRef,
+      intent: {
+        id: intent.id,
+        status: intent.status,
         amountChips: intent.amountChips,
+        amountUsdt,
+        amountUsdtMicro: intent.amountUsdtMicro,
         asset: intent.asset,
+        network: intent.network,
+        payAddress: intent.payAddress,
+        externalRef: intent.externalRef,
+        expiresAt: intent.expiresAt,
+        createdAt: intent.createdAt,
+      },
+      instructions: {
+        network: "TRC20",
+        asset: "USDT",
+        address: config.tronUsdtAddress,
+        amountUsdt,
+        amountChips: intent.amountChips,
+        reference: intent.externalRef,
+        expiresAt: intent.expiresAt,
+        note: "Send exactly this USDT amount on TRON (TRC20) to the club address. Do not use ERC20/BEP20.",
       },
     };
   });
@@ -600,7 +656,28 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       orderBy: { createdAt: "desc" },
       take: 20,
     });
-    return { deposits };
+    return {
+      deposits: deposits.map((d) => ({
+        ...d,
+        amountUsdt:
+          d.amountUsdtMicro != null ? formatUsdtMicro(d.amountUsdtMicro) : null,
+      })),
+    };
+  });
+
+  app.post("/wallet/deposits/:id/cancel", async (req) => {
+    const user = await requireUser(app, req);
+    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const intent = await prisma.depositIntent.findUnique({ where: { id } });
+    if (!intent || intent.userId !== user.id) throw httpError.notFound();
+    if (intent.status !== "pending") {
+      throw httpError.badRequest("Already processed");
+    }
+    await prisma.depositIntent.update({
+      where: { id },
+      data: { status: "cancelled" },
+    });
+    return { ok: true };
   });
 
   /** Rake income for room owner */
@@ -663,45 +740,134 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   app.get("/admin/deposits", async (req) => {
     const user = await requireUser(app, req);
     if (user.role !== "admin") throw httpError.forbidden();
+    const q = z
+      .object({
+        status: z
+          .enum(["pending", "confirmed", "cancelled", "expired", "all"])
+          .default("pending"),
+      })
+      .parse(req.query);
+
     const deposits = await prisma.depositIntent.findMany({
-      where: { status: "pending" },
-      include: { user: true },
-      orderBy: { createdAt: "asc" },
+      where: q.status === "all" ? undefined : { status: q.status },
+      include: {
+        user: {
+          select: { name: true, telegramId: true, id: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50,
     });
-    return { deposits };
+    return {
+      deposits: deposits.map((d) => ({
+        ...d,
+        amountUsdt:
+          d.amountUsdtMicro != null ? formatUsdtMicro(d.amountUsdtMicro) : null,
+      })),
+      watch: tronWatchStatus(),
+      payAddress: config.tronUsdtAddress || null,
+      chipsPerUsdt: config.chipsPerUsdt,
+    };
+  });
+
+  app.get("/admin/deposits/unmatched", async (req) => {
+    const user = await requireUser(app, req);
+    if (user.role !== "admin") throw httpError.forbidden();
+    const rows = await prisma.unmatchedDeposit.findMany({
+      where: { status: "open" },
+      orderBy: { createdAt: "desc" },
+      take: 40,
+    });
+    return {
+      unmatched: rows.map((r) => ({
+        ...r,
+        amountUsdt: formatUsdtMicro(r.amountUsdtMicro),
+      })),
+    };
+  });
+
+  app.post("/admin/deposits/poll", async (req) => {
+    const user = await requireUser(app, req);
+    if (user.role !== "admin") throw httpError.forbidden();
+    try {
+      const result = await pollTronUsdtDeposits(app.log);
+      return { ok: true, ...result, watch: tronWatchStatus() };
+    } catch (e) {
+      throw httpError.badRequest(
+        e instanceof Error ? e.message : "Tron poll failed",
+      );
+    }
   });
 
   app.post("/admin/deposits/:id/confirm", async (req) => {
     const user = await requireUser(app, req);
     if (user.role !== "admin") throw httpError.forbidden();
     const { id } = z.object({ id: z.string() }).parse(req.params);
+    const body = z
+      .object({ txid: z.string().min(8).max(128).optional() })
+      .parse(req.body ?? {});
 
-    const intent = await prisma.depositIntent.findUniqueOrThrow({
-      where: { id },
-    });
+    try {
+      await confirmDepositIntent(id, {
+        txid: body.txid ?? null,
+        confirmedBy: "admin",
+      });
+    } catch (e) {
+      throw httpError.badRequest(
+        e instanceof Error ? e.message : "Confirm failed",
+      );
+    }
+    return { ok: true };
+  });
+
+  app.post("/admin/deposits/:id/cancel", async (req) => {
+    const user = await requireUser(app, req);
+    if (user.role !== "admin") throw httpError.forbidden();
+    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const intent = await prisma.depositIntent.findUnique({ where: { id } });
+    if (!intent) throw httpError.notFound();
     if (intent.status !== "pending") {
       throw httpError.badRequest("Already processed");
     }
-
-    await prisma.$transaction(async (tx) => {
-      await tx.depositIntent.update({
-        where: { id },
-        data: { status: "confirmed" },
-      });
-      await tx.user.update({
-        where: { id: intent.userId },
-        data: { balance: { increment: intent.amountChips } },
-      });
-      await tx.ledgerEntry.create({
-        data: {
-          userId: intent.userId,
-          kind: "deposit",
-          amount: intent.amountChips,
-          meta: JSON.stringify({ intentId: id, asset: intent.asset }),
-        },
-      });
+    await prisma.depositIntent.update({
+      where: { id },
+      data: { status: "cancelled" },
     });
+    return { ok: true };
+  });
 
+  app.post("/admin/deposits/unmatched/:id/ignore", async (req) => {
+    const user = await requireUser(app, req);
+    if (user.role !== "admin") throw httpError.forbidden();
+    const { id } = z.object({ id: z.string() }).parse(req.params);
+    await prisma.unmatchedDeposit.update({
+      where: { id },
+      data: { status: "ignored" },
+    });
+    return { ok: true };
+  });
+
+  app.post("/admin/deposits/unmatched/:id/link", async (req) => {
+    const user = await requireUser(app, req);
+    if (user.role !== "admin") throw httpError.forbidden();
+    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const body = z.object({ intentId: z.string() }).parse(req.body);
+    const row = await prisma.unmatchedDeposit.findUnique({ where: { id } });
+    if (!row || row.status !== "open") throw httpError.notFound();
+    try {
+      await confirmDepositIntent(body.intentId, {
+        txid: row.txid,
+        confirmedBy: "admin",
+      });
+    } catch (e) {
+      throw httpError.badRequest(
+        e instanceof Error ? e.message : "Link failed",
+      );
+    }
+    await prisma.unmatchedDeposit.update({
+      where: { id },
+      data: { status: "linked", linkedIntentId: body.intentId },
+    });
     return { ok: true };
   });
 

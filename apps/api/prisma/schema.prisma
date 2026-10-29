@@ -108,16 +108,40 @@ model LedgerEntry {
 }
 
 model DepositIntent {
-  id          String   @id @default(cuid())
-  userId      String
-  amountChips Int
-  asset       String   @default("USDT")
-  status      String   @default("pending") // pending | confirmed | cancelled
-  externalRef String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String    @id @default(cuid())
+  userId           String
+  amountChips      Int
+  /** Exact USDT amount to send, in micro-units (1 USDT = 1_000_000). Unique among open pending. */
+  amountUsdtMicro  Int?
+  asset            String    @default("USDT")
+  network          String    @default("TRC20")
+  status           String    @default("pending") // pending | confirmed | cancelled | expired
+  externalRef      String?
+  payAddress       String?
+  txid             String?   @unique
+  confirmedBy      String? // auto | admin
+  expiresAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id])
+
+  @@index([status, amountUsdtMicro])
+  @@index([status, expiresAt])
+}
+
+/** Incoming TRC20 USDT that did not match any pending intent. */
+model UnmatchedDeposit {
+  id              String   @id @default(cuid())
+  txid            String   @unique
+  amountUsdtMicro Int
+  fromAddress     String?
+  toAddress       String?
+  note            String?
+  status          String   @default("open") // open | linked | ignored
+  linkedIntentId  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model ChatMessage {
