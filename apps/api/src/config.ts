@@ -3,7 +3,8 @@ import { readFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-function resolvePublicApiUrl(): string {
+/** Resolve live public API base (env or PA tunnel file). Safe to call anytime. */
+export function resolvePublicApiUrl(): string {
   const fromEnv = (process.env.PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
   if (fromEnv) return fromEnv;
   // PA always-on writes the live tunnel here after cloudflared starts.
@@ -52,10 +53,11 @@ export const config = {
   ).replace(/\/$/, ""),
   /**
    * Public HTTPS base of this API (cloudflare tunnel URL).
-   * Used to register TronHooks webhook: {PUBLIC_API_URL}/webhooks/tronhooks
-   * Falls back to ~/poker_room_api_url.txt on PythonAnywhere.
+   * Prefer resolvePublicApiUrl() at call-time — tunnel URL can change after boot.
    */
-  publicApiUrl: resolvePublicApiUrl(),
+  get publicApiUrl() {
+    return resolvePublicApiUrl();
+  },
   /** TronHooks API key (tw_live_…) — create/list watches */
   tronhooksApiKey: (process.env.TRONHOOKS_API_KEY ?? "").trim(),
   /** whsec_… shown once when watch is created — verify X-Signature */
