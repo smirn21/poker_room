@@ -1,4 +1,27 @@
 import "dotenv/config";
+import { readFileSync, existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+
+function resolvePublicApiUrl(): string {
+  const fromEnv = (process.env.PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+  // PA always-on writes the live tunnel here after cloudflared starts.
+  const candidates = [
+    join(homedir(), "poker_room_api_url.txt"),
+    join(process.cwd(), "..", "..", "poker_room_api_url.txt"),
+  ];
+  for (const path of candidates) {
+    try {
+      if (!existsSync(path)) continue;
+      const url = readFileSync(path, "utf8").trim().replace(/\/$/, "");
+      if (url.startsWith("https://")) return url;
+    } catch {
+      /* ignore */
+    }
+  }
+  return "";
+}
 
 export const config = {
   port: Number(process.env.PORT ?? 3001),
@@ -30,8 +53,9 @@ export const config = {
   /**
    * Public HTTPS base of this API (cloudflare tunnel URL).
    * Used to register TronHooks webhook: {PUBLIC_API_URL}/webhooks/tronhooks
+   * Falls back to ~/poker_room_api_url.txt on PythonAnywhere.
    */
-  publicApiUrl: (process.env.PUBLIC_API_URL ?? "").trim().replace(/\/$/, ""),
+  publicApiUrl: resolvePublicApiUrl(),
   /** TronHooks API key (tw_live_…) — create/list watches */
   tronhooksApiKey: (process.env.TRONHOOKS_API_KEY ?? "").trim(),
   /** whsec_… shown once when watch is created — verify X-Signature */
