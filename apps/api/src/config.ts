@@ -22,6 +22,21 @@ export const config = {
   tronUsdtContract: (
     process.env.TRON_USDT_CONTRACT ?? "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
   ).trim(),
+  /**
+   * Indexer for incoming USDT: tronscan (preferred) | trongrid.
+   * Auto: tronscan if TRONSCAN_API_KEY set, else trongrid.
+   */
+  tronProvider: (() => {
+    const raw = (process.env.TRON_PROVIDER ?? "").trim().toLowerCase();
+    if (raw === "tronscan" || raw === "trongrid") return raw;
+    return (process.env.TRONSCAN_API_KEY ?? "").trim()
+      ? ("tronscan" as const)
+      : ("trongrid" as const);
+  })(),
+  tronscanApiKey: (process.env.TRONSCAN_API_KEY ?? "").trim(),
+  tronscanBase: (
+    process.env.TRONSCAN_BASE_URL ?? "https://apilist.tronscanapi.com"
+  ).replace(/\/$/, ""),
   trongridApiKey: (process.env.TRONGRID_API_KEY ?? "").trim(),
   trongridBase: (
     process.env.TRONGRID_BASE_URL ?? "https://api.trongrid.io"
@@ -29,7 +44,7 @@ export const config = {
   /** How many chips one whole USDT buys */
   chipsPerUsdt: Number(process.env.CHIPS_PER_USDT ?? 100),
   depositTtlMinutes: Number(process.env.DEPOSIT_TTL_MINUTES ?? 60),
-  /** Poll TronGrid for incoming USDT (needs TRON_USDT_ADDRESS) */
+  /** Poll indexer for incoming USDT (needs TRON_USDT_ADDRESS) */
   tronWatchEnabled: process.env.TRON_WATCH_ENABLED === "1",
   tronWatchIntervalMs: Number(process.env.TRON_WATCH_INTERVAL_MS ?? 20_000),
 };
