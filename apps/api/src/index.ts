@@ -133,6 +133,11 @@ setupSocket(app.server, app);
 const { startTronWatcher } = await import("./tronWatcher.js");
 startTronWatcher(app.log);
 
+const { ensureTronhooksAligned } = await import("./tronhooks.js");
+void ensureTronhooksAligned(app.log).then(() => {
+  app.log.info({ tronhooks: tronhooksStatus() }, "tronhooks_boot_status");
+});
+
 app.log.info(
   {
     tronhooks: tronhooksStatus(),

@@ -1,5 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { config } from "./config.js";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { config, resolvePublicApiUrl } from "./config.js";
 import { prisma } from "./db.js";
 import { applyIncomingUsdtTransfer } from "./depositMatch.js";
 import { expireStaleDeposits } from "./depositService.js";
@@ -278,6 +281,10 @@ export async function registerTronhooksWatch(opts?: {
   }
 
   const created = (await res.json()) as WatchRow & { secret?: string };
+  if (created.secret) {
+    persistEnvValue("TRONHOOKS_WEBHOOK_SECRET", created.secret);
+    persistEnvValue("PUBLIC_API_URL", resolvePublicApiUrl());
+  }
   return {
     watchId: created.id,
     webhookUrl,
@@ -285,4 +292,53 @@ export async function registerTronhooksWatch(opts?: {
     created: true,
     reused: false,
   };
+}
+
+function persistEnvValue(key: string, value: string) {
+  const path = join(homedir(), "poker_room", ".env");
+  if (!existsSync(path)) return;
+  const lines = readFileSync(path, "utf8").split(/\r?\n/);
+  let found = false;
+  const out = lines.map((line) => {
+    if (line.startsWith(`${key}=`)) {
+      found = true;
+      return `${key}=${value}`;
+    }
+    return line;
+  });
+  if (!found) out.push(`${key}=${value}`);
+  writeFileSync(path, out.join("\n") + (out[out.length - 1] === "" ? "" : "\n"));
+  process.env[key] = value;
+}
+
+/** Keep TronHooks receiver URL aligned with the live tunnel after always-on restarts. */
+export async function ensureTronhooksAligned(log?: {
+  info: (o: unknown, msg?: string) => void;
+  warn: (o: unknown, msg?: string) => void;
+}) {
+  if (!config.tronhooksApiKey || !config.tronUsdtAddress) {
+    log?.info?.({}, "tronhooks_skip_align_missing_config");
+    return;
+  }
+  if (!expectedWebhookUrl()) {
+    log?.warn?.({}, "tronhooks_skip_align_no_public_url");
+    return;
+  }
+  try {
+    const r = await registerTronhooksWatch({ forceRecreate: false });
+    log?.info?.(
+      {
+        watchId: r.watchId,
+        webhookUrl: r.webhookUrl,
+        created: r.created,
+        reused: r.reused,
+        secretPersisted: Boolean(r.secret),
+      },
+      "tronhooks_aligned",
+    );
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    markTronhooksError(msg);
+    log?.warn?.({ err: msg }, "tronhooks_align_failed");
+  }
 }

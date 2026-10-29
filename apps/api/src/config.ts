@@ -3,6 +3,33 @@ import { readFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
+function envFileCandidates(): string[] {
+  return [
+    join(homedir(), "poker_room", ".env"),
+    join(process.cwd(), ".env"),
+    join(process.cwd(), "..", "..", ".env"),
+  ];
+}
+
+/** Read a key from on-disk .env (process.env can go stale after tunnel/watch updates). */
+export function readEnvFileValue(key: string): string {
+  for (const path of envFileCandidates()) {
+    try {
+      if (!existsSync(path)) continue;
+      for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+        if (!line.startsWith(`${key}=`)) continue;
+        return line
+          .slice(key.length + 1)
+          .trim()
+          .replace(/^["']|["']$/g, "");
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return (process.env[key] ?? "").trim();
+}
+
 /** Resolve live public API base. Prefer PA tunnel file — env often goes stale after restart. */
 export function resolvePublicApiUrl(): string {
   // PA always-on / pa_point_web write the live tunnel here.
@@ -19,7 +46,11 @@ export function resolvePublicApiUrl(): string {
       /* ignore */
     }
   }
-  return (process.env.PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
+  return readEnvFileValue("PUBLIC_API_URL");
+}
+
+export function resolveTronhooksWebhookSecret(): string {
+  return readEnvFileValue("TRONHOOKS_WEBHOOK_SECRET");
 }
 
 export const config = {
@@ -57,17 +88,23 @@ export const config = {
     return resolvePublicApiUrl();
   },
   /** TronHooks API key (tw_live_…) — create/list watches */
-  tronhooksApiKey: (process.env.TRONHOOKS_API_KEY ?? "").trim(),
-  /** whsec_… shown once when watch is created — verify X-Signature */
-  tronhooksWebhookSecret: (process.env.TRONHOOKS_WEBHOOK_SECRET ?? "").trim(),
+  get tronhooksApiKey() {
+    return readEnvFileValue("TRONHOOKS_API_KEY");
+  },
+  /** whsec_… — re-read from disk so watch re-register works without API restart */
+  get tronhooksWebhookSecret() {
+    return resolveTronhooksWebhookSecret();
+  },
   /**
    * Accept TronHooks webhooks (needs TRONHOOKS_WEBHOOK_SECRET + TRON_USDT_ADDRESS).
-   * Default ON when secret is present.
+   * Default ON when secret is present on disk.
    */
-  tronhooksEnabled:
-    process.env.TRONHOOKS_ENABLED === "1" ||
-    (process.env.TRONHOOKS_ENABLED !== "0" &&
-      Boolean((process.env.TRONHOOKS_WEBHOOK_SECRET ?? "").trim())),
+  get tronhooksEnabled() {
+    const flag = readEnvFileValue("TRONHOOKS_ENABLED");
+    if (flag === "1") return true;
+    if (flag === "0") return false;
+    return Boolean(resolveTronhooksWebhookSecret());
+  },
   /** How many chips one whole USDT buys */
   chipsPerUsdt: Number(process.env.CHIPS_PER_USDT ?? 100),
   depositTtlMinutes: Number(process.env.DEPOSIT_TTL_MINUTES ?? 60),
