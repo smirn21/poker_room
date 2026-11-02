@@ -1555,21 +1555,46 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   margin-top: 0.1rem;
 }
 
-/* Opponent hole cards sit above the seat so they don't cover the board */
+/* Opponent showdown holes — board-sized, parked outside the seat toward the rim */
 .hole-opp {
   position: absolute;
-  left: 50%;
-  bottom: calc(100% + 0.15rem);
-  transform: translateX(-50%);
   margin: 0;
-  z-index: 3;
+  z-index: 8;
   pointer-events: none;
+  gap: 3px;
 }
 
-.hole-opp .pcard-sm {
-  width: 1.55rem;
-  height: 2.15rem;
-  font-size: 0.55rem;
+.hole-opp.hole-up {
+  left: 50%;
+  bottom: calc(100% + 0.12rem);
+  transform: translateX(-50%);
+}
+
+.hole-opp.hole-down {
+  left: 50%;
+  top: calc(100% + 0.12rem);
+  transform: translateX(-50%);
+}
+
+.hole-opp.hole-left {
+  right: calc(100% + 0.12rem);
+  left: auto;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+}
+
+.hole-opp.hole-right {
+  left: calc(100% + 0.12rem);
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+}
+
+/* Match board card footprint */
+.hole-opp .pcard-lg {
+  width: 2.55rem;
+  height: 3.55rem;
 }
 
 .hole-hero {
@@ -1722,10 +1747,14 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .board-zone {
-    top: 58%;
+    top: 62%;
     width: min(84%, 220px);
     gap: 0.04rem;
     z-index: 14;
+  }
+
+  .table-screen-over .board-zone {
+    top: 64%;
   }
 
   .pot-area {
@@ -1765,15 +1794,6 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     margin: 0.1rem auto 0;
     align-self: center;
     pointer-events: none;
-  }
-
-  /* Keep showdown hole cards in the seat column — absolute-above hits the board/topbar */
-  .hole-opp {
-    position: static;
-    transform: none;
-    left: auto;
-    bottom: auto;
-    margin-top: 0.05rem;
   }
 
   .top-tools .lang-switch-compact,
@@ -1906,9 +1926,21 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     bottom: calc(100% + 0.1rem);
   }
 
-  .hole-opp .pcard-sm {
-    width: 1.1rem;
-    height: 1.55rem;
+  .hole-opp .pcard-lg {
+    width: 2rem;
+    height: 2.8rem;
+  }
+
+  .hole-opp .pcard-lg .pcard-rank {
+    font-size: 0.72rem;
+  }
+
+  .hole-opp .pcard-lg .pcard-suit {
+    font-size: 0.58rem;
+  }
+
+  .hole-opp .pcard-lg .pcard-pip {
+    font-size: 1.05rem;
   }
 
   .opp-backs {

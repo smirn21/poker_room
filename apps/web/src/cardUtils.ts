@@ -32,44 +32,55 @@ export function formatCard(card: Card): { label: string; red: boolean } {
   };
 }
 
+export type HoleDir = "up" | "down" | "left" | "right";
+
+type OppSlot = { left: number; top: number; hole: HoleDir };
+
 /**
- * Opponent rim slots by count — kept high on the oval so bet stacks
- * stay clear of the board/pot (center ~58% on phone).
+ * Opponent rim slots by count — clear of board/pot, with hole-card
+ * direction so showdown faces sit outside the oval (not on the board).
  */
-const OPP_BY_COUNT: { left: number; top: number }[][] = [
+const OPP_BY_COUNT: OppSlot[][] = [
   [],
-  [{ left: 50, top: 11 }],
+  [{ left: 50, top: 12, hole: "up" }],
   [
-    { left: 18, top: 12 },
-    { left: 82, top: 12 },
+    { left: 16, top: 14, hole: "up" },
+    { left: 84, top: 14, hole: "up" },
   ],
   [
-    { left: 14, top: 20 },
-    { left: 50, top: 9 },
-    { left: 86, top: 20 },
+    { left: 12, top: 28, hole: "left" },
+    { left: 50, top: 11, hole: "up" },
+    { left: 88, top: 28, hole: "right" },
   ],
   [
-    { left: 13, top: 28 },
-    { left: 30, top: 11 },
-    { left: 70, top: 11 },
-    { left: 87, top: 28 },
+    { left: 10, top: 34, hole: "left" },
+    { left: 28, top: 12, hole: "up" },
+    { left: 72, top: 12, hole: "up" },
+    { left: 90, top: 34, hole: "right" },
   ],
   [
-    { left: 12, top: 32 },
-    { left: 24, top: 13 },
-    { left: 50, top: 9 },
-    { left: 76, top: 13 },
-    { left: 88, top: 32 },
+    { left: 9, top: 36, hole: "left" },
+    { left: 24, top: 14, hole: "up" },
+    { left: 50, top: 9, hole: "up" },
+    { left: 76, top: 14, hole: "up" },
+    { left: 91, top: 36, hole: "right" },
   ],
   [
-    { left: 11, top: 34 },
-    { left: 20, top: 15 },
-    { left: 38, top: 10 },
-    { left: 62, top: 10 },
-    { left: 80, top: 15 },
-    { left: 89, top: 34 },
+    { left: 8, top: 40, hole: "left" },
+    { left: 20, top: 18, hole: "up" },
+    { left: 36, top: 10, hole: "up" },
+    { left: 64, top: 10, hole: "up" },
+    { left: 80, top: 18, hole: "up" },
+    { left: 92, top: 40, hole: "right" },
   ],
 ];
+
+export type SeatLayoutPos = {
+  left: string;
+  top: string;
+  isHero: boolean;
+  holeDir: HoleDir;
+};
 
 /**
  * Hero in bottom strip; opponents on the rim so they don't cover the board.
@@ -77,16 +88,21 @@ const OPP_BY_COUNT: { left: number; top: number }[][] = [
 export function seatLayout(
   seats: { seatIndex: number; userId: string | null }[],
   myUserId: string,
-): Map<number, { left: string; top: string; isHero: boolean }> {
+): Map<number, SeatLayoutPos> {
   const occupied = seats.filter((s) => s.userId);
-  const map = new Map<number, { left: string; top: string; isHero: boolean }>();
+  const map = new Map<number, SeatLayoutPos>();
   if (!occupied.length) return map;
 
   const hero =
     occupied.find((s) => s.userId === myUserId) ?? occupied[0];
   const others = occupied.filter((s) => s.seatIndex !== hero.seatIndex);
 
-  map.set(hero.seatIndex, { left: "50%", top: "88%", isHero: true });
+  map.set(hero.seatIndex, {
+    left: "50%",
+    top: "88%",
+    isHero: true,
+    holeDir: "up",
+  });
 
   const slots =
     OPP_BY_COUNT[Math.min(others.length, OPP_BY_COUNT.length - 1)] ??
@@ -98,6 +114,7 @@ export function seatLayout(
       left: `${slot.left}%`,
       top: `${slot.top}%`,
       isHero: false,
+      holeDir: slot.hole,
     });
   });
 

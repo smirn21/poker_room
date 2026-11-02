@@ -455,12 +455,12 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
           </div>
         )}
         {seat.holeCards && seat.holeCards.length > 0 && onFelt && (
-          <div className="hole hole-opp">
+          <div className={`hole hole-opp hole-${pos.holeDir}`}>
             {seat.holeCards.map((c, i) => (
               <PlayingCard
                 key={`${state?.handNo}-opp-${seat.seatIndex}-${c}`}
                 card={c}
-                size="sm"
+                size="lg"
                 className="street-reveal"
                 dealDelayMs={i * 100}
                 highlight={showdownHighlight && winningCards.has(c)}
