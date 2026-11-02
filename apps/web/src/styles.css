@@ -1934,9 +1934,13 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     top: -0.35rem;
   }
 
-  /* Thumb zone only while acting — avoid a dead strip under showdown hero */
-  .table-screen-turn .actions-live {
+  /* Keep hero + action row as one bottom block (no void between cards and buttons) */
+  .table-screen-turn .hero-zone {
     margin-top: auto;
+  }
+
+  .table-screen-turn .actions-live {
+    margin-top: 0.25rem;
     flex-shrink: 0;
   }
 
