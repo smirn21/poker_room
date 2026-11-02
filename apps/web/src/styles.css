@@ -1698,28 +1698,28 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .felt {
-    /* Width follows max-height so aspect-ratio can't blow past the phone viewport */
-    width: min(100%, calc(min(34dvh, 290px) * 1.22));
-    max-height: min(34dvh, 290px);
-    aspect-ratio: 1.22 / 1;
+    /* Fill phone height so the hero strip isn't stranded under a void */
+    width: min(100%, calc(min(42dvh, 340px) * 1.18));
+    max-height: min(42dvh, 340px);
+    aspect-ratio: 1.18 / 1;
     border-width: 5px;
-    margin: 0.1rem auto 0.2rem;
+    margin: 0.15rem auto 0.15rem;
   }
 
   .table-screen-playing .felt {
-    width: min(100%, calc(min(32dvh, 270px) * 1.22));
-    max-height: min(32dvh, 270px);
+    width: min(100%, calc(min(40dvh, 320px) * 1.18));
+    max-height: min(40dvh, 320px);
   }
 
   .table-screen-turn .felt,
   .table-screen-over .felt {
-    width: min(100%, calc(min(28dvh, 240px) * 1.28));
-    max-height: min(28dvh, 240px);
-    aspect-ratio: 1.28 / 1;
+    width: min(100%, calc(min(34dvh, 280px) * 1.22));
+    max-height: min(34dvh, 280px);
+    aspect-ratio: 1.22 / 1;
   }
 
   .board-zone {
-    top: 60%;
+    top: 58%;
     width: min(84%, 220px);
     gap: 0.04rem;
     z-index: 14;
@@ -1729,7 +1729,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     min-height: 0;
   }
 
-  .pot-stack .chip-piles {
+  /* Caption alone — chip + «Банк N» was a cramped double label */
+  .pot-stack > .chip-stack {
     display: none;
   }
 
@@ -1853,18 +1854,21 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     font-size: 0.45rem;
   }
 
-  /* Stack label only — piles inflate seat height into the board */
+  /* Amount label only — chip glyph + label read as «5k 1.9k» and inflate height */
   .seat-chips.chip-compact {
     gap: 0;
     margin-top: 0;
   }
 
-  .seat-chips .chip-piles {
+  .seat-chips .chip-static {
     display: none;
   }
 
   .seat-chips .chip-label {
     font-size: 0.52rem;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 0.05rem 0.22rem;
+    border-radius: 999px;
   }
 
   .bet-stack {
@@ -1883,7 +1887,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     transform-origin: bottom center;
   }
 
-  .bet-stack .chip-piles {
+  .bet-stack .chip-static {
     display: none;
   }
 
@@ -1914,24 +1918,18 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     height: 1.45rem;
   }
 
-  /* Pin hero + actions to the bottom; kill the dead gap under the felt */
-  .table-screen-playing .hero-zone,
-  .table-screen-turn .hero-zone,
-  .table-screen-over .hero-zone {
-    margin-top: auto;
-  }
-
+  /* Hero sits under the felt; only the action / next-hand row pins to bottom */
   .hero-zone {
     padding: 0.28rem 0.4rem;
-    margin: 0.08rem 0 0.15rem;
+    margin: 0.2rem 0 0.12rem;
     gap: 0.35rem;
     flex-shrink: 0;
   }
 
-  .table-screen-playing .actions,
-  .table-screen-turn .actions,
+  .table-screen-turn .actions-live,
+  .table-screen-playing .primary-wide,
   .table-screen-over .primary-wide {
-    margin-top: 0;
+    margin-top: auto;
     flex-shrink: 0;
   }
 
@@ -2015,14 +2013,14 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .felt {
-    width: min(100%, calc(min(32dvh, 260px) * 1.22));
-    max-height: min(32dvh, 260px);
+    width: min(100%, calc(min(40dvh, 300px) * 1.18));
+    max-height: min(40dvh, 300px);
   }
 
   .table-screen-turn .felt,
   .table-screen-over .felt {
-    width: min(100%, calc(min(26dvh, 220px) * 1.28));
-    max-height: min(26dvh, 220px);
+    width: min(100%, calc(min(32dvh, 250px) * 1.22));
+    max-height: min(32dvh, 250px);
   }
 
   .chat {
@@ -2033,14 +2031,14 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 /* Short viewports (Telegram Mini App on compact phones) */
 @media (max-height: 700px) {
   .felt {
-    width: min(100%, calc(min(32dvh, 270px) * 1.22));
-    max-height: min(32dvh, 270px);
+    width: min(100%, calc(min(38dvh, 300px) * 1.18));
+    max-height: min(38dvh, 300px);
   }
 
   .table-screen-turn .felt,
   .table-screen-over .felt {
-    width: min(100%, calc(min(26dvh, 220px) * 1.28));
-    max-height: min(26dvh, 220px);
+    width: min(100%, calc(min(30dvh, 240px) * 1.22));
+    max-height: min(30dvh, 240px);
   }
 
   .hero-zone {
