@@ -195,7 +195,7 @@ export const api = {
     }),
   ledger: () => request<{ entries: unknown[] }>("/wallet/ledger"),
   createInvite: (maxUses = 5) =>
-    request<{ invite: { code: string; maxUses: number } }>("/admin/invites", {
+    request<{ invite: { code: string; maxUses: number } }>("/invites", {
       method: "POST",
       body: JSON.stringify({ maxUses }),
     }),

@@ -6,16 +6,20 @@ export const en: Record<MessageKey, string> = {
   inviteOnly: "Invite-only. Enter a club code or table code (TBL-…).",
   inviteWelcome: "Welcome to the felt",
   inviteLead:
-    "Club Hold'em is private Texas Hold'em for your circle. Enter a club code from the admin, or a table code (TBL-…) from anyone already seated.",
+    "Club Hold'em is private Texas Hold'em for your circle. Enter a club code (CLUB-…) from any member, or a table code (TBL-…) from anyone already seated.",
   invitePointSeats: "Up to 9 seats at one table",
   invitePointTable:
-    "Seated players see the table code — tap to copy and invite friends",
+    "Any club member can mint a CLUB-… code; seated players share TBL-…",
   invitePointWallet: "Chips via the club wallet (USDT TRC20)",
   inviteHow:
     "Paste the code below. After entry you'll land in the lobby — pick a table or sit by code.",
   inviteCode: "Invite code",
   inviteShareHint: "Share table code",
   inviteShareText: "Join my Club Hold'em table: {code}",
+  clubInviteShareText: "Join Club Hold'em with invite: {code}",
+  clubInviteHint:
+    "Create a CLUB-… code and send it to a friend — they join the club and can sit at a table.",
+  shareClubInvite: "Share",
   tableCodeJoin: "Table code",
   tableCodePlaceholder: "TBL-XXXXXX",
   enter: "Enter",
@@ -71,7 +75,8 @@ export const en: Record<MessageKey, string> = {
   errLookup: "Player not found",
   errAdjust: "Could not adjust balance",
   adjustOk: "Done. New balance: {balance}",
-  profileHint: "Language is in the header. Club settings — admin only.",
+  profileHint:
+    "Language is in the header. Any member can invite to the club. Club settings — admin only.",
   join: "Join",
   enterTable: "Enter table",
   tableActive: "Active",

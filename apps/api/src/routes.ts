@@ -719,12 +719,15 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
-  app.post("/admin/invites", async (req) => {
+  async function createClubInvite(req: {
+    headers: { authorization?: string };
+    body: unknown;
+  }) {
     const user = await requireUser(app, req);
-    if (user.role !== "admin") throw httpError.forbidden();
+    if (!user.whitelisted) throw httpError.forbidden("Not whitelisted");
     const body = z
       .object({
-        maxUses: z.number().int().positive().default(5),
+        maxUses: z.number().int().positive().max(50).default(5),
         code: z.string().min(4).max(24).optional(),
       })
       .parse(req.body);
@@ -741,7 +744,12 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       },
     });
     return { invite };
-  });
+  }
+
+  /** Any club member can mint a club invite (CLUB-…). */
+  app.post("/invites", async (req) => createClubInvite(req));
+  /** Legacy admin path — same rules as /invites. */
+  app.post("/admin/invites", async (req) => createClubInvite(req));
 
   app.get("/admin/deposits", async (req) => {
     const user = await requireUser(app, req);

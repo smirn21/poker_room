@@ -2518,6 +2518,14 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   text-align: center;
 }
 
+.profile-invite {
+  width: 100%;
+}
+
+.invite-actions {
+  margin-top: 0.55rem;
+}
+
 .winner-banner-glow {
   animation: bannerIn 0.45s var(--ease-out) both;
   box-shadow: 0 0 16px rgba(67, 197, 181, 0.28);

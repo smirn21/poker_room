@@ -389,9 +389,14 @@ export function App() {
   }
 
   async function createInvite() {
-    const r = await api.createInvite(10);
-    setInviteCreated(r.invite.code);
-    setInviteCopied(false);
+    setError(null);
+    try {
+      const r = await api.createInvite(10);
+      setInviteCreated(r.invite.code);
+      setInviteCopied(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("createInvite"));
+    }
   }
 
   async function copyInviteCode() {
@@ -403,6 +408,21 @@ export function App() {
     } catch {
       setError(t("copyFailed"));
     }
+  }
+
+  async function shareClubInvite() {
+    if (!inviteCreated) return;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?invite=${encodeURIComponent(inviteCreated)}`;
+    const text = t("clubInviteShareText", { code: inviteCreated });
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: t("brand"), text, url: shareUrl });
+        return;
+      }
+    } catch {
+      /* fall through to copy */
+    }
+    await copyInviteCode();
   }
 
   async function openAdmin() {
@@ -1205,6 +1225,43 @@ export function App() {
             <span>{t("clubSettings")}</span>
           </button>
         )}
+        <section className="panel panel-compact profile-invite">
+          <h2 className="card-title">{t("cardInvites")}</h2>
+          <p className="hint hint-tight">{t("clubInviteHint")}</p>
+          <button
+            type="button"
+            className="primary-wide"
+            onClick={() => void createInvite()}
+          >
+            {t("createInvite")}
+          </button>
+          {inviteCreated && (
+            <div className="invite-code-block">
+              <button
+                type="button"
+                className="invite-code-btn"
+                onClick={() => void copyInviteCode()}
+                title={t("tapToCopy")}
+              >
+                <span className="invite-code-label">{t("inviteCode")}</span>
+                <strong className="invite-code-value">{inviteCreated}</strong>
+              </button>
+              <div className="invite-actions">
+                <button
+                  type="button"
+                  className="secondary primary-wide"
+                  onClick={() => void shareClubInvite()}
+                >
+                  {t("shareClubInvite")}
+                </button>
+              </div>
+              <p className="hint invite-copy-hint">
+                {inviteCopied ? t("copied") : t("tapToCopy")}
+              </p>
+            </div>
+          )}
+        </section>
+        {error && <p className="error">{error}</p>}
         <p className="hint center-hint hint-tight">{t("profileHint")}</p>
       </div>
     );

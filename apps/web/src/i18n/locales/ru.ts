@@ -4,16 +4,20 @@ export const ru = {
   inviteOnly: "Только по приглашению. Код клуба или код стола (TBL-…).",
   inviteWelcome: "Рады видеть вас за сукном",
   inviteLead:
-    "Club Hold'em — закрытый Texas Hold'em для своих. Войдите по коду клуба от админа или по коду стола TBL-… от любого игрока за столом.",
+    "Club Hold'em — закрытый Texas Hold'em для своих. Войдите по коду клуба (CLUB-…) от любого участника или по коду стола TBL-… от игрока за столом.",
   invitePointSeats: "До 9 мест за одним столом",
   invitePointTable:
-    "Код стола виден сидящим — нажмите, чтобы скопировать и позвать друзей",
+    "Любой участник клуба может создать код CLUB-…; за столом — код TBL-…",
   invitePointWallet: "Фишки через кошелёк клуба (USDT TRC20)",
   inviteHow:
     "Вставьте код ниже. После входа откроется лобби — выберите стол или сядьте по коду.",
   inviteCode: "Код приглашения",
   inviteShareHint: "Поделиться кодом стола",
   inviteShareText: "Заходи за стол Club Hold'em: {code}",
+  clubInviteShareText: "Приглашение в Club Hold'em: {code}",
+  clubInviteHint:
+    "Создайте код CLUB-… и отправьте другу — он войдёт в клуб и сможет сесть за стол.",
+  shareClubInvite: "Поделиться",
   tableCodeJoin: "Код стола",
   tableCodePlaceholder: "TBL-XXXXXX",
   enter: "Войти",
@@ -69,7 +73,8 @@ export const ru = {
   errLookup: "Игрок не найден",
   errAdjust: "Не удалось изменить баланс",
   adjustOk: "Готово. Новый баланс: {balance}",
-  profileHint: "Язык — в шапке. Настройки клуба — только у админа.",
+  profileHint:
+    "Язык — в шапке. Пригласить в клуб может любой участник. Настройки клуба — только у админа.",
   join: "Сесть",
   enterTable: "Зайти за стол",
   tableActive: "Активен",
