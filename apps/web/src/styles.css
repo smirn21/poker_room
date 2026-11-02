@@ -1719,10 +1719,22 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .board-zone {
-    top: 54%;
-    width: min(84%, 230px);
-    gap: 0.08rem;
+    top: 60%;
+    width: min(84%, 220px);
+    gap: 0.04rem;
     z-index: 14;
+  }
+
+  .pot-area {
+    min-height: 0;
+  }
+
+  .pot-stack .chip-piles {
+    display: none;
+  }
+
+  .pot-caption {
+    margin-top: 0;
   }
 
   .table-screen-over .pot-rake,
@@ -1801,8 +1813,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .seat {
-    width: 3.35rem;
-    gap: 0.02rem;
+    width: 3.1rem;
+    gap: 0;
     z-index: 6;
   }
 
@@ -1811,77 +1823,79 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .seat .avatar {
-    width: 1.7rem;
-    height: 1.7rem;
+    width: 1.45rem;
+    height: 1.45rem;
     border-width: 1.5px;
   }
 
   .seat-meta {
-    padding: 0.06rem 0.18rem;
-    border-radius: 6px;
+    padding: 0.04rem 0.14rem;
+    border-radius: 5px;
   }
 
   .seat .name {
-    max-width: 3.2rem;
-    font-size: 0.55rem;
+    max-width: 3rem;
+    font-size: 0.52rem;
   }
 
   .seat-badges {
-    min-height: 0.65rem;
-    gap: 0.08rem;
+    min-height: 0.55rem;
+    gap: 0.06rem;
   }
 
   .badge {
-    font-size: 0.45rem;
-    padding: 0.04rem 0.16rem;
+    font-size: 0.42rem;
+    padding: 0.03rem 0.14rem;
   }
 
   .hand-name {
-    max-width: 3.2rem;
-    font-size: 0.48rem;
+    max-width: 3rem;
+    font-size: 0.45rem;
   }
 
+  /* Stack label only — piles inflate seat height into the board */
   .seat-chips.chip-compact {
-    gap: 0.15rem;
-    margin-top: 0.02rem;
+    gap: 0;
+    margin-top: 0;
   }
 
-  .seat-chips .chip-static {
-    width: 0.9rem;
-    height: 0.9rem;
+  .seat-chips .chip-piles {
+    display: none;
   }
 
   .seat-chips .chip-label {
-    font-size: 0.55rem;
+    font-size: 0.52rem;
   }
 
   .bet-stack {
-    transform: translateX(-50%) scale(0.72);
+    transform: translateX(-50%) scale(0.7);
     transform-origin: top center;
-    z-index: 4;
+    z-index: 5;
   }
 
-  /* Keep street bets tucked under the seat so they don't collide with pot/board */
+  /* Nest bets into the seat foot so they clear pot/board */
   .bet-stack.bet-down {
-    top: calc(100% - 0.15rem);
+    top: calc(100% - 0.95rem);
   }
 
   .bet-stack.bet-up {
-    bottom: calc(100% - 0.1rem);
+    bottom: calc(100% - 0.85rem);
     transform-origin: bottom center;
   }
 
-  .bet-stack .chip-static {
-    width: 0.8rem;
-    height: 0.8rem;
+  .bet-stack .chip-piles {
+    display: none;
   }
 
   .bet-stack .chip-label {
-    font-size: 0.5rem;
+    font-size: 0.48rem;
+    background: rgba(0, 0, 0, 0.55);
+    padding: 0.05rem 0.22rem;
+    border-radius: 999px;
   }
 
   .hero-zone .bet-stack.bet-up {
-    bottom: calc(100% + 0.15rem);
+    bottom: calc(100% + 0.1rem);
   }
 
   .hole-opp .pcard-sm {
@@ -1900,10 +1914,24 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     height: 1.45rem;
   }
 
+  /* Pin hero + actions to the bottom; kill the dead gap under the felt */
+  .table-screen-playing .hero-zone,
+  .table-screen-turn .hero-zone,
+  .table-screen-over .hero-zone {
+    margin-top: auto;
+  }
+
   .hero-zone {
     padding: 0.28rem 0.4rem;
     margin: 0.08rem 0 0.15rem;
     gap: 0.35rem;
+    flex-shrink: 0;
+  }
+
+  .table-screen-playing .actions,
+  .table-screen-turn .actions,
+  .table-screen-over .primary-wide {
+    margin-top: 0;
     flex-shrink: 0;
   }
 
@@ -2035,8 +2063,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .board-zone {
-    top: 48%;
-    gap: 0.08rem;
+    top: 58%;
+    gap: 0.04rem;
   }
 
   .chat-panel {

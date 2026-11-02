@@ -33,41 +33,41 @@ export function formatCard(card: Card): { label: string; red: boolean } {
 }
 
 /**
- * Opponent rim slots by count — kept clear of the board (center ~46%)
- * and spaced so names/chips don't collide on a narrow phone oval.
+ * Opponent rim slots by count — kept high on the oval so bet stacks
+ * stay clear of the board/pot (center ~58% on phone).
  */
 const OPP_BY_COUNT: { left: number; top: number }[][] = [
   [],
-  [{ left: 50, top: 14 }],
+  [{ left: 50, top: 11 }],
   [
-    { left: 16, top: 17 },
-    { left: 84, top: 17 },
+    { left: 18, top: 12 },
+    { left: 82, top: 12 },
   ],
   [
-    { left: 14, top: 26 },
-    { left: 50, top: 11 },
-    { left: 86, top: 26 },
+    { left: 14, top: 20 },
+    { left: 50, top: 9 },
+    { left: 86, top: 20 },
   ],
   [
-    { left: 14, top: 34 },
-    { left: 30, top: 14 },
-    { left: 70, top: 14 },
-    { left: 86, top: 34 },
+    { left: 13, top: 28 },
+    { left: 30, top: 11 },
+    { left: 70, top: 11 },
+    { left: 87, top: 28 },
   ],
   [
-    { left: 12, top: 38 },
-    { left: 24, top: 16 },
-    { left: 50, top: 11 },
-    { left: 76, top: 16 },
-    { left: 88, top: 38 },
+    { left: 12, top: 32 },
+    { left: 24, top: 13 },
+    { left: 50, top: 9 },
+    { left: 76, top: 13 },
+    { left: 88, top: 32 },
   ],
   [
-    { left: 11, top: 40 },
-    { left: 20, top: 18 },
-    { left: 38, top: 12 },
-    { left: 62, top: 12 },
-    { left: 80, top: 18 },
-    { left: 89, top: 40 },
+    { left: 11, top: 34 },
+    { left: 20, top: 15 },
+    { left: 38, top: 10 },
+    { left: 62, top: 10 },
+    { left: 80, top: 15 },
+    { left: 89, top: 34 },
   ],
 ];
 
