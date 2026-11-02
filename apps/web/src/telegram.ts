@@ -71,8 +71,42 @@ export function applyTelegramSafeAreaVars(tg?: TgWebApp | null): void {
   );
 }
 
+/**
+ * Keep layout height aligned with the *visible* viewport.
+ * iOS / Telegram WebView often leave 100dvh full-screen when the software
+ * keyboard opens; visualViewport shrinks — we mirror that into --vv-height.
+ */
+export function syncVisualViewport(): void {
+  const root = document.documentElement;
+  const vv = window.visualViewport;
+  const height = vv ? vv.height : window.innerHeight;
+  const offsetTop = vv?.offsetTop ?? 0;
+  const obscured = Math.max(0, window.innerHeight - height - offsetTop);
+
+  root.style.setProperty("--vv-height", `${Math.round(height)}px`);
+  root.style.setProperty("--vv-offset-top", `${Math.round(offsetTop)}px`);
+  root.style.setProperty("--keyboard-inset", `${Math.round(obscured)}px`);
+  root.classList.toggle("keyboard-open", obscured > 80);
+}
+
+/** Bind visualViewport listeners; returns cleanup. Safe to call once at boot. */
+export function bindVisualViewport(): () => void {
+  const sync = () => syncVisualViewport();
+  sync();
+  const vv = window.visualViewport;
+  vv?.addEventListener("resize", sync);
+  vv?.addEventListener("scroll", sync);
+  window.addEventListener("resize", sync);
+  return () => {
+    vv?.removeEventListener("resize", sync);
+    vv?.removeEventListener("scroll", sync);
+    window.removeEventListener("resize", sync);
+  };
+}
+
 export function initTelegramChrome(): TgWebApp | null {
   const tg = window.Telegram?.WebApp ?? null;
+  syncVisualViewport();
   if (!tg) return null;
 
   tg.ready();
@@ -92,7 +126,10 @@ export function initTelegramChrome(): TgWebApp | null {
 
   applyTelegramSafeAreaVars(tg);
 
-  const sync = () => applyTelegramSafeAreaVars(tg);
+  const sync = () => {
+    applyTelegramSafeAreaVars(tg);
+    syncVisualViewport();
+  };
   tg.onEvent?.("safeAreaChanged", sync);
   tg.onEvent?.("contentSafeAreaChanged", sync);
   tg.onEvent?.("viewportChanged", sync);

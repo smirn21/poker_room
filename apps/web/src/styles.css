@@ -139,6 +139,7 @@ button.primary-wide {
   padding-left: calc(var(--safe-left) + 0.65rem);
   min-height: 100dvh;
   min-height: 100svh;
+  min-height: var(--vv-height, 100svh);
   box-sizing: border-box;
 }
 
@@ -147,6 +148,9 @@ button.primary-wide {
   flex-direction: column;
   height: 100dvh;
   height: 100svh;
+  /* Prefer visible viewport so the software keyboard doesn't cover inputs */
+  height: var(--vv-height, 100svh);
+  max-height: var(--vv-height, 100svh);
   overflow: hidden;
 }
 
@@ -155,8 +159,19 @@ button.primary-wide {
   flex-direction: column;
   height: 100dvh;
   height: 100svh;
+  height: var(--vv-height, 100svh);
+  max-height: var(--vv-height, 100svh);
   overflow: hidden;
   padding-bottom: calc(var(--safe-bottom) + 4.1rem);
+}
+
+/* Keyboard covers the home indicator — drop that padding while composing */
+html.keyboard-open .app-shell {
+  padding-bottom: 0.45rem;
+}
+
+html.keyboard-open .app-shell-nav {
+  padding-bottom: 0.45rem;
 }
 
 .app-topbar {
@@ -749,16 +764,21 @@ button.primary-wide {
 
 .invite-gate-body {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 1.1rem;
   max-width: 26rem;
   width: 100%;
   margin: 0 auto;
   padding: 0.35rem 0 0.75rem;
   text-align: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .invite-welcome {
@@ -766,6 +786,8 @@ button.primary-wide {
   flex-direction: column;
   align-items: center;
   gap: 0.55rem;
+  flex: 0 1 auto;
+  min-height: 0;
 }
 
 .invite-title {
@@ -825,6 +847,15 @@ button.primary-wide {
 .invite-panel {
   text-align: left;
   margin-bottom: 0;
+  margin-top: auto;
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: rgba(12, 16, 18, 0.96);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 -16px 28px rgba(8, 12, 14, 0.72);
 }
 
 .invite-panel label {
@@ -836,6 +867,37 @@ button.primary-wide {
 .invite-panel input {
   text-align: center;
   letter-spacing: 0.04em;
+}
+
+/* While typing/pasting a code: collapse marketing so the field stays above the keyboard */
+html.keyboard-open .invite-points,
+html.invite-compose .invite-points,
+html.keyboard-open .invite-lead,
+html.invite-compose .invite-lead,
+html.keyboard-open .invite-how,
+html.invite-compose .invite-how,
+html.keyboard-open .invite-panel > .secondary,
+html.invite-compose .invite-panel > .secondary {
+  display: none;
+}
+
+html.keyboard-open .invite-title,
+html.invite-compose .invite-title {
+  font-size: 1.05rem;
+  max-width: none;
+}
+
+html.keyboard-open .invite-gate-body,
+html.invite-compose .invite-gate-body {
+  gap: 0.55rem;
+  justify-content: flex-end;
+  padding-bottom: 0.25rem;
+}
+
+html.keyboard-open .invite-panel,
+html.invite-compose .invite-panel {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
 }
 
 .invite-how {

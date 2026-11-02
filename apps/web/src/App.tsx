@@ -144,7 +144,16 @@ export function App() {
     const pre = params.get("invite");
     if (pre) setInviteCode(pre);
     void boot();
+    return () => {
+      document.documentElement.classList.remove("invite-compose");
+    };
   }, []);
+
+  useEffect(() => {
+    if (gate !== "invite") {
+      document.documentElement.classList.remove("invite-compose");
+    }
+  }, [gate]);
 
   useEffect(() => {
     if (gate === "boot" || gate === "invite" || gate === "app") {
@@ -576,6 +585,19 @@ export function App() {
               placeholder={`${t("tableCodePlaceholder")} / CLUB-…`}
               autoCapitalize="characters"
               autoCorrect="off"
+              autoComplete="off"
+              spellCheck={false}
+              enterKeyHint="done"
+              onFocus={(e) => {
+                document.documentElement.classList.add("invite-compose");
+                const el = e.currentTarget;
+                window.requestAnimationFrame(() => {
+                  el.scrollIntoView({ block: "center", behavior: "smooth" });
+                });
+              }}
+              onBlur={() => {
+                document.documentElement.classList.remove("invite-compose");
+              }}
             />
             <button type="button" onClick={redeem} className="primary-wide">
               {t("enter")}
@@ -1014,6 +1036,15 @@ export function App() {
               placeholder={t("tableCodePlaceholder")}
               autoCapitalize="characters"
               autoCorrect="off"
+              autoComplete="off"
+              spellCheck={false}
+              enterKeyHint="go"
+              onFocus={(e) => {
+                const el = e.currentTarget;
+                window.requestAnimationFrame(() => {
+                  el.scrollIntoView({ block: "center", behavior: "smooth" });
+                });
+              }}
             />
           </label>
           <button
