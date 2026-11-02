@@ -1926,6 +1926,20 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     bottom: calc(100% + 0.1rem);
   }
 
+  .hole-opp {
+    z-index: 9;
+  }
+
+  .hole-opp.hole-down {
+    top: calc(100% + 0.06rem);
+  }
+
+  .hole-opp.hole-left,
+  .hole-opp.hole-right {
+    /* nudge slightly inward so pairs stay inside the phone frame */
+    max-width: 4.4rem;
+  }
+
   .hole-opp .pcard-lg {
     width: 2rem;
     height: 2.8rem;
