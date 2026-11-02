@@ -1218,6 +1218,10 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   max-width: 100%;
 }
 
+.winner-banner-felt {
+  margin-top: 0;
+}
+
 /* —— Playing cards —— */
 .pcard {
   position: relative;
@@ -1732,19 +1736,35 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .board-zone {
-    top: 48%;
-    width: min(88%, 240px);
-    gap: 0.1rem;
+    top: 54%;
+    width: min(84%, 230px);
+    gap: 0.08rem;
     z-index: 14;
   }
 
-  .winner-banner {
+  .table-screen-over .pot-rake,
+  .table-screen-over .pot-rake-dim {
+    display: none;
+  }
+
+  .winner-banner,
+  .winner-banner-felt {
     font-size: 0.62rem;
-    padding: 0.2rem 0.4rem;
-    max-width: 100%;
+    padding: 0.18rem 0.45rem;
+    max-width: min(90%, 220px);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .winner-banner-felt {
+    position: absolute;
+    left: 50%;
+    bottom: 6%;
+    transform: translateX(-50%);
+    z-index: 15;
+    margin: 0;
+    pointer-events: none;
   }
 
   /* Keep showdown hole cards in the seat column — absolute-above hits the board/topbar */

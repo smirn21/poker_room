@@ -40,13 +40,13 @@ const OPP_BY_COUNT: { left: number; top: number }[][] = [
   [],
   [{ left: 50, top: 14 }],
   [
-    { left: 20, top: 20 },
-    { left: 80, top: 20 },
+    { left: 16, top: 17 },
+    { left: 84, top: 17 },
   ],
   [
-    { left: 16, top: 28 },
-    { left: 50, top: 12 },
-    { left: 84, top: 28 },
+    { left: 14, top: 26 },
+    { left: 50, top: 11 },
+    { left: 86, top: 26 },
   ],
   [
     { left: 14, top: 34 },

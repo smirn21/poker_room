@@ -679,10 +679,13 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
               <div key={`ph-${i}`} className="board-slot" />
             ))}
           </div>
-          {winnerText ? (
-            <div className="winner-banner winner-banner-glow">{winnerText}</div>
-          ) : null}
         </div>
+
+        {winnerText ? (
+          <div className="winner-banner winner-banner-glow winner-banner-felt">
+            {winnerText}
+          </div>
+        ) : null}
 
         {flying.map((f) => (
           <span
