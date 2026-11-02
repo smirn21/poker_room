@@ -4,7 +4,18 @@ export const en: Record<MessageKey, string> = {
   brand: "Club Hold'em",
   openingRoom: "Opening the room…",
   inviteOnly: "Invite-only. Enter a club code or table code (TBL-…).",
+  inviteWelcome: "Welcome to the felt",
+  inviteLead:
+    "Club Hold'em is private Texas Hold'em for your circle. Enter a club code from the admin, or a table code (TBL-…) from anyone already seated.",
+  invitePointSeats: "Up to 9 seats at one table",
+  invitePointTable:
+    "Seated players see the table code — tap to copy and invite friends",
+  invitePointWallet: "Chips via the club wallet (USDT TRC20)",
+  inviteHow:
+    "Paste the code below. After entry you'll land in the lobby — pick a table or sit by code.",
   inviteCode: "Invite code",
+  inviteShareHint: "Share table code",
+  inviteShareText: "Join my Club Hold'em table: {code}",
   tableCodeJoin: "Table code",
   tableCodePlaceholder: "TBL-XXXXXX",
   enter: "Enter",

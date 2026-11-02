@@ -293,7 +293,8 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
   const tableName = state?.name ?? null;
   const playing = state?.status === "playing";
   /** Compact chip in topbar — never a tall banner that pushes actions off-screen */
-  const showTableInvite = Boolean(mySeatLive && tableInviteCode && !playing);
+  /* Any seated player can share the table code — not admin-only */
+  const showTableInvite = Boolean(mySeatLive && tableInviteCode);
   const needsRebuy = Boolean(
     mySeatLive &&
       mySeatLive.stack <= 0 &&
@@ -320,12 +321,30 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
 
   async function copyTableInvite() {
     if (!tableInviteCode) return;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?invite=${encodeURIComponent(tableInviteCode)}`;
+    const payload = `${tableInviteCode}\n${shareUrl}`;
     try {
-      await navigator.clipboard.writeText(tableInviteCode);
+      if (navigator.share) {
+        await navigator.share({
+          title: tableName ?? t("brand"),
+          text: t("inviteShareText", { code: tableInviteCode }),
+          url: shareUrl,
+        });
+        setInviteCopied(true);
+        window.setTimeout(() => setInviteCopied(false), 2000);
+        return;
+      }
+      await navigator.clipboard.writeText(payload);
       setInviteCopied(true);
       window.setTimeout(() => setInviteCopied(false), 2000);
     } catch {
-      setError(t("copyFailed"));
+      try {
+        await navigator.clipboard.writeText(tableInviteCode);
+        setInviteCopied(true);
+        window.setTimeout(() => setInviteCopied(false), 2000);
+      } catch {
+        setError(t("copyFailed"));
+      }
     }
   }
 
@@ -516,6 +535,11 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
             </button>
           )}
           <span className="street-pill">{streetLabel || "—"}</span>
+          {tableInviteCode && (
+            <span className="table-code-inline" title={t("inviteTableHint")}>
+              {tableInviteCode}
+            </span>
+          )}
           <span className="hint table-hand-hint">
             {t("handNo", { n: state?.handNo ?? 0 })}
           </span>
@@ -526,7 +550,7 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
               type="button"
               className={`invite-chip${inviteCopied ? " invite-chip-ok" : ""}`}
               onClick={() => void copyTableInvite()}
-              title={inviteCopied ? t("inviteTableCopied") : t("inviteTableHint")}
+              title={inviteCopied ? t("inviteTableCopied") : t("inviteShareHint")}
             >
               {isHost && <span className="host-dot" aria-hidden />}
               <span className="invite-chip-code">{tableInviteCode}</span>

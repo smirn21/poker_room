@@ -274,7 +274,7 @@ export function App() {
       const r = await api.createTable({
         smallBlind: 50,
         bigBlind: 100,
-        maxSeats: 6,
+        maxSeats: 9,
       });
       await join(r.table.id);
     } catch (e) {
@@ -534,30 +534,41 @@ export function App() {
 
   if (gate === "invite" || (user && !user.whitelisted)) {
     return (
-      <div className="app-shell app-shell-fit">
+      <div className="app-shell app-shell-fit invite-gate">
         {gateHeader}
-        <p className="sub">{t("inviteOnly")}</p>
-        <div className="panel panel-compact">
-          <label htmlFor="invite">{t("inviteCode")}</label>
-          <input
-            id="invite"
-            value={inviteCode}
-            onChange={(e) => setInviteCode(e.target.value)}
-            placeholder={`${t("tableCodePlaceholder")} / CLUB-…`}
-            autoCapitalize="characters"
-            autoCorrect="off"
-          />
-          <button type="button" onClick={redeem} className="primary-wide">
-            {t("enter")}
-          </button>
-          {error && <p className="error">{error}</p>}
-          <button
-            type="button"
-            className="secondary primary-wide"
-            onClick={() => void boot()}
-          >
-            {t("retryAuth")}
-          </button>
+        <div className="invite-gate-body">
+          <div className="invite-welcome">
+            <h2 className="invite-title">{t("inviteWelcome")}</h2>
+            <p className="invite-lead">{t("inviteLead")}</p>
+            <ul className="invite-points">
+              <li>{t("invitePointSeats")}</li>
+              <li>{t("invitePointTable")}</li>
+              <li>{t("invitePointWallet")}</li>
+            </ul>
+          </div>
+          <div className="panel invite-panel">
+            <p className="invite-how">{t("inviteHow")}</p>
+            <label htmlFor="invite">{t("inviteCode")}</label>
+            <input
+              id="invite"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              placeholder={`${t("tableCodePlaceholder")} / CLUB-…`}
+              autoCapitalize="characters"
+              autoCorrect="off"
+            />
+            <button type="button" onClick={redeem} className="primary-wide">
+              {t("enter")}
+            </button>
+            {error && <p className="error">{error}</p>}
+            <button
+              type="button"
+              className="secondary primary-wide"
+              onClick={() => void boot()}
+            >
+              {t("retryAuth")}
+            </button>
+          </div>
         </div>
       </div>
     );

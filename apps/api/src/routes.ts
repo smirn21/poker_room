@@ -295,7 +295,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
         name: z.string().min(1).max(40).optional(),
         smallBlind: z.number().int().positive().default(50),
         bigBlind: z.number().int().positive().default(100),
-        maxSeats: z.number().int().min(2).max(9).default(6),
+        maxSeats: z.number().int().min(2).max(9).default(9),
       })
       .parse(req.body);
 

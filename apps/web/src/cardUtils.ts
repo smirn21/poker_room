@@ -37,45 +37,60 @@ export type HoleDir = "up" | "down" | "left" | "right";
 type OppSlot = { left: number; top: number; hole: HoleDir };
 
 /**
- * Opponent rim slots by count — clear of board/pot, with hole-card
- * direction so showdown faces sit outside the oval (not on the board).
- */
-/**
- * Seats kept on the upper rim with enough lateral gap that board-sized
- * showdown pairs (parked above each seat on phone) don't collide.
+ * Opponent rim slots for a portrait (vertically stretched) felt.
+ * Index = opponent count (hero is in the bottom strip). Full ring = 8 opps → 9-max.
  */
 const OPP_BY_COUNT: OppSlot[][] = [
   [],
-  [{ left: 50, top: 16, hole: "up" }],
+  [{ left: 50, top: 12, hole: "up" }],
   [
-    { left: 20, top: 18, hole: "up" },
-    { left: 80, top: 18, hole: "up" },
+    { left: 18, top: 18, hole: "up" },
+    { left: 82, top: 18, hole: "up" },
   ],
   [
-    { left: 14, top: 32, hole: "up" },
-    { left: 50, top: 15, hole: "up" },
-    { left: 86, top: 32, hole: "up" },
+    { left: 14, top: 28, hole: "up" },
+    { left: 50, top: 12, hole: "up" },
+    { left: 86, top: 28, hole: "up" },
   ],
   [
-    { left: 12, top: 38, hole: "up" },
-    { left: 32, top: 16, hole: "up" },
-    { left: 68, top: 16, hole: "up" },
-    { left: 88, top: 38, hole: "up" },
+    { left: 12, top: 36, hole: "up" },
+    { left: 28, top: 14, hole: "up" },
+    { left: 72, top: 14, hole: "up" },
+    { left: 88, top: 36, hole: "up" },
   ],
   [
     { left: 11, top: 42, hole: "up" },
-    { left: 28, top: 17, hole: "up" },
-    { left: 50, top: 14, hole: "up" },
-    { left: 72, top: 17, hole: "up" },
+    { left: 26, top: 16, hole: "up" },
+    { left: 50, top: 11, hole: "up" },
+    { left: 74, top: 16, hole: "up" },
     { left: 89, top: 42, hole: "up" },
   ],
   [
-    { left: 10, top: 44, hole: "up" },
-    { left: 24, top: 22, hole: "up" },
-    { left: 40, top: 14, hole: "up" },
-    { left: 60, top: 14, hole: "up" },
-    { left: 76, top: 22, hole: "up" },
-    { left: 90, top: 44, hole: "up" },
+    { left: 10, top: 48, hole: "up" },
+    { left: 14, top: 28, hole: "up" },
+    { left: 32, top: 13, hole: "up" },
+    { left: 68, top: 13, hole: "up" },
+    { left: 86, top: 28, hole: "up" },
+    { left: 90, top: 48, hole: "up" },
+  ],
+  [
+    { left: 10, top: 52, hole: "up" },
+    { left: 12, top: 34, hole: "up" },
+    { left: 26, top: 16, hole: "up" },
+    { left: 50, top: 10, hole: "up" },
+    { left: 74, top: 16, hole: "up" },
+    { left: 88, top: 34, hole: "up" },
+    { left: 90, top: 52, hole: "up" },
+  ],
+  [
+    { left: 9, top: 58, hole: "up" },
+    { left: 10, top: 40, hole: "up" },
+    { left: 18, top: 22, hole: "up" },
+    { left: 36, top: 11, hole: "up" },
+    { left: 64, top: 11, hole: "up" },
+    { left: 82, top: 22, hole: "up" },
+    { left: 90, top: 40, hole: "up" },
+    { left: 91, top: 58, hole: "up" },
   ],
 ];
 
@@ -87,7 +102,7 @@ export type SeatLayoutPos = {
 };
 
 /**
- * Hero in bottom strip; opponents on the rim so they don't cover the board.
+ * Hero in bottom strip; opponents on the rim of the portrait oval.
  */
 export function seatLayout(
   seats: { seatIndex: number; userId: string | null }[],

@@ -741,6 +741,111 @@ button.primary-wide {
   font-size: 0.92rem;
 }
 
+.invite-gate {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.invite-gate-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 1.1rem;
+  max-width: 26rem;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0.35rem 0 0.75rem;
+  text-align: center;
+}
+
+.invite-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.invite-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 5.2vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--gold-soft);
+  line-height: 1.2;
+  max-width: 18ch;
+}
+
+.invite-lead {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  max-width: 34ch;
+}
+
+.invite-points {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  text-align: left;
+}
+
+.invite-points li {
+  position: relative;
+  padding: 0.55rem 0.75rem 0.55rem 1.85rem;
+  border-radius: 12px;
+  background: rgba(18, 24, 28, 0.65);
+  border: 1px solid rgba(67, 197, 181, 0.14);
+  color: var(--ink);
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.invite-points li::before {
+  content: "";
+  position: absolute;
+  left: 0.7rem;
+  top: 50%;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(67, 197, 181, 0.45);
+}
+
+.invite-panel {
+  text-align: left;
+  margin-bottom: 0;
+}
+
+.invite-panel label {
+  display: block;
+  text-align: center;
+  margin-bottom: 0.35rem;
+}
+
+.invite-panel input {
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.invite-how {
+  margin: 0 0 0.75rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
 .panel {
   background: rgba(18, 24, 28, 0.78);
   border: 1px solid rgba(67, 197, 181, 0.14);
@@ -1069,14 +1174,14 @@ input:focus-visible {
 }
 
 .table-screen-playing .felt {
-  max-height: min(40dvh, 340px);
-  margin: 0.15rem 0 0.25rem;
-  aspect-ratio: 1.12 / 1;
+  max-height: min(56dvh, 480px);
+  margin: 0.15rem auto 0.25rem;
+  aspect-ratio: 0.7 / 1;
 }
 
 .table-screen-turn .felt {
-  max-height: min(32dvh, 280px);
-  aspect-ratio: 1.22 / 1;
+  max-height: min(48dvh, 400px);
+  aspect-ratio: 0.72 / 1;
 }
 
 .table-screen-turn .actions-live {
@@ -1136,13 +1241,14 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
 .felt {
   position: relative;
-  margin: 0.3rem 0 0.4rem;
-  width: 100%;
-  aspect-ratio: 1.08 / 1;
-  max-height: min(46dvh, 380px);
-  border-radius: 50% / 46%;
+  margin: 0.3rem auto 0.4rem;
+  width: min(100%, 380px);
+  /* Portrait oval — stretched along the phone display */
+  aspect-ratio: 0.72 / 1;
+  max-height: min(58dvh, 520px);
+  border-radius: 48% / 40%;
   background:
-    radial-gradient(ellipse at 50% 38%, #1a2c2e 0%, var(--felt-deep) 70%);
+    radial-gradient(ellipse at 50% 42%, #1a2c2e 0%, var(--felt-deep) 70%);
   border: 7px solid #1c2a2c;
   box-shadow:
     inset 0 0 56px rgba(0, 0, 0, 0.55),
@@ -1158,8 +1264,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 .felt-rail {
   pointer-events: none;
   position: absolute;
-  inset: 6%;
-  border-radius: 50% / 44%;
+  inset: 5% 8%;
+  border-radius: 48% / 38%;
   border: 1px solid rgba(67, 197, 181, 0.16);
   box-shadow: inset 0 0 24px rgba(67, 197, 181, 0.06);
 }
@@ -1167,7 +1273,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 .board-zone {
   position: absolute;
   left: 50%;
-  top: 46%;
+  top: 48%;
   transform: translate(-50%, -50%);
   z-index: 12;
   display: flex;
@@ -1176,6 +1282,18 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   gap: 0.28rem;
   width: min(92%, 280px);
   pointer-events: none;
+}
+
+.table-code-inline {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--gold-soft);
+  opacity: 0.85;
+  max-width: 6.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pot-chip {
@@ -1703,7 +1821,15 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .top-tools .invite-chip {
-    display: none;
+    display: inline-flex;
+    max-width: 5.8rem;
+    font-size: 0.58rem;
+    padding: 0.22rem 0.35rem;
+  }
+
+  .table-code-inline {
+    font-size: 0.55rem;
+    max-width: 5.2rem;
   }
 
   .table-hand-hint {
@@ -1726,35 +1852,36 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .felt {
-    /* Fill phone height so the hero strip isn't stranded under a void */
-    width: min(100%, calc(min(42dvh, 340px) * 1.18));
-    max-height: min(42dvh, 340px);
-    aspect-ratio: 1.18 / 1;
+    width: min(92%, 320px);
+    max-height: min(56dvh, 460px);
+    aspect-ratio: 0.68 / 1;
     border-width: 5px;
-    margin: 0.15rem auto 0.15rem;
+    margin: 0.1rem auto 0.12rem;
+    border-radius: 46% / 40%;
   }
 
   .table-screen-playing .felt {
-    width: min(100%, calc(min(40dvh, 320px) * 1.18));
-    max-height: min(40dvh, 320px);
+    width: min(92%, 310px);
+    max-height: min(54dvh, 440px);
+    aspect-ratio: 0.68 / 1;
   }
 
   .table-screen-turn .felt,
   .table-screen-over .felt {
-    width: min(100%, calc(min(34dvh, 280px) * 1.22));
-    max-height: min(34dvh, 280px);
-    aspect-ratio: 1.22 / 1;
+    width: min(90%, 290px);
+    max-height: min(46dvh, 380px);
+    aspect-ratio: 0.7 / 1;
   }
 
   .board-zone {
-    top: 62%;
-    width: min(84%, 220px);
+    top: 48%;
+    width: min(88%, 220px);
     gap: 0.04rem;
     z-index: 14;
   }
 
   .table-screen-over .board-zone {
-    top: 64%;
+    top: 50%;
   }
 
   .pot-area {
@@ -2075,7 +2202,9 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 /* Narrow phones */
 @media (max-width: 380px) {
   .top-tools .invite-chip {
-    display: none;
+    display: inline-flex;
+    max-width: 5rem;
+    font-size: 0.52rem;
   }
 
   .table-hand-hint {
@@ -2083,14 +2212,16 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .felt {
-    width: min(100%, calc(min(40dvh, 300px) * 1.18));
-    max-height: min(40dvh, 300px);
+    width: min(94%, 300px);
+    max-height: min(52dvh, 420px);
+    aspect-ratio: 0.68 / 1;
   }
 
   .table-screen-turn .felt,
   .table-screen-over .felt {
-    width: min(100%, calc(min(32dvh, 250px) * 1.22));
-    max-height: min(32dvh, 250px);
+    width: min(92%, 280px);
+    max-height: min(44dvh, 360px);
+    aspect-ratio: 0.7 / 1;
   }
 
   .chat {
@@ -2101,14 +2232,16 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 /* Short viewports (Telegram Mini App on compact phones) */
 @media (max-height: 700px) {
   .felt {
-    width: min(100%, calc(min(38dvh, 300px) * 1.18));
-    max-height: min(38dvh, 300px);
+    width: min(90%, 300px);
+    max-height: min(50dvh, 400px);
+    aspect-ratio: 0.7 / 1;
   }
 
   .table-screen-turn .felt,
   .table-screen-over .felt {
-    width: min(100%, calc(min(30dvh, 240px) * 1.22));
-    max-height: min(30dvh, 240px);
+    width: min(88%, 280px);
+    max-height: min(42dvh, 340px);
+    aspect-ratio: 0.72 / 1;
   }
 
   .hero-zone {
@@ -2131,7 +2264,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .board-zone {
-    top: 58%;
+    top: 48%;
     gap: 0.04rem;
   }
 
@@ -2145,14 +2278,16 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
 @media (max-height: 600px) {
   .felt {
-    width: min(100%, calc(min(28dvh, 210px) * 1.22));
-    max-height: min(28dvh, 210px);
+    width: min(88%, 270px);
+    max-height: min(46dvh, 340px);
+    aspect-ratio: 0.72 / 1;
   }
 
   .table-screen-turn .felt,
   .table-screen-over .felt {
-    width: min(100%, calc(min(22dvh, 190px) * 1.28));
-    max-height: min(22dvh, 190px);
+    width: min(86%, 250px);
+    max-height: min(38dvh, 300px);
+    aspect-ratio: 0.74 / 1;
   }
 
   .table-hand-hint {
