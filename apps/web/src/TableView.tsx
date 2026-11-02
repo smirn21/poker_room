@@ -681,12 +681,6 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
           </div>
         </div>
 
-        {winnerText ? (
-          <div className="winner-banner winner-banner-glow winner-banner-felt">
-            {winnerText}
-          </div>
-        ) : null}
-
         {flying.map((f) => (
           <span
             key={f.id}
@@ -712,6 +706,12 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
           .filter((s) => s.userId && s.userId !== user.id)
           .map((seat) => renderSeat(seat, true))}
       </div>
+
+      {winnerText ? (
+        <div className="winner-banner winner-banner-glow winner-banner-felt">
+          {winnerText}
+        </div>
+      ) : null}
 
       {/* Hero strip */}
       {mySeat && (
