@@ -1926,18 +1926,21 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     bottom: calc(100% + 0.1rem);
   }
 
-  .hole-opp {
-    z-index: 9;
-  }
-
-  .hole-opp.hole-down {
-    top: calc(100% + 0.06rem);
-  }
-
-  .hole-opp.hole-left,
-  .hole-opp.hole-right {
-    /* nudge slightly inward so pairs stay inside the phone frame */
-    max-width: 4.4rem;
+  /*
+   * Full-table showdown: park every opp pair just above its seat.
+   * Side/up/down offsets collide at 5 opponents on a 390px felt.
+   */
+  .table-screen-over .hole-opp,
+  .table-screen-over .hole-opp.hole-up,
+  .table-screen-over .hole-opp.hole-down,
+  .table-screen-over .hole-opp.hole-left,
+  .table-screen-over .hole-opp.hole-right {
+    left: 50%;
+    right: auto;
+    top: auto;
+    bottom: calc(100% + 0.08rem);
+    transform: translateX(-50%);
+    z-index: 10;
   }
 
   .hole-opp .pcard-lg {

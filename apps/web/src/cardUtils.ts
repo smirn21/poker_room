@@ -40,39 +40,42 @@ type OppSlot = { left: number; top: number; hole: HoleDir };
  * Opponent rim slots by count — clear of board/pot, with hole-card
  * direction so showdown faces sit outside the oval (not on the board).
  */
-/** holeDir points toward table center so faces stay on-screen at 6-max */
+/**
+ * Seats kept on the upper rim with enough lateral gap that board-sized
+ * showdown pairs (parked above each seat on phone) don't collide.
+ */
 const OPP_BY_COUNT: OppSlot[][] = [
   [],
-  [{ left: 50, top: 14, hole: "down" }],
+  [{ left: 50, top: 16, hole: "up" }],
   [
-    { left: 18, top: 16, hole: "down" },
-    { left: 82, top: 16, hole: "down" },
+    { left: 20, top: 18, hole: "up" },
+    { left: 80, top: 18, hole: "up" },
   ],
   [
-    { left: 12, top: 30, hole: "right" },
-    { left: 50, top: 13, hole: "down" },
-    { left: 88, top: 30, hole: "left" },
+    { left: 14, top: 32, hole: "up" },
+    { left: 50, top: 15, hole: "up" },
+    { left: 86, top: 32, hole: "up" },
   ],
   [
-    { left: 11, top: 36, hole: "right" },
-    { left: 30, top: 14, hole: "down" },
-    { left: 70, top: 14, hole: "down" },
-    { left: 89, top: 36, hole: "left" },
+    { left: 12, top: 38, hole: "up" },
+    { left: 32, top: 16, hole: "up" },
+    { left: 68, top: 16, hole: "up" },
+    { left: 88, top: 38, hole: "up" },
   ],
   [
-    { left: 10, top: 38, hole: "right" },
-    { left: 26, top: 15, hole: "down" },
-    { left: 50, top: 12, hole: "down" },
-    { left: 74, top: 15, hole: "down" },
-    { left: 90, top: 38, hole: "left" },
+    { left: 11, top: 42, hole: "up" },
+    { left: 28, top: 17, hole: "up" },
+    { left: 50, top: 14, hole: "up" },
+    { left: 72, top: 17, hole: "up" },
+    { left: 89, top: 42, hole: "up" },
   ],
   [
-    { left: 9, top: 42, hole: "right" },
-    { left: 22, top: 20, hole: "down" },
-    { left: 38, top: 12, hole: "down" },
-    { left: 62, top: 12, hole: "down" },
-    { left: 78, top: 20, hole: "down" },
-    { left: 91, top: 42, hole: "left" },
+    { left: 10, top: 44, hole: "up" },
+    { left: 24, top: 22, hole: "up" },
+    { left: 40, top: 14, hole: "up" },
+    { left: 60, top: 14, hole: "up" },
+    { left: 76, top: 22, hole: "up" },
+    { left: 90, top: 44, hole: "up" },
   ],
 ];
 
