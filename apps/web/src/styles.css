@@ -2086,7 +2086,10 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     gap: 0.04rem;
   }
 
-  .chat-panel {
+  /* Same as ≤430px width: hide chat only in-hand, keep it while waiting */
+  .table-screen-playing .chat-panel,
+  .table-screen-turn .chat-panel,
+  .table-screen-over .chat-panel {
     display: none;
   }
 }
