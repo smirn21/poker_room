@@ -27,10 +27,13 @@ fi
 echo "Tunnel URL: ${URL}"
 
 ROOT="${HOME}/poker_room"
-cat > "${ROOT}/apps/web/.env.production" <<EOF
+# Vite loads .env.production.local over .env.production — write both.
+for envf in "${ROOT}/apps/web/.env.production" "${ROOT}/apps/web/.env.production.local"; do
+  cat > "${envf}" <<EOF
 VITE_API_URL=${URL}
 VITE_WS_URL=${URL}
 EOF
+done
 
 # Keep API CORS on the Mini App origin + public API URL for TronHooks
 if [[ -f "${ROOT}/.env" ]]; then
