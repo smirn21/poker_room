@@ -354,7 +354,12 @@ html.keyboard-open .app-shell-nav {
   display: flex;
   gap: 0.45rem;
   align-items: flex-end;
-  margin-bottom: 0.55rem;
+  margin-bottom: 0.35rem;
+}
+
+.lobby-code-error {
+  margin: 0 0 0.55rem;
+  font-size: 0.88rem;
 }
 
 .lobby-code-row .grow {

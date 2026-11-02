@@ -171,13 +171,22 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       return { user: toUserDTO(u), tableId: tableByCode.id };
     }
 
-    if (user.whitelisted) {
-      return { user: toUserDTO(user) };
-    }
-
     const invite = await prisma.invite.findUnique({
       where: { code },
     });
+
+    // Already in the club: known CLUB-… is a no-op; unknown / TBL- miss must error
+    // so lobby "sit by code" and shared links don't silently stay on the lobby.
+    if (user.whitelisted) {
+      if (invite) {
+        return { user: toUserDTO(user) };
+      }
+      if (code.startsWith("TBL-")) {
+        throw httpError.badRequest("Table not found");
+      }
+      throw httpError.badRequest("Invalid invite");
+    }
+
     if (!invite) throw httpError.badRequest("Invalid invite");
     if (invite.expiresAt && invite.expiresAt < new Date()) {
       throw httpError.badRequest("Invite expired");

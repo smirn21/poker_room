@@ -216,9 +216,9 @@ export function App() {
       const { token, user: u } = await api.authTelegram(initData);
       setToken(token);
       setUser(u);
+      const params = new URLSearchParams(window.location.search);
+      const pre = params.get("invite") ?? params.get("table");
       if (!u.whitelisted) {
-        const params = new URLSearchParams(window.location.search);
-        const pre = params.get("invite") ?? params.get("table");
         if (pre) {
           const r = await api.redeemInvite(pre.trim());
           await afterInviteOrAuth(r.user, { tableId: r.tableId ?? null });
@@ -226,6 +226,18 @@ export function App() {
         }
         setGate("invite");
         return;
+      }
+      // Already in club — still honour shared TBL-/table links
+      if (pre) {
+        try {
+          const r = await api.redeemInvite(pre.trim());
+          await afterInviteOrAuth(r.user, {
+            tableId: r.tableId ?? (params.get("table") ? pre.trim() : null),
+          });
+          return;
+        } catch {
+          /* invalid club code → fall through to lobby */
+        }
       }
       await afterInviteOrAuth(u);
     } catch (e) {
@@ -252,28 +264,34 @@ export function App() {
     }
   }
 
-  /** Lobby: sit by TBL- code (or club code that maps to a table). */
+  function mapJoinError(raw: string): string {
+    if (/table not found/i.test(raw)) return t("errTableCode");
+    if (/table full/i.test(raw)) return t("errTableFull");
+    if (/insufficient/i.test(raw)) return t("errInsufficient");
+    if (/not whitelisted/i.test(raw)) return t("errInvite");
+    return raw || t("errJoin");
+  }
+
+  /** Lobby: sit by TBL-… / table id via join (not club redeem — that is silent for members). */
   async function sitByCode() {
+    if (!user) return;
+    const code = inviteCode.trim();
+    if (!code) return;
     try {
       setError(null);
-      const code = inviteCode.trim();
-      if (!code) return;
-      const r = await api.redeemInvite(code);
-      setUser(r.user);
-      if (r.tableId) {
-        await join(r.tableId);
+      if (user.balance <= 0) {
+        setTab("wallet");
+        setError(t("errInsufficient"));
         return;
       }
-      // Plain club invite — just refresh lobby
-      await refreshTables();
+      const amount = Math.min(buyIn, user.balance);
+      const r = await api.joinTable(code, amount);
+      setUser(r.user);
+      setTableId(r.tableId ?? code);
       setInviteCode("");
+      setGate("table");
     } catch (e) {
-      // Fallback: try join endpoint directly (cuid / TBL-)
-      try {
-        await join(inviteCode.trim());
-      } catch {
-        setError(e instanceof Error ? e.message : t("errInvite"));
-      }
+      setError(mapJoinError(e instanceof Error ? e.message : ""));
     }
   }
 
@@ -1045,6 +1063,12 @@ export function App() {
                   el.scrollIntoView({ block: "center", behavior: "smooth" });
                 });
               }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void sitByCode();
+                }
+              }}
             />
           </label>
           <button
@@ -1056,6 +1080,7 @@ export function App() {
             {t("sitByCode")}
           </button>
         </div>
+        {error && <p className="error lobby-code-error">{error}</p>}
         <div className="table-list table-list-fit">
           {tables.map((tbl, i) => (
             <div
@@ -1110,7 +1135,6 @@ export function App() {
           ))}
           {tables.length === 0 && <p className="hint center-hint">{t("noTables")}</p>}
         </div>
-        {error && <p className="error">{error}</p>}
       </div>
     );
   } else if (tab === "tables") {
