@@ -1675,28 +1675,11 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .top-tools .invite-chip {
-    padding: 0.28rem 0.4rem;
-    max-width: 4.8rem;
+    display: none;
   }
 
-  .top-tools .invite-chip-code {
-    font-size: 0.62rem;
-    max-width: 3.6rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: inline-block;
-    vertical-align: bottom;
-  }
-
-  .top-tools .lang-switch-compact {
-    font-size: 0.65rem;
-    padding: 0.28rem 0.35rem;
-    max-width: 4.2rem;
-  }
-
-  .top-tools .icon-btn {
-    padding: 0.3rem 0.4rem;
-    font-size: 0.95rem;
+  .table-hand-hint {
+    display: none;
   }
 
   .table-leave-full {
@@ -1873,25 +1856,32 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .bet-stack {
-    transform: translateX(-50%) scale(0.82);
+    transform: translateX(-50%) scale(0.72);
     transform-origin: top center;
+    z-index: 4;
   }
 
+  /* Keep street bets tucked under the seat so they don't collide with pot/board */
   .bet-stack.bet-down {
-    top: calc(100% + 0.05rem);
+    top: calc(100% - 0.15rem);
   }
 
   .bet-stack.bet-up {
-    bottom: calc(100% + 0.05rem);
+    bottom: calc(100% - 0.1rem);
+    transform-origin: bottom center;
   }
 
   .bet-stack .chip-static {
-    width: 0.85rem;
-    height: 0.85rem;
+    width: 0.8rem;
+    height: 0.8rem;
   }
 
   .bet-stack .chip-label {
-    font-size: 0.52rem;
+    font-size: 0.5rem;
+  }
+
+  .hero-zone .bet-stack.bet-up {
+    bottom: calc(100% + 0.15rem);
   }
 
   .hole-opp .pcard-sm {
