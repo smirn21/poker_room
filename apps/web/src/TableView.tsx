@@ -496,9 +496,11 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
   }
 
   return (
-    <div className={`table-screen${playing ? " table-screen-playing" : ""}${isMyTurn ? " table-screen-turn" : ""}`}>
+    <div
+      className={`table-screen${playing ? " table-screen-playing" : ""}${isMyTurn ? " table-screen-turn" : ""}${state?.status === "hand_over" ? " table-screen-over" : ""}`}
+    >
       <div className="table-topbar">
-        <button type="button" className="secondary" onClick={onBack}>
+        <button type="button" className="secondary table-back-btn" onClick={onBack}>
           {t("lobby")}
         </button>
         <div className="table-status">
@@ -514,7 +516,9 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
             </button>
           )}
           <span className="street-pill">{streetLabel || "—"}</span>
-          <span className="hint">{t("handNo", { n: state?.handNo ?? 0 })}</span>
+          <span className="hint table-hand-hint">
+            {t("handNo", { n: state?.handNo ?? 0 })}
+          </span>
         </div>
         <div className="top-tools">
           {showTableInvite && (
@@ -537,8 +541,17 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
           >
             😊
           </button>
-          <button type="button" className="secondary" onClick={leave}>
-            {t("leave")}
+          <button
+            type="button"
+            className="secondary table-leave-btn"
+            onClick={leave}
+            aria-label={t("leave")}
+            title={t("leave")}
+          >
+            <span className="table-leave-full">{t("leave")}</span>
+            <span className="table-leave-short" aria-hidden>
+              ✕
+            </span>
           </button>
         </div>
       </div>
@@ -817,7 +830,7 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
               </div>
             ))}
           </div>
-          <form className="row" onSubmit={sendChat}>
+          <form className="row chat-compose" onSubmit={sendChat}>
             <input
               value={chatText}
               onChange={(e) => setChatText(e.target.value)}

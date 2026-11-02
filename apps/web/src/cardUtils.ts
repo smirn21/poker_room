@@ -32,14 +32,43 @@ export function formatCard(card: Card): { label: string; red: boolean } {
   };
 }
 
-/** Fixed rim slots — never dead-center over the board. */
-const OPP_SLOTS: { left: number; top: number }[] = [
-  { left: 16, top: 18 },
-  { left: 84, top: 18 },
-  { left: 6, top: 42 },
-  { left: 94, top: 42 },
-  { left: 22, top: 12 },
-  { left: 78, top: 12 },
+/**
+ * Opponent rim slots by count — kept clear of the board (center ~46%)
+ * and spaced so names/chips don't collide on a narrow phone oval.
+ */
+const OPP_BY_COUNT: { left: number; top: number }[][] = [
+  [],
+  [{ left: 50, top: 14 }],
+  [
+    { left: 20, top: 20 },
+    { left: 80, top: 20 },
+  ],
+  [
+    { left: 16, top: 28 },
+    { left: 50, top: 12 },
+    { left: 84, top: 28 },
+  ],
+  [
+    { left: 14, top: 34 },
+    { left: 30, top: 14 },
+    { left: 70, top: 14 },
+    { left: 86, top: 34 },
+  ],
+  [
+    { left: 12, top: 38 },
+    { left: 24, top: 16 },
+    { left: 50, top: 11 },
+    { left: 76, top: 16 },
+    { left: 88, top: 38 },
+  ],
+  [
+    { left: 11, top: 40 },
+    { left: 20, top: 18 },
+    { left: 38, top: 12 },
+    { left: 62, top: 12 },
+    { left: 80, top: 18 },
+    { left: 89, top: 40 },
+  ],
 ];
 
 /**
@@ -59,8 +88,12 @@ export function seatLayout(
 
   map.set(hero.seatIndex, { left: "50%", top: "88%", isHero: true });
 
+  const slots =
+    OPP_BY_COUNT[Math.min(others.length, OPP_BY_COUNT.length - 1)] ??
+    OPP_BY_COUNT[OPP_BY_COUNT.length - 1];
+
   others.forEach((seat, i) => {
-    const slot = OPP_SLOTS[i % OPP_SLOTS.length];
+    const slot = slots[i % slots.length];
     map.set(seat.seatIndex, {
       left: `${slot.left}%`,
       top: `${slot.top}%`,

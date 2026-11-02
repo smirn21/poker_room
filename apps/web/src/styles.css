@@ -1060,19 +1060,23 @@ input:focus-visible {
 .table-screen {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.3rem;
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  /* Keep action row clear of iPhone home indicator */
+  padding-bottom: max(0.15rem, calc(var(--safe-bottom) * 0.35));
 }
 
 .table-screen-playing .felt {
-  max-height: min(42dvh, 360px);
-  margin: 0.2rem 0 0.35rem;
+  max-height: min(40dvh, 340px);
+  margin: 0.15rem 0 0.25rem;
+  aspect-ratio: 1.12 / 1;
 }
 
 .table-screen-turn .felt {
-  max-height: min(36dvh, 320px);
+  max-height: min(32dvh, 280px);
+  aspect-ratio: 1.22 / 1;
 }
 
 .table-screen-turn .actions-live {
@@ -1084,10 +1088,20 @@ input:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.4rem;
+  gap: 0.35rem;
   /* Leave horizontal room for TG close (L) and ⋯ / minimize (R) when insets are thin */
-  min-height: 2.5rem;
-  padding-right: 0.15rem;
+  min-height: 2.35rem;
+  padding-right: 0.1rem;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.table-leave-short {
+  display: none;
+}
+
+.table-leave-full {
+  display: inline;
 }
 
 .table-topbar .tg-native-back-hint {
@@ -1122,11 +1136,11 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
 .felt {
   position: relative;
-  margin: 0.35rem 0 0.5rem;
+  margin: 0.3rem 0 0.4rem;
   width: 100%;
-  aspect-ratio: 1 / 1.05;
-  max-height: min(48dvh, 400px);
-  border-radius: 50% / 44%;
+  aspect-ratio: 1.08 / 1;
+  max-height: min(46dvh, 380px);
+  border-radius: 50% / 46%;
   background:
     radial-gradient(ellipse at 50% 38%, #1a2c2e 0%, var(--felt-deep) 70%);
   border: 7px solid #1c2a2c;
@@ -1137,6 +1151,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     0 10px 28px rgba(0, 0, 0, 0.45);
   overflow: visible;
   isolation: isolate;
+  flex-shrink: 1;
+  min-height: 0;
 }
 
 .felt-rail {
@@ -1595,103 +1611,442 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   font-weight: 600;
 }
 
-/* Narrow phones */
-@media (max-width: 380px) {
+/* iPhone / Telegram Mini App width */
+@media (max-width: 430px) {
   .app-shell {
-    padding-top: calc(var(--safe-top) + 0.45rem);
-    padding-right: calc(var(--safe-right) + 0.4rem);
-    padding-bottom: calc(var(--safe-bottom) + 1rem);
-    padding-left: calc(var(--safe-left) + 0.4rem);
+    padding-top: calc(var(--safe-top) + 0.4rem);
+    padding-right: calc(var(--safe-right) + 0.45rem);
+    padding-bottom: calc(var(--safe-bottom) + 0.85rem);
+    padding-left: calc(var(--safe-left) + 0.45rem);
   }
 
   .brand {
     font-size: 1.35rem;
   }
 
-  .felt {
-    max-height: 42dvh;
-    border-width: 6px;
-  }
-
-  .pcard-lg {
-    width: 2.15rem;
-    height: 3rem;
-  }
-
-  .board-slot {
-    width: 2.15rem;
-    height: 3rem;
-  }
-
-  .seat {
-    width: 4.1rem;
-  }
-
-  .seat .name {
-    max-width: 3.8rem;
-  }
-
   .table-topbar {
-    flex-wrap: wrap;
-    row-gap: 0.35rem;
+    display: grid;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr) minmax(0, auto);
+    align-items: center;
+    column-gap: 0.3rem;
+    row-gap: 0.2rem;
+  }
+
+  .table-back-btn {
+    padding: 0.4rem 0.55rem;
+    font-size: 0.72rem;
   }
 
   .table-status {
-    order: 3;
-    width: 100%;
+    min-width: 0;
     flex-direction: row;
+    flex-wrap: wrap;
     justify-content: center;
-    gap: 0.45rem;
+    gap: 0.25rem 0.35rem;
   }
 
-  .chat {
-    max-height: 72px;
+  .table-name-chip {
+    max-width: 5.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.72rem;
+    padding: 0.18rem 0.4rem;
   }
 
-  .actions button {
-    padding: 0.55rem 0.25rem;
-    font-size: 0.75rem;
+  .street-pill {
+    font-size: 0.62rem;
+    padding: 0.15rem 0.4rem;
+  }
+
+  .table-hand-hint {
+    font-size: 0.62rem;
+    width: 100%;
+    text-align: center;
+  }
+
+  .top-tools {
+    gap: 0.2rem;
+    min-width: 0;
+  }
+
+  .top-tools .invite-chip {
+    padding: 0.28rem 0.4rem;
+    max-width: 4.8rem;
+  }
+
+  .top-tools .invite-chip-code {
+    font-size: 0.62rem;
+    max-width: 3.6rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    vertical-align: bottom;
+  }
+
+  .top-tools .lang-switch-compact {
+    font-size: 0.65rem;
+    padding: 0.28rem 0.35rem;
+    max-width: 4.2rem;
+  }
+
+  .top-tools .icon-btn {
+    padding: 0.3rem 0.4rem;
+    font-size: 0.95rem;
+  }
+
+  .table-leave-full {
+    display: none;
+  }
+
+  .table-leave-short {
+    display: inline;
+    font-size: 0.95rem;
+    line-height: 1;
+  }
+
+  .table-leave-btn {
+    padding: 0.35rem 0.5rem;
+    min-width: 2.1rem;
+  }
+
+  .felt {
+    /* Width follows max-height so aspect-ratio can't blow past the phone viewport */
+    width: min(100%, calc(min(34dvh, 290px) * 1.22));
+    max-height: min(34dvh, 290px);
+    aspect-ratio: 1.22 / 1;
+    border-width: 5px;
+    margin: 0.1rem auto 0.2rem;
+  }
+
+  .table-screen-playing .felt {
+    width: min(100%, calc(min(32dvh, 270px) * 1.22));
+    max-height: min(32dvh, 270px);
+  }
+
+  .table-screen-turn .felt,
+  .table-screen-over .felt {
+    width: min(100%, calc(min(28dvh, 240px) * 1.28));
+    max-height: min(28dvh, 240px);
+    aspect-ratio: 1.28 / 1;
+  }
+
+  .board-zone {
+    top: 48%;
+    width: min(88%, 240px);
+    gap: 0.1rem;
+    z-index: 14;
+  }
+
+  .winner-banner {
+    font-size: 0.62rem;
+    padding: 0.2rem 0.4rem;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Keep showdown hole cards in the seat column — absolute-above hits the board/topbar */
+  .hole-opp {
+    position: static;
+    transform: none;
+    left: auto;
+    bottom: auto;
+    margin-top: 0.05rem;
+  }
+
+  .top-tools .lang-switch-compact,
+  .top-tools .icon-btn {
+    display: none;
+  }
+
+  .table-screen-playing .chat-panel,
+  .table-screen-turn .chat-panel,
+  .table-screen-over .chat-panel {
+    display: none;
+  }
+
+  .pcard-lg {
+    width: 2rem;
+    height: 2.8rem;
+  }
+
+  .board-slot {
+    width: 2rem;
+    height: 2.8rem;
+  }
+
+  .board {
+    gap: 0.18rem;
+    min-height: 2.8rem;
+  }
+
+  .pot-caption {
+    font-size: 0.6rem;
+    padding: 0.08rem 0.35rem;
+  }
+
+  .pot-rake {
+    font-size: 0.55rem;
+    margin-top: 0.05rem;
+  }
+
+  .table-screen-playing .pot-rake-dim,
+  .table-screen-turn .pot-rake {
+    display: none;
+  }
+
+  .seat {
+    width: 3.35rem;
+    gap: 0.02rem;
+    z-index: 6;
+  }
+
+  .seat.winner {
+    z-index: 8;
+  }
+
+  .seat .avatar {
+    width: 1.7rem;
+    height: 1.7rem;
+    border-width: 1.5px;
+  }
+
+  .seat-meta {
+    padding: 0.06rem 0.18rem;
+    border-radius: 6px;
+  }
+
+  .seat .name {
+    max-width: 3.2rem;
+    font-size: 0.55rem;
+  }
+
+  .seat-badges {
+    min-height: 0.65rem;
+    gap: 0.08rem;
+  }
+
+  .badge {
+    font-size: 0.45rem;
+    padding: 0.04rem 0.16rem;
+  }
+
+  .hand-name {
+    max-width: 3.2rem;
+    font-size: 0.48rem;
+  }
+
+  .seat-chips.chip-compact {
+    gap: 0.15rem;
+    margin-top: 0.02rem;
+  }
+
+  .seat-chips .chip-static {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+
+  .seat-chips .chip-label {
+    font-size: 0.55rem;
+  }
+
+  .bet-stack {
+    transform: translateX(-50%) scale(0.82);
+    transform-origin: top center;
+  }
+
+  .bet-stack.bet-down {
+    top: calc(100% + 0.05rem);
+  }
+
+  .bet-stack.bet-up {
+    bottom: calc(100% + 0.05rem);
+  }
+
+  .bet-stack .chip-static {
+    width: 0.85rem;
+    height: 0.85rem;
+  }
+
+  .bet-stack .chip-label {
+    font-size: 0.52rem;
   }
 
   .hole-opp .pcard-sm {
-    width: 1.35rem;
-    height: 1.9rem;
+    width: 1.1rem;
+    height: 1.55rem;
+  }
+
+  .opp-backs {
+    display: flex;
+    gap: 1px;
+    justify-content: center;
+  }
+
+  .opp-backs .pcard-sm {
+    width: 1.05rem;
+    height: 1.45rem;
+  }
+
+  .hero-zone {
+    padding: 0.28rem 0.4rem;
+    margin: 0.08rem 0 0.15rem;
+    gap: 0.35rem;
+    flex-shrink: 0;
+  }
+
+  .hero-inline {
+    min-width: 3.1rem;
+    width: 3.1rem;
+  }
+
+  .hero-inline .avatar {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .hero-inline .seat-badges {
+    flex-wrap: wrap;
+    max-width: 3.1rem;
+  }
+
+  .pcard-hero {
+    width: 2.45rem;
+    height: 3.4rem;
+  }
+
+  .pcard-hero .pcard-rank {
+    font-size: 0.85rem;
+  }
+
+  .pcard-hero .pcard-suit {
+    font-size: 0.7rem;
+  }
+
+  .pcard-hero .pcard-pip {
+    font-size: 1.2rem;
+  }
+
+  .hero-cards {
+    gap: 0.22rem;
+  }
+
+  .hero-strength {
+    font-size: 0.6rem;
+    top: -0.45rem;
+    padding: 0.08rem 0.4rem;
+  }
+
+  .actions {
+    gap: 0.3rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .actions button {
+    padding: 0.62rem 0.2rem;
+    font-size: 0.74rem;
+    border-radius: 10px;
+  }
+
+  .actions-live input[type="number"] {
+    min-height: 2.55rem;
+    font-size: 1rem;
+  }
+
+  .chat {
+    max-height: 64px;
+  }
+
+  .primary-wide {
+    margin-bottom: 0.25rem;
+    padding: 0.6rem 0.7rem;
+    flex-shrink: 0;
+  }
+}
+
+/* Narrow phones */
+@media (max-width: 380px) {
+  .top-tools .invite-chip {
+    display: none;
+  }
+
+  .table-hand-hint {
+    display: none;
+  }
+
+  .felt {
+    width: min(100%, calc(min(32dvh, 260px) * 1.22));
+    max-height: min(32dvh, 260px);
+  }
+
+  .table-screen-turn .felt,
+  .table-screen-over .felt {
+    width: min(100%, calc(min(26dvh, 220px) * 1.28));
+    max-height: min(26dvh, 220px);
+  }
+
+  .chat {
+    max-height: 52px;
   }
 }
 
 /* Short viewports (Telegram Mini App on compact phones) */
 @media (max-height: 700px) {
   .felt {
-    max-height: 38dvh;
-    aspect-ratio: 1 / 0.95;
+    width: min(100%, calc(min(32dvh, 270px) * 1.22));
+    max-height: min(32dvh, 270px);
+  }
+
+  .table-screen-turn .felt,
+  .table-screen-over .felt {
+    width: min(100%, calc(min(26dvh, 220px) * 1.28));
+    max-height: min(26dvh, 220px);
   }
 
   .hero-zone {
-    padding: 0.4rem 0.5rem;
-    margin: 0.15rem 0 0.3rem;
+    padding: 0.28rem 0.4rem;
+    margin: 0.06rem 0 0.12rem;
+  }
+
+  .pcard-hero {
+    width: 2.35rem;
+    height: 3.25rem;
   }
 
   .chat {
-    max-height: 56px;
+    max-height: 48px;
   }
 
   .primary-wide {
-    margin-bottom: 0.4rem;
-    padding: 0.55rem 0.75rem;
+    margin-bottom: 0.2rem;
+    padding: 0.5rem 0.65rem;
   }
 
   .board-zone {
     top: 48%;
-    gap: 0.18rem;
+    gap: 0.08rem;
+  }
+
+  .chat-panel {
+    display: none;
   }
 }
 
 @media (max-height: 600px) {
   .felt {
-    max-height: 34dvh;
+    width: min(100%, calc(min(28dvh, 210px) * 1.22));
+    max-height: min(28dvh, 210px);
   }
 
-  .chat-panel {
+  .table-screen-turn .felt,
+  .table-screen-over .felt {
+    width: min(100%, calc(min(22dvh, 190px) * 1.28));
+    max-height: min(22dvh, 190px);
+  }
+
+  .table-hand-hint {
     display: none;
   }
 }
