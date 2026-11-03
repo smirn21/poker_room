@@ -57,6 +57,10 @@ export const config = {
   port: Number(process.env.PORT ?? 3001),
   jwtSecret: process.env.JWT_SECRET ?? "dev-secret-change-me",
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? "",
+  /** @username without @ — for t.me/?start= referral links */
+  telegramBotUsername: (process.env.TELEGRAM_BOT_USERNAME ?? "Wpt_room_bot")
+    .trim()
+    .replace(/^@/, ""),
   // Default ON so Mini App ?dev=1 works on PA even if .env load is flaky.
   // Set DEV_BYPASS_AUTH=0 explicitly to require real Telegram initData.
   devBypassAuth: process.env.DEV_BYPASS_AUTH !== "0",

@@ -68,6 +68,13 @@ export const api = {
       body: JSON.stringify({ code }),
     }),
   me: () => request<{ user: UserDTO }>("/me"),
+  referral: () =>
+    request<{
+      code: string;
+      inviteesCount: number;
+      telegramStartLink: string | null;
+      miniAppLink: string;
+    }>("/me/referral"),
   tables: () =>
     request<{
       tables: {
@@ -288,8 +295,25 @@ export const api = {
       note: string;
     }>("/admin/house"),
   lookupUserByTelegram: (telegramId: string) =>
+    request<{
+      user: UserDTO;
+      referredBy: { id: string; name: string; telegramId: string } | null;
+      referralCount: number;
+      blockedAt: string | null;
+      blockedReason: string | null;
+    }>(`/admin/users/by-telegram/${encodeURIComponent(telegramId.trim())}`),
+  blockUser: (telegramId: string, reason?: string) =>
+    request<{ user: UserDTO; kickedFromTables: number }>(
+      `/admin/users/${encodeURIComponent(telegramId.trim())}/block`,
+      {
+        method: "POST",
+        body: JSON.stringify({ reason: reason || undefined }),
+      },
+    ),
+  unblockUser: (telegramId: string) =>
     request<{ user: UserDTO }>(
-      `/admin/users/by-telegram/${encodeURIComponent(telegramId.trim())}`,
+      `/admin/users/${encodeURIComponent(telegramId.trim())}/unblock`,
+      { method: "POST", body: JSON.stringify({}) },
     ),
   adjustBalance: (telegramId: string, amount: number) =>
     request<{ user: UserDTO }>("/admin/wallet/adjust", {

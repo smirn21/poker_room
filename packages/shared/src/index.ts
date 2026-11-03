@@ -136,4 +136,7 @@ export interface UserDTO {
   balance: number;
   role: "user" | "admin";
   whitelisted: boolean;
+  /** True when admin blocked the account. */
+  blocked: boolean;
+  personalInviteCode?: string | null;
 }

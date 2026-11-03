@@ -16,6 +16,14 @@ model User {
   role        String   @default("user") // user | admin
   whitelisted Boolean  @default(false)
   balance     Int      @default(0)
+  /** Stable personal referral code (REF-XXXXXX). */
+  personalInviteCode String? @unique
+  /** First inviter only — never overwritten. */
+  referredById String?
+  referredBy   User?   @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals    User[]  @relation("UserReferrals")
+  blockedAt    DateTime?
+  blockedReason String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

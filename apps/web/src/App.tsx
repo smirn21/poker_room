@@ -136,7 +136,21 @@ export function App() {
   const [adjustTgId, setAdjustTgId] = useState("");
   const [adjustAmt, setAdjustAmt] = useState(1000);
   const [adjustTarget, setAdjustTarget] = useState<UserDTO | null>(null);
+  const [adjustMeta, setAdjustMeta] = useState<{
+    referredBy: { id: string; name: string; telegramId: string } | null;
+    referralCount: number;
+    blockedAt: string | null;
+    blockedReason: string | null;
+  } | null>(null);
+  const [blockReason, setBlockReason] = useState("");
   const [adjustMsg, setAdjustMsg] = useState<string | null>(null);
+  const [referral, setReferral] = useState<{
+    code: string;
+    inviteesCount: number;
+    telegramStartLink: string | null;
+    miniAppLink: string;
+  } | null>(null);
+  const [referralCopied, setReferralCopied] = useState(false);
 
   useEffect(() => {
     initTelegramChrome();
@@ -154,6 +168,12 @@ export function App() {
       document.documentElement.classList.remove("invite-compose");
     }
   }, [gate]);
+
+  useEffect(() => {
+    if (gate === "app" && tab === "profile" && user?.whitelisted && !user.blocked) {
+      void loadReferral();
+    }
+  }, [gate, tab, user?.id, user?.whitelisted, user?.blocked]);
 
   useEffect(() => {
     if (gate === "boot" || gate === "invite" || gate === "app") {
@@ -216,6 +236,12 @@ export function App() {
       const { token, user: u } = await api.authTelegram(initData);
       setToken(token);
       setUser(u);
+      if (u.blocked) {
+        setGate("app");
+        setTab("profile");
+        setError(t("errBlocked"));
+        return;
+      }
       const params = new URLSearchParams(window.location.search);
       const pre = params.get("invite") ?? params.get("table");
       if (!u.whitelisted) {
@@ -529,9 +555,78 @@ export function App() {
     try {
       const r = await api.lookupUserByTelegram(id);
       setAdjustTarget(r.user);
+      setAdjustMeta({
+        referredBy: r.referredBy,
+        referralCount: r.referralCount,
+        blockedAt: r.blockedAt,
+        blockedReason: r.blockedReason,
+      });
     } catch (e) {
       setAdjustTarget(null);
+      setAdjustMeta(null);
       setError(e instanceof Error ? e.message : t("errLookup"));
+    }
+  }
+
+  async function toggleBlockTarget(block: boolean) {
+    const id = adjustTgId.trim();
+    if (!id) return;
+    setError(null);
+    setAdjustMsg(null);
+    try {
+      if (block) {
+        const r = await api.blockUser(id, blockReason.trim() || undefined);
+        setAdjustTarget(r.user);
+        setAdjustMeta((m) =>
+          m
+            ? {
+                ...m,
+                blockedAt: new Date().toISOString(),
+                blockedReason: blockReason.trim() || "Blocked by admin",
+              }
+            : m,
+        );
+        setAdjustMsg(t("blockOk"));
+      } else {
+        const r = await api.unblockUser(id);
+        setAdjustTarget(r.user);
+        setAdjustMeta((m) =>
+          m ? { ...m, blockedAt: null, blockedReason: null } : m,
+        );
+        setAdjustMsg(t("unblockOk"));
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("errBlock"));
+    }
+  }
+
+  async function loadReferral() {
+    try {
+      const r = await api.referral();
+      setReferral(r);
+    } catch {
+      setReferral(null);
+    }
+  }
+
+  async function shareReferralLink() {
+    if (!referral) return;
+    const url = referral.telegramStartLink ?? referral.miniAppLink;
+    const text = t("clubInviteShareText", { code: referral.code });
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: t("brand"), text, url });
+        return;
+      }
+    } catch {
+      /* fall through to copy */
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setReferralCopied(true);
+      window.setTimeout(() => setReferralCopied(false), 2000);
+    } catch {
+      setError(t("copyFailed"));
     }
   }
 
@@ -728,6 +823,7 @@ export function App() {
                 onChange={(e) => {
                   setAdjustTgId(e.target.value.replace(/[^\d]/g, ""));
                   setAdjustTarget(null);
+                  setAdjustMeta(null);
                   setAdjustMsg(null);
                 }}
                 placeholder="123456789"
@@ -744,12 +840,60 @@ export function App() {
               </button>
             </div>
             {adjustTarget && (
-              <p className="player-found">
-                {t("playerFound", {
-                  name: adjustTarget.name,
-                  balance: adjustTarget.balance,
-                })}
-              </p>
+              <div className="player-found-block">
+                <p className="player-found">
+                  {t("playerFound", {
+                    name: adjustTarget.name,
+                    balance: adjustTarget.balance,
+                  })}
+                  {adjustTarget.blocked || adjustMeta?.blockedAt
+                    ? ` · ${t("userBlockedBadge")}`
+                    : ""}
+                </p>
+                <p className="hint hint-tight">
+                  {adjustMeta?.referredBy
+                    ? t("referredByLabel", {
+                        name: adjustMeta.referredBy.name,
+                        id: adjustMeta.referredBy.telegramId,
+                      })
+                    : t("referredByNone")}
+                  {adjustMeta
+                    ? ` · ${t("referralCount", { n: adjustMeta.referralCount })}`
+                    : ""}
+                </p>
+                {adjustMeta?.blockedReason && (
+                  <p className="hint hint-tight">{adjustMeta.blockedReason}</p>
+                )}
+                <label htmlFor="block-reason">
+                  {t("blockReasonPlaceholder")}
+                  <input
+                    id="block-reason"
+                    value={blockReason}
+                    onChange={(e) => setBlockReason(e.target.value)}
+                    placeholder={t("blockReasonPlaceholder")}
+                  />
+                </label>
+                <div className="row adjust-actions">
+                  {adjustTarget.blocked || adjustMeta?.blockedAt ? (
+                    <button
+                      type="button"
+                      className="secondary btn-compact"
+                      onClick={() => void toggleBlockTarget(false)}
+                    >
+                      {t("unblockUser")}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="secondary btn-compact"
+                      onClick={() => void toggleBlockTarget(true)}
+                      disabled={adjustTarget.role === "admin"}
+                    >
+                      {t("blockUser")}
+                    </button>
+                  )}
+                </div>
+              </div>
             )}
             <label htmlFor="adj-amt">
               {t("adjustAmount")}
@@ -1000,7 +1144,16 @@ export function App() {
 
   let body: ReactNode = null;
 
-  if (tab === "lobby") {
+  if (user.blocked) {
+    body = (
+      <div className="tab-pane">
+        <section className="panel panel-compact">
+          <h2 className="card-title">{t("accountBlockedTitle")}</h2>
+          <p className="hint">{t("accountBlockedBody")}</p>
+        </section>
+      </div>
+    );
+  } else if (tab === "lobby") {
     const openCount = tables.length;
     const seatedSum = tables.reduce((n, tbl) => n + tbl.seated, 0);
     body = (
@@ -1288,42 +1441,91 @@ export function App() {
             <span>{t("clubSettings")}</span>
           </button>
         )}
-        <section className="panel panel-compact profile-invite">
-          <h2 className="card-title">{t("cardInvites")}</h2>
-          <p className="hint hint-tight">{t("clubInviteHint")}</p>
-          <button
-            type="button"
-            className="primary-wide"
-            onClick={() => void createInvite()}
-          >
-            {t("createInvite")}
-          </button>
-          {inviteCreated && (
-            <div className="invite-code-block">
-              <button
-                type="button"
-                className="invite-code-btn"
-                onClick={() => void copyInviteCode()}
-                title={t("tapToCopy")}
-              >
-                <span className="invite-code-label">{t("inviteCode")}</span>
-                <strong className="invite-code-value">{inviteCreated}</strong>
-              </button>
-              <div className="invite-actions">
+        {user.blocked ? (
+          <section className="panel panel-compact">
+            <h2 className="card-title">{t("accountBlockedTitle")}</h2>
+            <p className="hint">{t("accountBlockedBody")}</p>
+          </section>
+        ) : (
+          <>
+            <section className="panel panel-compact profile-invite">
+              <h2 className="card-title">{t("referralTitle")}</h2>
+              <p className="hint hint-tight">{t("referralHint")}</p>
+              {referral ? (
+                <div className="invite-code-block">
+                  <button
+                    type="button"
+                    className="invite-code-btn"
+                    onClick={() => void shareReferralLink()}
+                    title={t("copyReferral")}
+                  >
+                    <span className="invite-code-label">{t("inviteCode")}</span>
+                    <strong className="invite-code-value">{referral.code}</strong>
+                  </button>
+                  <p className="hint hint-tight">
+                    {t("referralCount", { n: referral.inviteesCount })}
+                  </p>
+                  <div className="invite-actions">
+                    <button
+                      type="button"
+                      className="primary-wide"
+                      onClick={() => void shareReferralLink()}
+                    >
+                      {t("shareReferral")}
+                    </button>
+                  </div>
+                  <p className="hint invite-copy-hint">
+                    {referralCopied ? t("copied") : t("copyReferral")}
+                  </p>
+                </div>
+              ) : (
                 <button
                   type="button"
                   className="secondary primary-wide"
-                  onClick={() => void shareClubInvite()}
+                  onClick={() => void loadReferral()}
                 >
-                  {t("shareClubInvite")}
+                  {t("shareReferral")}
                 </button>
-              </div>
-              <p className="hint invite-copy-hint">
-                {inviteCopied ? t("copied") : t("tapToCopy")}
-              </p>
-            </div>
-          )}
-        </section>
+              )}
+            </section>
+            <section className="panel panel-compact profile-invite">
+              <h2 className="card-title">{t("cardInvites")}</h2>
+              <p className="hint hint-tight">{t("clubInviteHint")}</p>
+              <button
+                type="button"
+                className="primary-wide"
+                onClick={() => void createInvite()}
+              >
+                {t("createInvite")}
+              </button>
+              {inviteCreated && (
+                <div className="invite-code-block">
+                  <button
+                    type="button"
+                    className="invite-code-btn"
+                    onClick={() => void copyInviteCode()}
+                    title={t("tapToCopy")}
+                  >
+                    <span className="invite-code-label">{t("inviteCode")}</span>
+                    <strong className="invite-code-value">{inviteCreated}</strong>
+                  </button>
+                  <div className="invite-actions">
+                    <button
+                      type="button"
+                      className="secondary primary-wide"
+                      onClick={() => void shareClubInvite()}
+                    >
+                      {t("shareClubInvite")}
+                    </button>
+                  </div>
+                  <p className="hint invite-copy-hint">
+                    {inviteCopied ? t("copied") : t("tapToCopy")}
+                  </p>
+                </div>
+              )}
+            </section>
+          </>
+        )}
         {error && <p className="error">{error}</p>}
         <p className="hint center-hint hint-tight">{t("profileHint")}</p>
       </div>

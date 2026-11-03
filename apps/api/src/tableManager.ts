@@ -280,6 +280,53 @@ export class TableManager {
     await prisma.pokerTable.delete({ where: { id: tableId } }).catch(() => undefined);
   }
 
+  /**
+   * Kick a user from every table (e.g. admin ban).
+   * Cashes out stack even mid-hand — ban takes priority over etiquette.
+   */
+  async forceRemoveUser(
+    userId: string,
+    reason = "blocked",
+  ): Promise<number> {
+    const seats = await prisma.tableSeat.findMany({ where: { userId } });
+    let removed = 0;
+    for (const seat of seats) {
+      const tableId = seat.tableId;
+      let cashOut = seat.stack;
+      try {
+        await this.ensureLoaded(tableId);
+        await this.withTable(tableId, (engine) => {
+          const left = engine.leave(userId);
+          cashOut = left?.stack ?? seat.stack;
+          this.clearRebuy(tableId, userId);
+        });
+      } catch {
+        cashOut = seat.stack;
+      }
+      await prisma.$transaction(async (tx) => {
+        await tx.tableSeat.deleteMany({ where: { tableId, userId } });
+        if (cashOut > 0) {
+          await tx.user.update({
+            where: { id: userId },
+            data: { balance: { increment: cashOut } },
+          });
+          await tx.ledgerEntry.create({
+            data: {
+              userId,
+              kind: "cash_out",
+              amount: cashOut,
+              meta: JSON.stringify({ tableId, reason }),
+            },
+          });
+        }
+      });
+      const deleted = await this.deleteIfEmpty(tableId);
+      if (!deleted) await this.maybeTransferHost(tableId);
+      removed += 1;
+    }
+    return removed;
+  }
+
   clearRebuy(tableId: string, userId: string): void {
     const live = this.tables.get(tableId);
     if (!live) return;

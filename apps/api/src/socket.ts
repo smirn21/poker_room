@@ -35,7 +35,9 @@ export function setupSocket(httpServer: HttpServer, app: FastifyInstance): Serve
       if (!token) return next(new Error("Unauthorized"));
       const payload = app.jwt.verify<{ sub: string }>(token);
       const user = await prisma.user.findUnique({ where: { id: payload.sub } });
-      if (!user?.whitelisted) return next(new Error("Forbidden"));
+      if (!user?.whitelisted || user.blockedAt) {
+        return next(new Error("Forbidden"));
+      }
       socket.data.userId = user.id;
       socket.data.user = user;
       next();

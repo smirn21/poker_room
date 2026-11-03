@@ -19,6 +19,7 @@ import {
   registerTronhooksWatch,
   tronhooksStatus,
 } from "./tronhooks.js";
+import { resolveMiniAppUrl } from "./telegramBot.js";
 
 function toUserDTO(u: {
   id: string;
@@ -29,6 +30,8 @@ function toUserDTO(u: {
   balance: number;
   role: string;
   whitelisted: boolean;
+  blockedAt?: Date | null;
+  personalInviteCode?: string | null;
 }): UserDTO {
   return {
     id: u.id,
@@ -39,20 +42,88 @@ function toUserDTO(u: {
     balance: u.balance,
     role: u.role === "admin" ? "admin" : "user",
     whitelisted: u.whitelisted,
+    blocked: Boolean(u.blockedAt),
+    personalInviteCode: u.personalInviteCode ?? null,
   };
 }
 
-async function requireUser(app: FastifyInstance, request: { headers: { authorization?: string } }) {
+function assertNotBlocked(user: { blockedAt: Date | null }): void {
+  if (user.blockedAt) throw httpError.forbidden("Account blocked");
+}
+
+async function requireUser(
+  app: FastifyInstance,
+  request: { headers: { authorization?: string } },
+  opts?: { allowBlocked?: boolean },
+) {
   const auth = request.headers.authorization;
   if (!auth?.startsWith("Bearer ")) throw httpError.unauthorized();
   const payload = await app.jwt.verify<{ sub: string }>(auth.slice(7));
   const user = await prisma.user.findUnique({ where: { id: payload.sub } });
   if (!user) throw httpError.unauthorized();
+  if (!opts?.allowBlocked) assertNotBlocked(user);
   return user;
 }
 
 function newTableInviteCode(): string {
   return `TBL-${randomBytes(3).toString("hex").toUpperCase()}`;
+}
+
+function newPersonalInviteCode(): string {
+  return `REF-${randomBytes(3).toString("hex").toUpperCase()}`;
+}
+
+/** Normalize CLUB-/TBL-/REF- and Telegram start payloads like ref_XXXX. */
+export function normalizeInviteCode(raw: string): string {
+  let c = raw.trim();
+  if (/^ref[_-]/i.test(c)) {
+    c = c.replace(/^ref[_-]/i, "");
+    if (!/^(REF|CLUB|TBL)-/i.test(c)) {
+      c = `REF-${c}`;
+    }
+  }
+  return c.toUpperCase();
+}
+
+async function ensurePersonalInviteCode(userId: string): Promise<string> {
+  const existing = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { personalInviteCode: true },
+  });
+  if (existing?.personalInviteCode) return existing.personalInviteCode;
+  for (let i = 0; i < 8; i++) {
+    const code = newPersonalInviteCode();
+    try {
+      const u = await prisma.user.update({
+        where: { id: userId },
+        data: { personalInviteCode: code },
+      });
+      return u.personalInviteCode!;
+    } catch {
+      /* unique clash — retry */
+    }
+  }
+  throw httpError.badRequest("Could not allocate referral code");
+}
+
+type UserDb = Pick<typeof prisma, "user">;
+
+/** Set referredById once when first joining the club. */
+async function attributeReferrer(
+  userId: string,
+  referrerId: string | null | undefined,
+  db: UserDb = prisma,
+): Promise<void> {
+  if (!referrerId || referrerId === userId) return;
+  const cur = await db.user.findUnique({
+    where: { id: userId },
+    select: { referredById: true },
+  });
+  if (cur?.referredById) return;
+  await db.user.update({
+    where: { id: userId },
+    data: { referredById: referrerId },
+  });
 }
 
 async function getClubSettings() {
@@ -129,6 +200,12 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
+    if (user.whitelisted && !user.personalInviteCode) {
+      await ensurePersonalInviteCode(user.id).catch(() => undefined);
+      user =
+        (await prisma.user.findUnique({ where: { id: user.id } })) ?? user;
+    }
+
     const token = await reply.jwtSign(
       { sub: user.id },
       { expiresIn: "7d" },
@@ -139,12 +216,12 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   app.post("/auth/invite", async (req) => {
     const user = await requireUser(app, req);
     const body = z.object({ code: z.string().min(3) }).parse(req.body);
-    const code = body.code.trim().toUpperCase();
+    const code = normalizeInviteCode(body.code);
 
     // Table invite (TBL-…) → whitelist if needed + return tableId for immediate seat
     const tableByCode = await prisma.pokerTable.findFirst({
       where: { inviteCode: code, status: "open" },
-      select: { id: true },
+      select: { id: true, createdById: true },
     });
     if (tableByCode) {
       let u = user;
@@ -157,6 +234,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
               balance: { increment: config.signupBonus },
             },
           });
+          await attributeReferrer(user.id, tableByCode.createdById, tx);
           await tx.ledgerEntry.create({
             data: {
               userId: updated.id,
@@ -167,15 +245,52 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
           });
           return updated;
         });
+        await ensurePersonalInviteCode(u.id).catch(() => undefined);
+        u = (await prisma.user.findUniqueOrThrow({ where: { id: u.id } }));
       }
       return { user: toUserDTO(u), tableId: tableByCode.id };
+    }
+
+    // Personal REF-… link (unlimited, owned by one member)
+    const refOwner = await prisma.user.findFirst({
+      where: { personalInviteCode: code },
+      select: { id: true },
+    });
+    if (refOwner) {
+      if (user.whitelisted) {
+        return { user: toUserDTO(user) };
+      }
+      const updated = await prisma.$transaction(async (tx) => {
+        const u = await tx.user.update({
+          where: { id: user.id },
+          data: {
+            whitelisted: true,
+            balance: { increment: config.signupBonus },
+          },
+        });
+        await attributeReferrer(user.id, refOwner.id, tx);
+        await tx.ledgerEntry.create({
+          data: {
+            userId: u.id,
+            kind: "signup_bonus",
+            amount: config.signupBonus,
+            meta: JSON.stringify({ invite: code, kind: "ref" }),
+          },
+        });
+        return u;
+      });
+      await ensurePersonalInviteCode(updated.id).catch(() => undefined);
+      const fresh = await prisma.user.findUniqueOrThrow({
+        where: { id: updated.id },
+      });
+      return { user: toUserDTO(fresh) };
     }
 
     const invite = await prisma.invite.findUnique({
       where: { code },
     });
 
-    // Already in the club: known CLUB-… is a no-op; unknown / TBL- miss must error
+    // Already in the club: known CLUB-/REF- is a no-op; unknown / TBL- miss must error
     // so lobby "sit by code" and shared links don't silently stay on the lobby.
     if (user.whitelisted) {
       if (invite) {
@@ -207,6 +322,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
           balance: { increment: config.signupBonus },
         },
       });
+      await attributeReferrer(user.id, invite.createdById, tx);
       await tx.ledgerEntry.create({
         data: {
           userId: u.id,
@@ -218,12 +334,36 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       return u;
     });
 
-    return { user: toUserDTO(updated) };
+    await ensurePersonalInviteCode(updated.id).catch(() => undefined);
+    const fresh = await prisma.user.findUniqueOrThrow({
+      where: { id: updated.id },
+    });
+    return { user: toUserDTO(fresh) };
   });
 
   app.get("/me", async (req) => {
-    const user = await requireUser(app, req);
+    const user = await requireUser(app, req, { allowBlocked: true });
     return { user: toUserDTO(user) };
+  });
+
+  app.get("/me/referral", async (req) => {
+    const user = await requireUser(app, req);
+    if (!user.whitelisted) throw httpError.forbidden("Not whitelisted");
+    const code = await ensurePersonalInviteCode(user.id);
+    const inviteesCount = await prisma.user.count({
+      where: { referredById: user.id },
+    });
+    const bot = config.telegramBotUsername;
+    const telegramStartLink = bot
+      ? `https://t.me/${bot}?start=${encodeURIComponent(code)}`
+      : null;
+    const miniAppLink = `${resolveMiniAppUrl()}/?invite=${encodeURIComponent(code)}`;
+    return {
+      code,
+      inviteesCount,
+      telegramStartLink,
+      miniAppLink,
+    };
   });
 
   app.get("/tables", async (req) => {
@@ -954,9 +1094,68 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       .parse(req.params);
     const target = await prisma.user.findUnique({
       where: { telegramId: telegramId.trim() },
+      include: {
+        referredBy: {
+          select: { id: true, name: true, telegramId: true },
+        },
+        _count: { select: { referrals: true } },
+      },
     });
     if (!target) throw httpError.notFound("User not found");
-    return { user: toUserDTO(target) };
+    return {
+      user: toUserDTO(target),
+      referredBy: target.referredBy,
+      referralCount: target._count.referrals,
+      blockedAt: target.blockedAt,
+      blockedReason: target.blockedReason,
+    };
+  });
+
+  app.post("/admin/users/:telegramId/block", async (req) => {
+    const admin = await requireUser(app, req);
+    if (admin.role !== "admin") throw httpError.forbidden();
+    const { telegramId } = z
+      .object({ telegramId: z.string().min(1).max(32) })
+      .parse(req.params);
+    const body = z
+      .object({ reason: z.string().trim().max(200).optional() })
+      .parse(req.body ?? {});
+    const target = await prisma.user.findUnique({
+      where: { telegramId: telegramId.trim() },
+    });
+    if (!target) throw httpError.notFound("User not found");
+    if (target.role === "admin") {
+      throw httpError.badRequest("Cannot block an admin");
+    }
+    if (target.id === admin.id) {
+      throw httpError.badRequest("Cannot block yourself");
+    }
+    const updated = await prisma.user.update({
+      where: { id: target.id },
+      data: {
+        blockedAt: new Date(),
+        blockedReason: body.reason?.length ? body.reason : "Blocked by admin",
+      },
+    });
+    const kicked = await tableManager.forceRemoveUser(target.id, "blocked");
+    return { user: toUserDTO(updated), kickedFromTables: kicked };
+  });
+
+  app.post("/admin/users/:telegramId/unblock", async (req) => {
+    const admin = await requireUser(app, req);
+    if (admin.role !== "admin") throw httpError.forbidden();
+    const { telegramId } = z
+      .object({ telegramId: z.string().min(1).max(32) })
+      .parse(req.params);
+    const target = await prisma.user.findUnique({
+      where: { telegramId: telegramId.trim() },
+    });
+    if (!target) throw httpError.notFound("User not found");
+    const updated = await prisma.user.update({
+      where: { id: target.id },
+      data: { blockedAt: null, blockedReason: null },
+    });
+    return { user: toUserDTO(updated) };
   });
 
   /**

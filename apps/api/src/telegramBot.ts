@@ -164,15 +164,27 @@ function welcomeCopy(lang?: string): { text: string; button: string } {
   };
 }
 
+function normalizeStartDeepLink(raw: string): string {
+  let c = raw.trim();
+  if (/^ref[_-]/i.test(c)) {
+    c = c.replace(/^ref[_-]/i, "");
+    if (!/^(REF|CLUB|TBL)-/i.test(c)) c = `REF-${c}`;
+  }
+  return c.toUpperCase();
+}
+
 export async function sendStartGreeting(
   chatId: number,
   opts?: { languageCode?: string; deepLink?: string },
 ): Promise<void> {
   const mini = resolveMiniAppUrl();
-  const openUrl =
+  const deep =
     opts?.deepLink && opts.deepLink.length > 0
-      ? `${mini}/?invite=${encodeURIComponent(opts.deepLink)}`
-      : `${mini}/`;
+      ? normalizeStartDeepLink(opts.deepLink)
+      : "";
+  const openUrl = deep
+    ? `${mini}/?invite=${encodeURIComponent(deep)}`
+    : `${mini}/`;
   const copy = welcomeCopy(opts?.languageCode);
 
   await tgCall("sendMessage", {
