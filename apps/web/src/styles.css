@@ -1736,16 +1736,19 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   position: absolute;
   left: 50%;
   /* Mid-lower felt: clears top-rim seats; pot sits under cards */
-  top: 56%;
+  top: 55%;
   transform: translate(-50%, -50%);
   z-index: 12;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.28rem;
-  /* Keep board/pot inside a narrow center corridor so rim seats never collide */
-  width: min(58%, 230px);
-  max-width: 58%;
+  /*
+   * Wide enough for large street cards, but not full felt width —
+   * rim seats stay outside this corridor.
+   */
+  width: min(82%, 340px);
+  max-width: 82%;
   pointer-events: none;
 }
 
@@ -1815,26 +1818,35 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
 .board {
   display: flex;
-  gap: 0.35rem;
+  gap: 0;
   justify-content: center;
   align-items: center;
   width: 100%;
   min-height: 7.2rem;
 }
 
-/* Community cards: ~2× former .pcard-lg (3.05×4.25 → 6.1×8.5), capped to fit 5 across */
+/*
+ * Large street cards (~2× seat lg). Slight horizontal overlap (fan)
+ * so 5 big cards fit without eating into rim seats.
+ */
 .board .pcard-lg,
 .board-slot {
-  width: min(6.1rem, calc((100% - 1.4rem) / 5));
+  width: min(5.6rem, 22vw, calc((100% + 3.2rem) / 5));
   height: auto;
   aspect-ratio: 3.05 / 4.25;
+  flex-shrink: 0;
+  margin-inline-start: -0.72rem;
+}
+
+.board .pcard-lg:first-child,
+.board-slot:first-child {
+  margin-inline-start: 0;
 }
 
 .board-slot {
   border-radius: 10px;
   border: 1px dashed rgba(67, 197, 181, 0.22);
   background: rgba(0, 0, 0, 0.22);
-  flex-shrink: 0;
 }
 
 .winner-banner {
@@ -2417,14 +2429,14 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .board-zone {
-    top: 56%;
-    width: min(58%, 210px);
+    top: 55%;
+    width: min(84%, 310px);
     gap: 0.18rem;
     z-index: 12;
   }
 
   .table-screen-over .board-zone {
-    top: 54%;
+    top: 53%;
   }
 
   .pot-cluster {
@@ -2505,17 +2517,23 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     height: 3.55rem;
   }
 
-  /* Board stays ~2× previous mobile lg (2.55→5.1) */
+  /* Board ~2× mobile lg — fan overlap keeps rim seats clear */
   .board .pcard-lg,
   .board-slot {
-    width: min(5.1rem, calc((100% - 1.2rem) / 5));
+    width: min(5.1rem, 20vw, calc((100% + 2.8rem) / 5));
     height: auto;
     aspect-ratio: 2.55 / 3.55;
+    margin-inline-start: -0.65rem;
+  }
+
+  .board .pcard-lg:first-child,
+  .board-slot:first-child {
+    margin-inline-start: 0;
   }
 
   .board {
-    gap: 0.22rem;
-    min-height: 0;
+    gap: 0;
+    min-height: 6.4rem;
   }
 
   .pot-caption {
@@ -2869,14 +2887,20 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
   .board .pcard-lg,
   .board-slot {
-    width: min(4.7rem, calc((100% - 1rem) / 5));
+    width: min(4.8rem, 19vw, calc((100% + 2.4rem) / 5));
     height: auto;
     aspect-ratio: 2.35 / 3.25;
+    margin-inline-start: -0.55rem;
+  }
+
+  .board .pcard-lg:first-child,
+  .board-slot:first-child {
+    margin-inline-start: 0;
   }
 
   .board {
-    gap: 0.25rem;
-    min-height: 6.5rem;
+    gap: 0;
+    min-height: 5.8rem;
   }
 
   .chat {
@@ -2889,8 +2913,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .board-zone {
-    top: 56%;
-    width: min(56%, 200px);
+    top: 55%;
+    width: min(86%, 300px);
     gap: 0.12rem;
   }
 
