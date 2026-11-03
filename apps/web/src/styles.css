@@ -162,7 +162,10 @@ button.primary-wide {
   height: var(--vv-height, 100svh);
   max-height: var(--vv-height, 100svh);
   overflow: hidden;
-  /* Bottom nav is in-flow (not fixed) — it owns safe-area padding */
+}
+
+/* Higher specificity so media queries cannot re-add bottom padding under the nav */
+.app-shell.app-shell-nav {
   padding-bottom: 0;
 }
 
@@ -2018,6 +2021,39 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     padding-right: calc(var(--safe-right) + 0.45rem);
     padding-bottom: calc(var(--safe-bottom) + 0.85rem);
     padding-left: calc(var(--safe-left) + 0.45rem);
+  }
+
+  /* Must win over .app-shell padding-bottom in this breakpoint */
+  .app-shell.app-shell-nav {
+    padding-bottom: 0;
+  }
+
+  /* Free vertical space for table cards under TG chrome */
+  .lobby-hero {
+    gap: 0.2rem;
+    margin: 0 0 0.1rem;
+  }
+
+  .lobby-hero-logo.brand-logo-lg {
+    width: 3.6rem;
+    height: 3.6rem;
+    border-radius: 0.85rem;
+  }
+
+  .lobby-hero-brand {
+    font-size: 1.05rem;
+  }
+
+  .lobby-hello {
+    gap: 0.2rem;
+  }
+
+  .lobby-hello .hint {
+    display: none;
+  }
+
+  .table-list-fit {
+    padding-bottom: 1rem;
   }
 
   .brand {
