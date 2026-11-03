@@ -100,6 +100,9 @@ export const en: Record<MessageKey, string> = {
   chipsToBuy: "Chips to buy",
   createUsdtDeposit: "Create USDT deposit",
   depositExactHint: "Send exactly this amount on TRC20 (not ERC20).",
+  depositExactNote:
+    "Send exactly this USDT amount on TRON (TRC20) to the club address. Do not use ERC20/BEP20.",
+  errDepositAmount: "Enter a chip amount greater than zero",
   depositNetwork: "Network",
   depositAmount: "USDT amount",
   depositAddress: "Address",

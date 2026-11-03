@@ -799,7 +799,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
         amountChips: intent.amountChips,
         reference: intent.externalRef,
         expiresAt: intent.expiresAt,
-        note: "Send exactly this USDT amount on TRON (TRC20) to the club address. Do not use ERC20/BEP20.",
+        note: "Отправьте ровно эту сумму USDT в сети TRON (TRC20) на адрес клуба. Не используйте ERC20/BEP20.",
       },
     };
   });

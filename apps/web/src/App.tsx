@@ -117,7 +117,7 @@ export function App() {
   } | null>(null);
   const [tableId, setTableId] = useState<string | null>(null);
   const [buyIn, setBuyIn] = useState(2000);
-  const [depositAmt, setDepositAmt] = useState(5000);
+  const [depositAmt, setDepositAmt] = useState("5000");
   const [inviteCreated, setInviteCreated] = useState<string | null>(null);
   const [inviteCopied, setInviteCopied] = useState(false);
   const [tgIdCopied, setTgIdCopied] = useState(false);
@@ -445,7 +445,12 @@ export function App() {
     try {
       setError(null);
       setDepositCopied(null);
-      const r = await api.deposit(depositAmt, "USDT");
+      const chips = Number.parseInt(depositAmt.replace(/\D/g, ""), 10);
+      if (!Number.isFinite(chips) || chips < 1) {
+        setError(t("errDepositAmount"));
+        return;
+      }
+      const r = await api.deposit(chips, "USDT");
       setDepositInstr({
         address: r.instructions.address,
         amountUsdt: r.instructions.amountUsdt,
@@ -1397,7 +1402,7 @@ export function App() {
     );
   } else if (tab === "wallet") {
     body = (
-      <div className="tab-pane">
+      <div className="tab-pane wallet-pane">
         <h2 className="pane-title">{t("wallet")}</h2>
         <p className="balance-line">
           <RichText
@@ -1413,15 +1418,30 @@ export function App() {
             {t("chipsToBuy")}
             <input
               id="dep"
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              enterKeyHint="done"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
               value={depositAmt}
-              onChange={(e) => setDepositAmt(Number(e.target.value))}
+              onChange={(e) =>
+                setDepositAmt(e.target.value.replace(/\D/g, ""))
+              }
+              onFocus={(e) => {
+                const el = e.currentTarget;
+                window.requestAnimationFrame(() => {
+                  el.scrollIntoView({ block: "center", behavior: "smooth" });
+                });
+              }}
             />
           </label>
           <button
             type="button"
             className="primary-wide"
             onClick={() => void makeDeposit()}
+            disabled={!depositAmt.replace(/\D/g, "")}
           >
             {t("createUsdtDeposit")}
           </button>
@@ -1469,7 +1489,7 @@ export function App() {
                   />
                 </p>
               )}
-              <p className="hint hint-tight">{depositInstr.note}</p>
+              <p className="hint hint-tight">{t("depositExactNote")}</p>
             </div>
           )}
         </div>

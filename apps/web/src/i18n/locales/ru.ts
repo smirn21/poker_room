@@ -98,6 +98,9 @@ export const ru = {
   chipsToBuy: "Сколько фишек купить",
   createUsdtDeposit: "Создать депозит USDT",
   depositExactHint: "Отправьте ровно эту сумму в сети TRC20 (не ERC20).",
+  depositExactNote:
+    "Отправьте ровно эту сумму USDT в сети TRON (TRC20) на адрес клуба. Не используйте ERC20/BEP20.",
+  errDepositAmount: "Укажите число фишек больше нуля",
   depositNetwork: "Сеть",
   depositAmount: "Сумма USDT",
   depositAddress: "Адрес",
