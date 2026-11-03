@@ -12,8 +12,13 @@ export const ru = {
   inviteHow:
     "Вставьте код ниже. После входа откроется лобби — выберите стол или сядьте по коду.",
   inviteCode: "Код приглашения",
-  inviteShareHint: "Поделиться кодом стола",
-  inviteShareText: "Заходи за стол Hold'em House: {code}",
+  inviteShareHint: "Поделиться столом",
+  inviteShareText:
+    "Заходи за стол Hold'em House\n{link}\nКод: {code}",
+  tableWaitingDeposit:
+    "Стол ждёт вас — пополните баланс, затем нажмите «Сесть за стол».",
+  sitPendingTable: "Сесть за стол",
+  pendingTableHint: "После пополнения можно сесть по приглашению.",
   clubInviteShareText: "Приглашение в Hold'em House: {code}",
   clubInviteHint:
     "Создайте код CLUB-… и отправьте другу — он войдёт в клуб и сможет сесть за стол.",

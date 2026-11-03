@@ -14,8 +14,13 @@ export const en: Record<MessageKey, string> = {
   inviteHow:
     "Paste the code below. After entry you'll land in the lobby — pick a table or sit by code.",
   inviteCode: "Invite code",
-  inviteShareHint: "Share table code",
-  inviteShareText: "Join my Hold'em House table: {code}",
+  inviteShareHint: "Share table",
+  inviteShareText:
+    "Join my Hold'em House table\n{link}\nCode: {code}",
+  tableWaitingDeposit:
+    "The table is waiting — top up chips, then tap “Sit at table”.",
+  sitPendingTable: "Sit at table",
+  pendingTableHint: "After a deposit you can join from the invite.",
   clubInviteShareText: "Join Hold'em House with invite: {code}",
   clubInviteHint:
     "Create a CLUB-… code and send it to a friend — they join the club and can sit at a table.",

@@ -27,12 +27,27 @@ fi
 echo "Tunnel URL: ${URL}"
 
 ROOT="${HOME}/poker_room"
+# Bot username for t.me deep links (table invites)
+BOT_USER="Wpt_room_bot"
+if [[ -f "${ROOT}/.env" ]]; then
+  BOT_USER=$(grep -E '^TELEGRAM_BOT_USERNAME=' "${ROOT}/.env" | head -1 | cut -d= -f2- | tr -d '\r' | sed 's/^@//')
+  [[ -n "${BOT_USER}" ]] || BOT_USER="Wpt_room_bot"
+fi
+MINI_SHORT=""
+if [[ -f "${ROOT}/.env" ]]; then
+  MINI_SHORT=$(grep -E '^TELEGRAM_MINI_APP_SHORT_NAME=' "${ROOT}/.env" | head -1 | cut -d= -f2- | tr -d '\r' || true)
+fi
+
 # Vite loads .env.production.local over .env.production — write both.
 for envf in "${ROOT}/apps/web/.env.production" "${ROOT}/apps/web/.env.production.local"; do
-  cat > "${envf}" <<EOF
-VITE_API_URL=${URL}
-VITE_WS_URL=${URL}
-EOF
+  {
+    echo "VITE_API_URL=${URL}"
+    echo "VITE_WS_URL=${URL}"
+    echo "VITE_TG_BOT_USERNAME=${BOT_USER}"
+    if [[ -n "${MINI_SHORT}" ]]; then
+      echo "VITE_TG_MINI_APP_SHORT_NAME=${MINI_SHORT}"
+    fi
+  } > "${envf}"
 done
 
 # Keep API CORS on the Mini App origin + public API URL for TronHooks

@@ -9,6 +9,10 @@ export type TgSafeInsets = {
 
 type TgWebApp = {
   initData: string;
+  initDataUnsafe?: {
+    start_param?: string;
+    user?: { id?: number; language_code?: string };
+  };
   ready: () => void;
   expand: () => void;
   requestFullscreen?: () => void;

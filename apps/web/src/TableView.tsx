@@ -19,6 +19,7 @@ import {
 } from "./handStrength";
 import { useI18n } from "./i18n";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
+import { tableInviteDeepLink } from "./telegramLinks";
 
 function mapTableError(
   msg: string,
@@ -321,25 +322,25 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
 
   async function copyTableInvite() {
     if (!tableInviteCode) return;
-    const shareUrl = `${window.location.origin}${window.location.pathname}?invite=${encodeURIComponent(tableInviteCode)}`;
-    const payload = `${tableInviteCode}\n${shareUrl}`;
+    const link = tableInviteDeepLink(tableInviteCode);
+    // Deep link in the body — Telegram clients often drop/ignore share `url`.
+    const shareBody = t("inviteShareText", { code: tableInviteCode, link });
     try {
       if (navigator.share) {
         await navigator.share({
           title: tableName ?? t("brand"),
-          text: t("inviteShareText", { code: tableInviteCode }),
-          url: shareUrl,
+          text: shareBody,
         });
         setInviteCopied(true);
         window.setTimeout(() => setInviteCopied(false), 2000);
         return;
       }
-      await navigator.clipboard.writeText(payload);
+      await navigator.clipboard.writeText(shareBody);
       setInviteCopied(true);
       window.setTimeout(() => setInviteCopied(false), 2000);
     } catch {
       try {
-        await navigator.clipboard.writeText(tableInviteCode);
+        await navigator.clipboard.writeText(`${link}\n${tableInviteCode}`);
         setInviteCopied(true);
         window.setTimeout(() => setInviteCopied(false), 2000);
       } catch {

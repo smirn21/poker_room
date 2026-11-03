@@ -7,6 +7,11 @@ import {
   initTelegramChrome,
   requestTelegramFullscreen,
 } from "./telegram";
+import {
+  readPendingTableId,
+  resolveLaunchInviteCode,
+  writePendingTableId,
+} from "./telegramLinks";
 import { useI18n } from "./i18n";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
 import { BrandLogo } from "./BrandLogo";
@@ -116,6 +121,9 @@ export function App() {
     recent: { id: string; amount: number; at: string }[];
   } | null>(null);
   const [tableId, setTableId] = useState<string | null>(null);
+  const [pendingTableId, setPendingTableId] = useState<string | null>(() =>
+    readPendingTableId(),
+  );
   const [buyIn, setBuyIn] = useState(2000);
   const [depositAmt, setDepositAmt] = useState("5000");
   const [inviteCreated, setInviteCreated] = useState<string | null>(null);
@@ -245,6 +253,16 @@ export function App() {
     };
   }, [gate]);
 
+  function rememberPendingTable(id: string) {
+    writePendingTableId(id);
+    setPendingTableId(id);
+  }
+
+  function clearPendingTable() {
+    writePendingTableId(null);
+    setPendingTableId(null);
+  }
+
   async function afterInviteOrAuth(
     u: UserDTO,
     opts?: { tableId?: string | null },
@@ -255,11 +273,15 @@ export function App() {
       return;
     }
     await refreshTables();
-    const tableParam = new URLSearchParams(window.location.search).get(
-      "table",
-    );
-    if (tableParam) {
-      await openTableFromLink(tableParam, u);
+    const pending = readPendingTableId();
+    if (pending && u.balance > 0) {
+      await openTableFromLink(pending, u);
+      return;
+    }
+    if (pending && u.balance <= 0) {
+      setGate("app");
+      setTab("wallet");
+      setError(t("tableWaitingDeposit"));
       return;
     }
     setGate("app");
@@ -286,8 +308,7 @@ export function App() {
         setError(t("errBlocked"));
         return;
       }
-      const params = new URLSearchParams(window.location.search);
-      const pre = params.get("invite") ?? params.get("table");
+      const pre = resolveLaunchInviteCode();
       if (!u.whitelisted) {
         if (pre) {
           const r = await api.redeemInvite(pre.trim());
@@ -297,16 +318,20 @@ export function App() {
         setGate("invite");
         return;
       }
-      // Already in club — still honour shared TBL-/table links
+      // Already in club — honour TBL- / startapp / ?invite= deep links
       if (pre) {
         try {
           const r = await api.redeemInvite(pre.trim());
-          await afterInviteOrAuth(r.user, {
-            tableId: r.tableId ?? (params.get("table") ? pre.trim() : null),
-          });
+          const tableTarget =
+            r.tableId ??
+            (pre.toUpperCase().startsWith("TBL-") ||
+            /^[a-z0-9]{20,}$/i.test(pre)
+              ? pre.trim()
+              : null);
+          await afterInviteOrAuth(r.user, { tableId: tableTarget });
           return;
         } catch {
-          /* invalid club code → fall through to lobby */
+          /* invalid club code → fall through to lobby / pending */
         }
       }
       await afterInviteOrAuth(u);
@@ -350,8 +375,9 @@ export function App() {
     try {
       setError(null);
       if (user.balance <= 0) {
+        rememberPendingTable(code);
         setTab("wallet");
-        setError(t("errInsufficient"));
+        setError(t("tableWaitingDeposit"));
         return;
       }
       const amount = Math.min(buyIn, user.balance);
@@ -359,10 +385,16 @@ export function App() {
       setUser(r.user);
       setTableId(r.tableId ?? code);
       setInviteCode("");
+      clearPendingTable();
       setGate("table");
     } catch (e) {
       setError(mapJoinError(e instanceof Error ? e.message : ""));
     }
+  }
+
+  async function sitPendingTable() {
+    if (!user || !pendingTableId) return;
+    await openTableFromLink(pendingTableId, user);
   }
 
   async function createTable() {
@@ -419,23 +451,33 @@ export function App() {
     }
   }
 
-  /** Open table from ?table= deep link (cuid or TBL- code). */
+  /** Open table from deep link / startapp (cuid or TBL- code). */
   async function openTableFromLink(id: string, u: UserDTO) {
     try {
       setError(null);
       if (u.balance <= 0) {
+        rememberPendingTable(id);
         setGate("app");
         setTab("wallet");
-        setError(t("errJoin"));
+        setError(t("tableWaitingDeposit"));
         return;
       }
       const amount = Math.min(buyIn, u.balance);
       const r = await api.joinTable(id, amount);
       setUser(r.user);
       setTableId(r.tableId ?? id);
+      clearPendingTable();
       setGate("table");
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("errJoin"));
+      const raw = e instanceof Error ? e.message : "";
+      if (/insufficient/i.test(raw)) {
+        rememberPendingTable(id);
+        setGate("app");
+        setTab("wallet");
+        setError(t("tableWaitingDeposit"));
+        return;
+      }
+      setError(mapJoinError(raw));
       setGate("app");
       setTab("lobby");
     }
@@ -1412,6 +1454,19 @@ export function App() {
             }}
           />
         </p>
+        {pendingTableId && (
+          <div className="panel panel-compact pending-table-panel">
+            <p className="hint hint-tight">{t("pendingTableHint")}</p>
+            <button
+              type="button"
+              className="primary-wide"
+              disabled={user.balance <= 0}
+              onClick={() => void sitPendingTable()}
+            >
+              {t("sitPendingTable")}
+            </button>
+          </div>
+        )}
         <div className="panel panel-compact">
           <p className="hint hint-tight">{t("walletHintUsdt")}</p>
           <label htmlFor="dep">
