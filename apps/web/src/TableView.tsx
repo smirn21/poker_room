@@ -32,6 +32,15 @@ function mapTableError(
 const WS = import.meta.env.VITE_WS_URL ?? "http://localhost:3001";
 const REACTIONS = ["😀", "😂", "🔥", "👏", "😎", "😱", "💪", "🎉"];
 
+function digitsOnly(raw: string): string {
+  return raw.replace(/\D/g, "");
+}
+
+function parseChips(raw: string, fallback = 0): number {
+  const n = Number.parseInt(digitsOnly(raw), 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 interface Props {
   tableId: string;
   user: UserDTO;
@@ -71,7 +80,7 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
   const [inviteCopied, setInviteCopied] = useState(false);
   const [tableNameDraft, setTableNameDraft] = useState("");
   const [editingName, setEditingName] = useState(false);
-  const [rebuyAmt, setRebuyAmt] = useState(2000);
+  const [rebuyAmt, setRebuyAmt] = useState("2000");
   const [rebuyLeft, setRebuyLeft] = useState<number | null>(null);
   const feltRef = useRef<HTMLDivElement>(null);
   const prevBoardLen = useRef(0);
@@ -371,7 +380,7 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
   async function doRebuy() {
     try {
       setError(null);
-      const r = await api.rebuyTable(tableId, rebuyAmt);
+      const r = await api.rebuyTable(tableId, Math.max(1, parseChips(rebuyAmt)));
       onUser(r.user);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errRebuy"));
@@ -620,10 +629,13 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
               {t("buyIn")}
               <input
                 id="rebuy-amt"
-                type="number"
-                min={1}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                enterKeyHint="done"
+                autoComplete="off"
                 value={rebuyAmt}
-                onChange={(e) => setRebuyAmt(Number(e.target.value))}
+                onChange={(e) => setRebuyAmt(digitsOnly(e.target.value))}
               />
             </label>
             <p className="hint">
@@ -633,7 +645,10 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
               type="button"
               className="primary-wide"
               onClick={() => void doRebuy()}
-              disabled={rebuyAmt <= 0 || rebuyAmt > user.balance}
+              disabled={
+                parseChips(rebuyAmt) <= 0 ||
+                parseChips(rebuyAmt) > user.balance
+              }
             >
               {t("rebuyAction")}
             </button>

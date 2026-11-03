@@ -48,6 +48,16 @@ function nearestScrollParent(el: HTMLElement): HTMLElement | null {
 }
 
 /** Keep focused wallet fields in the visible viewport above the soft keyboard. */
+/** Digits-only draft for chip/blind inputs (allows empty while typing). */
+function digitsOnly(raw: string): string {
+  return raw.replace(/\D/g, "");
+}
+
+function parseChips(raw: string, fallback = 0): number {
+  const n = Number.parseInt(digitsOnly(raw), 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 function scrollFieldAboveKeyboard(el: HTMLElement) {
   const run = () => {
     const vv = window.visualViewport;
@@ -180,9 +190,9 @@ export function App() {
   const [pendingTableId, setPendingTableId] = useState<string | null>(() =>
     readPendingTableId(),
   );
-  const [buyIn, setBuyIn] = useState(2000);
-  const [smallBlind, setSmallBlind] = useState(50);
-  const [bigBlind, setBigBlind] = useState(100);
+  const [buyIn, setBuyIn] = useState("2000");
+  const [smallBlind, setSmallBlind] = useState("50");
+  const [bigBlind, setBigBlind] = useState("100");
   const [depositAmt, setDepositAmt] = useState("5000");
   const [withdrawAmt, setWithdrawAmt] = useState("");
   const [withdrawAddress, setWithdrawAddress] = useState("");
@@ -459,7 +469,7 @@ export function App() {
         setError(t("tableWaitingDeposit"));
         return;
       }
-      const amount = Math.min(buyIn, user.balance);
+      const amount = Math.min(Math.max(1, parseChips(buyIn)), user.balance);
       const r = await api.joinTable(code, amount);
       setUser(r.user);
       setTableId(r.tableId ?? code);
@@ -479,14 +489,14 @@ export function App() {
   async function createTable() {
     try {
       setError(null);
-      const sb = Math.max(1, Math.floor(smallBlind));
-      const bb = Math.max(sb * 2, Math.floor(bigBlind));
+      const sb = Math.max(1, parseChips(smallBlind, 1));
+      const bb = Math.max(sb * 2, parseChips(bigBlind, sb * 2));
       if (bb < sb * 2) {
         setError(t("errBlinds"));
         return;
       }
-      setSmallBlind(sb);
-      setBigBlind(bb);
+      setSmallBlind(String(sb));
+      setBigBlind(String(bb));
       const r = await api.createTable({
         smallBlind: sb,
         bigBlind: bb,
@@ -529,7 +539,10 @@ export function App() {
   async function join(id: string, buyInOverride?: number) {
     try {
       setError(null);
-      const r = await api.joinTable(id, buyInOverride ?? buyIn);
+      const r = await api.joinTable(
+        id,
+        buyInOverride ?? Math.max(1, parseChips(buyIn)),
+      );
       setUser(r.user);
       setTableId(r.tableId ?? id);
       setGate("table");
@@ -549,7 +562,7 @@ export function App() {
         setError(t("tableWaitingDeposit"));
         return;
       }
-      const amount = Math.min(buyIn, u.balance);
+      const amount = Math.min(Math.max(1, parseChips(buyIn)), u.balance);
       const r = await api.joinTable(id, amount);
       setUser(r.user);
       setTableId(r.tableId ?? id);
@@ -1443,9 +1456,14 @@ export function App() {
             {t("buyIn")}
             <input
               id="buyin-lobby"
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              enterKeyHint="done"
+              autoComplete="off"
               value={buyIn}
-              onChange={(e) => setBuyIn(Number(e.target.value))}
+              onChange={(e) => setBuyIn(digitsOnly(e.target.value))}
+              onFocus={(e) => scrollFieldAboveKeyboard(e.currentTarget)}
             />
           </label>
           <button
@@ -1519,7 +1537,9 @@ export function App() {
                   </span>
                   <span>
                     <IconChip size={13} />{" "}
-                    {t("tableBuyInHint", { amount: buyIn })}
+                    {t("tableBuyInHint", {
+                      amount: Math.max(1, parseChips(buyIn)),
+                    })}
                   </span>
                 </div>
                 <div className="table-card-actions">
@@ -1561,28 +1581,35 @@ export function App() {
               {t("smallBlind")}
               <input
                 id="sb"
-                type="number"
-                min={1}
-                step={1}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                enterKeyHint="next"
+                autoComplete="off"
                 value={smallBlind}
                 onChange={(e) => {
-                  const sb = Math.max(1, Number(e.target.value) || 1);
-                  setSmallBlind(sb);
-                  setBigBlind(sb * 2);
+                  const next = digitsOnly(e.target.value);
+                  setSmallBlind(next);
+                  if (next) {
+                    const sb = parseChips(next);
+                    if (sb > 0) setBigBlind(String(sb * 2));
+                  }
                 }}
+                onFocus={(e) => scrollFieldAboveKeyboard(e.currentTarget)}
               />
             </label>
             <label htmlFor="bb">
               {t("bigBlind")}
               <input
                 id="bb"
-                type="number"
-                min={2}
-                step={1}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                enterKeyHint="next"
+                autoComplete="off"
                 value={bigBlind}
-                onChange={(e) =>
-                  setBigBlind(Math.max(1, Number(e.target.value) || 1))
-                }
+                onChange={(e) => setBigBlind(digitsOnly(e.target.value))}
+                onFocus={(e) => scrollFieldAboveKeyboard(e.currentTarget)}
               />
             </label>
           </div>
@@ -1591,9 +1618,14 @@ export function App() {
             {t("buyIn")}
             <input
               id="buyin"
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              enterKeyHint="done"
+              autoComplete="off"
               value={buyIn}
-              onChange={(e) => setBuyIn(Number(e.target.value))}
+              onChange={(e) => setBuyIn(digitsOnly(e.target.value))}
+              onFocus={(e) => scrollFieldAboveKeyboard(e.currentTarget)}
             />
           </label>
           <button type="button" className="primary-wide" onClick={createTable}>
