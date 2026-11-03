@@ -22,6 +22,12 @@ import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
 import { tableInviteDeepLink } from "./telegramLinks";
 import { CenterNotice } from "./CenterNotice";
 import { localizeApiError } from "./localizeApiError";
+import {
+  playDealCard,
+  playDealSequence,
+  playWin,
+  unlockAudio,
+} from "./sounds";
 
 const WS = import.meta.env.VITE_WS_URL ?? "http://localhost:3001";
 const REACTIONS = ["😀", "😂", "🔥", "👏", "😎", "😱", "💪", "🎉"];
@@ -90,6 +96,20 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
   const prevHandNo = useRef(0);
   const lastPotRef = useRef(0);
   const celebratedHand = useRef(-1);
+  const dealtHandSfx = useRef(-1);
+
+  // Unlock Web Audio on first tap (required in Telegram / iOS)
+  useEffect(() => {
+    const unlock = () => unlockAudio();
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("touchstart", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("touchstart", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
 
   useEffect(() => {
     const token = getToken();
@@ -153,7 +173,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
     return () => clearInterval(id);
   }, [state?.turnEndsAt, state?.turnSeconds, state?.status]);
 
-  // Board reveal
+  // Board reveal + deal SFX
   useEffect(() => {
     if (!state) return;
     const board = state.board ?? [];
@@ -162,6 +182,12 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
       prevBoardLen.current = 0;
       setRevealedBoard([]);
       setFlying([]);
+      // Hole-card deal riff when a new hand starts
+      if (state.status === "playing" && dealtHandSfx.current !== state.handNo) {
+        dealtHandSfx.current = state.handNo;
+        const seatsIn = state.seats.filter((s) => s.inHand).length;
+        playDealSequence(Math.min(12, Math.max(4, seatsIn * 2)), 95, 60);
+      }
     }
     if (board.length === prevBoardLen.current) {
       setRevealedBoard(board);
@@ -180,6 +206,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
     const gap = board.length - from >= 3 ? 160 : 220;
     board.slice(from).forEach((card, i) => {
       window.setTimeout(() => {
+        playDealCard(from + i);
         setRevealedBoard((prev) =>
           prev.includes(card) ? prev : [...prev, card],
         );
@@ -196,6 +223,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
     if (!state || state.status !== "hand_over" || !state.winners?.length) return;
     if (celebratedHand.current === state.handNo) return;
     celebratedHand.current = state.handNo;
+    playWin();
 
     const felt = feltRef.current;
     if (!felt) return;
