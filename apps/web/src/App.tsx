@@ -2,7 +2,11 @@ import { useEffect, useState, type ReactNode } from "react";
 import type { UserDTO } from "@poker/shared";
 import { api, setToken } from "./api";
 import { TableView } from "./TableView";
-import { bindTelegramBackButton, initTelegramChrome } from "./telegram";
+import {
+  bindTelegramBackButton,
+  initTelegramChrome,
+  requestTelegramFullscreen,
+} from "./telegram";
 import { useI18n } from "./i18n";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
 import { BrandLogo } from "./BrandLogo";
@@ -36,22 +40,31 @@ type TableRow = {
 /**
  * Real Telegram Mini App session, or explicit ?dev=1 probe.
  * Never invent Player1 when opened as a plain link without WebApp initData.
+ * Read initData before expand/fullscreen — some clients clear it on early fullscreen.
  */
 async function resolveInitData(): Promise<string | null> {
-  let tg = initTelegramChrome();
-  if (tg?.initData) return tg.initData;
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    const raw = window.Telegram?.WebApp?.initData;
+    if (raw) {
+      initTelegramChrome({ fullscreen: false });
+      return raw;
+    }
+    await new Promise((r) => window.setTimeout(r, 50));
+  }
 
-  // initData sometimes appears a tick after script inject / expand
-  for (let i = 0; i < 15; i++) {
-    await new Promise((r) => window.setTimeout(r, 80));
-    tg = window.Telegram?.WebApp ?? null;
-    if (tg?.initData) return tg.initData;
+  // Still inside Telegram chrome but no signed payload — last soft ready()
+  if (window.Telegram?.WebApp) {
+    initTelegramChrome({ fullscreen: false });
+    const again = window.Telegram.WebApp.initData;
+    if (again) return again;
   }
 
   const params = new URLSearchParams(window.location.search);
   if (!params.has("dev")) return null;
   const id = params.get("dev") || "1";
   const name = params.get("name") ?? `Player${id}`;
+  initTelegramChrome({ fullscreen: false });
   return `dev:${id}:${name}`;
 }
 
@@ -96,6 +109,7 @@ export function App() {
   const [depositAmt, setDepositAmt] = useState(5000);
   const [inviteCreated, setInviteCreated] = useState<string | null>(null);
   const [inviteCopied, setInviteCopied] = useState(false);
+  const [tgIdCopied, setTgIdCopied] = useState(false);
   const [pending, setPending] = useState<
     {
       id: string;
@@ -254,6 +268,7 @@ export function App() {
       const { token, user: u } = await api.authTelegram(initData);
       setToken(token);
       setUser(u);
+      requestTelegramFullscreen();
       if (u.blocked) {
         setGate("app");
         setTab("profile");
@@ -442,6 +457,17 @@ export function App() {
       await navigator.clipboard.writeText(text);
       setDepositCopied(kind);
       window.setTimeout(() => setDepositCopied(null), 2000);
+    } catch {
+      setError(t("copyFailed"));
+    }
+  }
+
+  async function copyTelegramId() {
+    if (!user?.telegramId) return;
+    try {
+      await navigator.clipboard.writeText(String(user.telegramId));
+      setTgIdCopied(true);
+      window.setTimeout(() => setTgIdCopied(false), 2000);
     } catch {
       setError(t("copyFailed"));
     }
@@ -1198,9 +1224,16 @@ export function App() {
             )}
             <div className="user-identity">
               <strong>{user.name}</strong>
-              <span className="tg-id" title={t("telegramIdLabel")}>
-                {t("telegramIdShort", { id: user.telegramId })}
-              </span>
+              <button
+                type="button"
+                className="tg-id tg-id-btn"
+                title={t("tapToCopyId")}
+                onClick={() => void copyTelegramId()}
+              >
+                {tgIdCopied
+                  ? t("copied")
+                  : t("telegramIdShort", { id: user.telegramId })}
+              </button>
             </div>
           </div>
           <span className="hint">{t("lobbyHint")}</span>
@@ -1451,9 +1484,16 @@ export function App() {
           )}
           <div>
             <div className="profile-name">{user.name}</div>
-            <div className="tg-id" title={t("telegramIdLabel")}>
-              {t("telegramIdShort", { id: user.telegramId })}
-            </div>
+            <button
+              type="button"
+              className="tg-id tg-id-btn"
+              title={t("tapToCopyId")}
+              onClick={() => void copyTelegramId()}
+            >
+              {tgIdCopied
+                ? t("copied")
+                : t("telegramIdShort", { id: user.telegramId })}
+            </button>
             <div className="hint">
               {user.role === "admin" ? t("roleAdmin") : t("rolePlayer")}
             </div>

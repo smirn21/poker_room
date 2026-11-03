@@ -104,17 +104,22 @@ export function bindVisualViewport(): () => void {
   };
 }
 
-export function initTelegramChrome(): TgWebApp | null {
+export function initTelegramChrome(opts?: {
+  /** Fullscreen can drop/reload WebView on some clients — call after auth. */
+  fullscreen?: boolean;
+}): TgWebApp | null {
   const tg = window.Telegram?.WebApp ?? null;
   syncVisualViewport();
   if (!tg) return null;
 
   tg.ready();
   tg.expand();
-  try {
-    tg.requestFullscreen?.();
-  } catch {
-    /* optional Bot API 8.0 — chat-list opens often need this for content insets */
+  if (opts?.fullscreen) {
+    try {
+      tg.requestFullscreen?.();
+    } catch {
+      /* optional Bot API 8.0 */
+    }
   }
   try {
     tg.setHeaderColor?.(FELT_HEADER);
@@ -140,6 +145,15 @@ export function initTelegramChrome(): TgWebApp | null {
   window.setTimeout(sync, 300);
 
   return tg;
+}
+
+/** Ask Telegram for fullscreen after a successful session (safer for initData). */
+export function requestTelegramFullscreen(): void {
+  try {
+    window.Telegram?.WebApp?.requestFullscreen?.();
+  } catch {
+    /* optional */
+  }
 }
 
 /** Show Telegram native Back when available; returns cleanup. */

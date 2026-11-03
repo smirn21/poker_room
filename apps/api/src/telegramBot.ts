@@ -142,7 +142,11 @@ function startPayload(text: string | undefined): string | null {
   return m ? (m[1]?.trim() ?? "") : null;
 }
 
-function welcomeCopy(lang?: string): { text: string; button: string } {
+function welcomeCopy(lang?: string): {
+  text: string;
+  button: string;
+  menuHint: string;
+} {
   const ru = !lang || lang.toLowerCase().startsWith("ru");
   if (ru) {
     return {
@@ -150,8 +154,10 @@ function welcomeCopy(lang?: string): { text: string; button: string } {
         `<b>${BRAND_NAME}</b>\n\n` +
         "Рады видеть вас за сукном.\n" +
         "Закрытый Texas Hold'em для своих — войдите по коду клуба или стола.\n\n" +
-        "Нажмите кнопку ниже, чтобы открыть мини-приложение.",
+        "Нажмите кнопку под этим сообщением, чтобы открыть мини-приложение.",
       button: "Открыть клуб",
+      menuHint:
+        "Также можно открыть клуб кнопкой меню бота (☰ / «Открыть»).",
     };
   }
   return {
@@ -159,8 +165,9 @@ function welcomeCopy(lang?: string): { text: string; button: string } {
       `<b>${BRAND_NAME}</b>\n\n` +
       "Glad to see you at the felt.\n" +
       "Private Texas Hold'em — enter with a club or table code.\n\n" +
-      "Tap the button below to open the mini app.",
+      "Tap the button under this message to open the mini app.",
     button: "Open club",
+    menuHint: "You can also open the club via the bot menu button.",
   };
 }
 
@@ -187,18 +194,27 @@ export async function sendStartGreeting(
     : `${mini}/`;
   const copy = welcomeCopy(opts?.languageCode);
 
+  // Inline web_app under the message — reliable initData.
+  // Reply-keyboard web_app is flaky on some clients (empty initData).
   await tgCall("sendMessage", {
     chat_id: chatId,
     text: copy.text,
     parse_mode: "HTML",
     disable_web_page_preview: true,
     reply_markup: {
-      // Button under the composer — opens the Mini App
-      keyboard: [[{ text: copy.button, web_app: { url: openUrl } }]],
-      resize_keyboard: true,
-      is_persistent: true,
+      inline_keyboard: [[{ text: copy.button, web_app: { url: openUrl } }]],
     },
   });
+  // Drop any old reply-keyboard "Open" that may open without initData
+  try {
+    await tgCall("sendMessage", {
+      chat_id: chatId,
+      text: copy.menuHint,
+      reply_markup: { remove_keyboard: true },
+    });
+  } catch {
+    /* non-fatal */
+  }
 }
 
 async function handleUpdate(update: TgUpdate, log: Logger): Promise<void> {

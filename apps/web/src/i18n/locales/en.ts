@@ -65,6 +65,7 @@ export const en: Record<MessageKey, string> = {
   rolePlayer: "Player",
   telegramIdLabel: "Telegram ID",
   telegramIdShort: "ID {id}",
+  tapToCopyId: "Tap to copy Telegram ID",
   cardBalanceAdjust: "Balance by Telegram ID",
   balanceAdjustHint: "Find a player by Telegram ID, then credit or debit chips.",
   lookupPlayer: "Look up",

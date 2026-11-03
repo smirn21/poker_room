@@ -63,6 +63,7 @@ export const ru = {
   rolePlayer: "Игрок",
   telegramIdLabel: "Telegram ID",
   telegramIdShort: "ID {id}",
+  tapToCopyId: "Нажмите, чтобы скопировать Telegram ID",
   cardBalanceAdjust: "Баланс по Telegram ID",
   balanceAdjustHint: "Найдите игрока по Telegram ID, затем пополните или спишите фишки.",
   lookupPlayer: "Найти",

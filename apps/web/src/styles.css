@@ -162,7 +162,8 @@ button.primary-wide {
   height: var(--vv-height, 100svh);
   max-height: var(--vv-height, 100svh);
   overflow: hidden;
-  padding-bottom: calc(var(--safe-bottom) + 4.1rem);
+  /* Reserve space for fixed bottom-nav (icons + labels + safe inset) */
+  padding-bottom: calc(var(--safe-bottom) + 4.75rem);
 }
 
 /* Keyboard covers the home indicator — drop that padding while composing */
@@ -248,15 +249,15 @@ html.keyboard-open .app-shell-nav {
 }
 
 .lobby-hero-logo.brand-logo-lg {
-  width: 6.5rem;
-  height: 6.5rem;
-  border-radius: 1.35rem;
+  width: 5.75rem;
+  height: 5.75rem;
+  border-radius: 1.25rem;
 }
 
 .lobby-hero-brand {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 1.45rem;
+  font-size: 1.35rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--gold-soft);
@@ -663,6 +664,30 @@ html.keyboard-open .app-shell-nav {
   letter-spacing: 0.01em;
 }
 
+.tg-id-btn {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 0.15rem 0.35rem;
+  border: 1px dashed rgba(138, 154, 160, 0.35);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  text-align: left;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.tg-id-btn:active {
+  color: var(--accent-soft);
+  border-color: rgba(67, 197, 181, 0.45);
+}
+
 .player-found {
   margin: 0.15rem 0;
   font-size: 0.88rem;
@@ -698,12 +723,18 @@ html.keyboard-open .app-shell-nav {
 }
 
 .table-list-fit {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.55rem;
+  padding-bottom: 1.25rem;
+  overscroll-behavior: contain;
+  /* Keep last card clear of the fixed bottom nav while scrolling */
+  scroll-padding-bottom: 1.25rem;
 }
 
 .table-item-compact {
@@ -1102,7 +1133,9 @@ input:focus-visible {
   display: grid;
   gap: 0.75rem;
   overflow-y: auto;
-  padding-bottom: 0.25rem;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 1rem;
+  overscroll-behavior: contain;
 }
 
 .table-item {
