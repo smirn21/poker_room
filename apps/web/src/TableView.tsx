@@ -23,6 +23,7 @@ import { tableInviteDeepLink } from "./telegramLinks";
 import { CenterNotice } from "./CenterNotice";
 import { localizeApiError } from "./localizeApiError";
 import {
+  playAction,
   playDealCard,
   playDealSequence,
   playWin,
@@ -355,6 +356,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
     amount?: number,
   ) {
     setError(null);
+    playAction(action);
     socket?.emit("table:action", { tableId, action, amount });
   }
 

@@ -88,6 +88,107 @@ export function playDealSequence(
   }
 }
 
+export type ActionSfx =
+  | "fold"
+  | "check"
+  | "call"
+  | "bet"
+  | "raise"
+  | "all-in";
+
+/** Distinct click for fold / check / call / raise / all-in. */
+export function playAction(action: ActionSfx): void {
+  unlockAudio();
+  const c = ensureRunning();
+  if (!c) return;
+  const t0 = c.currentTime;
+
+  const tone = (freq: number, dur: number, gain = 0.16, type: OscillatorType = "sine") => {
+    const osc = c.createOscillator();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    osc.connect(g);
+    g.connect(c.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  };
+
+  const click = (freq = 2200, gain = 0.1) => {
+    const n = Math.max(1, Math.floor(c.sampleRate * 0.018));
+    const buf = c.createBuffer(1, n, c.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3);
+    }
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const bp = c.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = freq;
+    bp.Q.value = 1.2;
+    const g = c.createGain();
+    g.gain.value = gain;
+    src.connect(bp);
+    bp.connect(g);
+    g.connect(c.destination);
+    src.start(t0);
+    src.stop(t0 + 0.03);
+  };
+
+  switch (action) {
+    case "fold":
+      // Soft descending “discard”
+      tone(280, 0.12, 0.14, "triangle");
+      tone(180, 0.16, 0.1, "sine");
+      click(900, 0.06);
+      break;
+    case "check":
+      // Short knock
+      tone(420, 0.07, 0.12, "triangle");
+      click(1600, 0.08);
+      break;
+    case "call":
+      // Confident mid tap
+      tone(520, 0.09, 0.15, "sine");
+      tone(780, 0.07, 0.08, "triangle");
+      click(1400, 0.07);
+      break;
+    case "bet":
+    case "raise":
+      // Punchier push
+      tone(640, 0.08, 0.16, "square");
+      tone(960, 0.1, 0.1, "sine");
+      click(2000, 0.09);
+      break;
+    case "all-in":
+      // Bold double hit
+      tone(700, 0.1, 0.18, "square");
+      window.setTimeout(() => {
+        const c2 = ensureRunning();
+        if (!c2) return;
+        const t1 = c2.currentTime;
+        const osc = c2.createOscillator();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(880, t1);
+        osc.frequency.exponentialRampToValueAtTime(440, t1 + 0.18);
+        const g = c2.createGain();
+        g.gain.setValueAtTime(0.0001, t1);
+        g.gain.exponentialRampToValueAtTime(0.14, t1 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, t1 + 0.22);
+        osc.connect(g);
+        g.connect(c2.destination);
+        osc.start(t1);
+        osc.stop(t1 + 0.24);
+      }, 70);
+      click(2400, 0.1);
+      break;
+  }
+}
+
 /** Bright win chime + soft sparkle. */
 export function playWin(): void {
   const c = ensureRunning();
