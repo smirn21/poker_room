@@ -71,6 +71,8 @@ export class HoldEmTable {
     this.config = {
       ...config,
       maxSeats: Math.min(9, Math.max(2, config.maxSeats)),
+      // Never allow a sub-45s clock — stale callers used to pass 20.
+      turnSeconds: Math.max(45, Number(config.turnSeconds) || 45),
       rakePercent: Math.max(0, Math.min(20, config.rakePercent ?? 5)),
       rakeCapBb: Math.max(0, config.rakeCapBb ?? 3),
       noFlopNoDrop: config.noFlopNoDrop !== false,
@@ -320,7 +322,9 @@ export class HoldEmTable {
 
   private armTurnClock(): void {
     if (this.status === "playing" && this.actionIndex >= 0) {
-      this.turnEndsAt = Date.now() + this.config.turnSeconds * 1000;
+      const secs = Math.max(45, this.config.turnSeconds || 45);
+      this.config.turnSeconds = secs;
+      this.turnEndsAt = Date.now() + secs * 1000;
     } else {
       this.turnEndsAt = null;
     }
@@ -679,7 +683,7 @@ export class HoldEmTable {
       canCheck: toCall <= 0,
       legalActions: legal,
       turnEndsAt: this.turnEndsAt,
-      turnSeconds: this.config.turnSeconds,
+      turnSeconds: Math.max(45, this.config.turnSeconds || 45),
       rakePercent: this.config.rakePercent,
       rakeCapBb: this.config.rakeCapBb,
       rakeTaken: this.rakeTaken || undefined,

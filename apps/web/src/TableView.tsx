@@ -142,7 +142,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
       setTurnSecLeft(null);
       return;
     }
-    const total = (state.turnSeconds || 45) * 1000;
+    const total = Math.max(45, state.turnSeconds || 45) * 1000;
     const tick = () => {
       const msLeft = Math.max(0, state.turnEndsAt! - Date.now());
       setTurnLeft(msLeft / total);
@@ -270,14 +270,14 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
 
   const isMyTurn = Boolean(mySeat?.isTurn);
 
-  // Client fallback if server auto-next stalls after showdown
+  // Client fallback if server auto-next stalls after showdown (~7s pause + slack)
   useEffect(() => {
     if (state?.status !== "hand_over") return;
     const id = window.setTimeout(() => {
       void api.nextHand(tableId).catch(() => {
         /* server may already have dealt */
       });
-    }, 4200);
+    }, 8500);
     return () => window.clearTimeout(id);
   }, [state?.status, state?.handNo, tableId]);
 
@@ -455,6 +455,9 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
       .join(" · ") ?? "";
 
   const isShowdown = state?.status === "hand_over";
+  const aggressiveBet =
+    (a: string | null | undefined) =>
+      a === "bet" || a === "raise" || a === "all-in";
 
   function renderSeat(seat: PublicSeat, onFelt: boolean) {
     const pos = layout.get(seat.seatIndex);
@@ -466,6 +469,10 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
         ? actionLabel(seat.lastAction, locale)
         : null;
     const winHand = localizeHandName(winInfo?.handName, locale);
+    const showBetAmount =
+      !isShowdown &&
+      seat.bet > 0 &&
+      (aggressiveBet(seat.lastAction) || seat.isSb || seat.isBb);
     const badges = [
       seat.isDealer ? "D" : null,
       seat.isSb ? "SB" : null,
@@ -507,10 +514,18 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
           <div className="name">{seat.name}</div>
           {actionText && !seat.isTurn && (
             <div
-              className={`action-tag action-${seat.lastAction ?? "fold"}`}
+              className={`action-tag action-${seat.lastAction ?? "fold"}${
+                aggressiveBet(seat.lastAction) ? " action-tag-bet" : ""
+              }`}
             >
               {actionText}
+              {showBetAmount && aggressiveBet(seat.lastAction)
+                ? ` ${seat.bet}`
+                : ""}
             </div>
+          )}
+          {isWinner && winInfo && winInfo.amount > 0 && (
+            <div className="win-amount">+{winInfo.amount}</div>
           )}
           {winHand && onFelt && (
             <div className="hand-name">{winHand}</div>
@@ -535,8 +550,15 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
         </div>
         <ChipStack amount={seat.stack} size="sm" className="seat-chips" />
         {seat.bet > 0 && !isShowdown && (
-          <div className={`bet-stack ${pos.isHero ? "bet-up" : "bet-down"}`}>
-            <ChipStack amount={seat.bet} size="sm" />
+          <div
+            className={`bet-stack ${pos.isHero ? "bet-up" : "bet-down"}${
+              aggressiveBet(seat.lastAction) ? " bet-stack-loud" : ""
+            }`}
+          >
+            <ChipStack
+              amount={seat.bet}
+              size={aggressiveBet(seat.lastAction) ? "md" : "sm"}
+            />
           </div>
         )}
         {seat.holeCards && seat.holeCards.length > 0 && onFelt && (
@@ -828,7 +850,8 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
 
       {winnerText ? (
         <div className="winner-banner winner-banner-glow winner-banner-felt">
-          {winnerText}
+          <div className="winner-banner-title">{t("win")}</div>
+          <div className="winner-banner-body">{winnerText}</div>
         </div>
       ) : null}
 

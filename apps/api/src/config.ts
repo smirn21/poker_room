@@ -77,8 +77,8 @@ export const config = {
   turnSeconds: Math.max(45, Number(process.env.TURN_SECONDS ?? 45) || 45),
   /** Pause after hand_over before auto-dealing the next hand (ms) */
   autoNextHandMs: Math.max(
-    2500,
-    Number(process.env.AUTO_NEXT_HAND_MS ?? 3500) || 3500,
+    7000,
+    Number(process.env.AUTO_NEXT_HAND_MS ?? 7000) || 7000,
   ),
 
   /** USDT TRC20 club receive address (Trust Wallet / your wallet). */

@@ -78,8 +78,9 @@ export class TableManager {
   async ensureLoaded(tableId: string): Promise<HoldEmTable> {
     const existing = this.tables.get(tableId);
     if (existing) {
-      // Keep live tables on the current turn clock (e.g. 45s) after config changes.
-      existing.engine.config.turnSeconds = config.turnSeconds;
+      // Keep live tables on the current turn clock (floor 45s) after config changes.
+      const secs = Math.max(45, config.turnSeconds || 45);
+      existing.engine.config.turnSeconds = secs;
       return existing.engine;
     }
 
@@ -493,7 +494,7 @@ export class TableManager {
     if (!live) return;
     // Already scheduled — don't reset the delay on every re-emit.
     if (live.autoNextTimer) return;
-    const delay = Math.max(2500, config.autoNextHandMs);
+    const delay = Math.max(7000, config.autoNextHandMs);
     live.autoNextTimer = setTimeout(() => {
       const cur = this.tables.get(tableId);
       if (cur) cur.autoNextTimer = null;
