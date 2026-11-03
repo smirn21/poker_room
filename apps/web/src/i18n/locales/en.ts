@@ -192,6 +192,8 @@ export const en: Record<MessageKey, string> = {
   langRu: "Русский",
   langEn: "English",
   errBoot: "Boot failed",
+  errOpenFromTelegram:
+    "Open Hold'em House from Telegram (the bot Open button), not as a plain browser link.",
   errInvite: "Invite failed",
   errCreate: "Create failed",
   errJoin: "Join failed",

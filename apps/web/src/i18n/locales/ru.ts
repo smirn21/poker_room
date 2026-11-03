@@ -191,6 +191,8 @@ export const ru = {
   langRu: "Русский",
   langEn: "English",
   errBoot: "Не удалось войти",
+  errOpenFromTelegram:
+    "Откройте Hold'em House из Telegram (кнопка бота «Открыть»), а не как обычную ссылку в браузере.",
   errInvite: "Неверный инвайт",
   errCreate: "Не удалось создать стол",
   errJoin: "Не удалось сесть",

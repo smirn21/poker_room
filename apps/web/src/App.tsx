@@ -33,11 +33,24 @@ type TableRow = {
   seated: number;
 };
 
-function resolveInitData(): string {
-  const tg = initTelegramChrome();
+/**
+ * Real Telegram Mini App session, or explicit ?dev=1 probe.
+ * Never invent Player1 when opened as a plain link without WebApp initData.
+ */
+async function resolveInitData(): Promise<string | null> {
+  let tg = initTelegramChrome();
   if (tg?.initData) return tg.initData;
+
+  // initData sometimes appears a tick after script inject / expand
+  for (let i = 0; i < 15; i++) {
+    await new Promise((r) => window.setTimeout(r, 80));
+    tg = window.Telegram?.WebApp ?? null;
+    if (tg?.initData) return tg.initData;
+  }
+
   const params = new URLSearchParams(window.location.search);
-  const id = params.get("dev") ?? "1";
+  if (!params.has("dev")) return null;
+  const id = params.get("dev") || "1";
   const name = params.get("name") ?? `Player${id}`;
   return `dev:${id}:${name}`;
 }
@@ -232,7 +245,12 @@ export function App() {
     try {
       setError(null);
       setGate("boot");
-      const initData = resolveInitData();
+      const initData = await resolveInitData();
+      if (!initData) {
+        setError(t("errOpenFromTelegram"));
+        setGate("boot");
+        return;
+      }
       const { token, user: u } = await api.authTelegram(initData);
       setToken(token);
       setUser(u);
