@@ -19,7 +19,15 @@ import {
   registerTronhooksWatch,
   tronhooksStatus,
 } from "./tronhooks.js";
-import { resolveMiniAppUrl } from "./telegramBot.js";
+import {
+  notifyAdminsWithdrawRequest,
+  notifyUserWithdrawPending,
+  resolveMiniAppUrl,
+} from "./telegramBot.js";
+import {
+  createWithdrawIntent,
+  toWithdrawDto,
+} from "./withdrawService.js";
 
 function toUserDTO(u: {
   id: string;
@@ -818,6 +826,84 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
           d.amountUsdtMicro != null ? formatUsdtMicro(d.amountUsdtMicro) : null,
       })),
     };
+  });
+
+  app.get("/wallet/withdraw/config", async (req) => {
+    await requireUser(app, req);
+    const rate = Math.max(1, config.chipsPerUsdt);
+    return {
+      enabled: true,
+      network: "TRC20",
+      asset: "USDT",
+      chipsPerUsdt: rate,
+      minChips: rate,
+    };
+  });
+
+  app.post("/wallet/withdraw", async (req) => {
+    const user = await requireUser(app, req);
+    if (!user.whitelisted) throw httpError.forbidden();
+    if (user.blockedAt) throw httpError.forbidden("Account blocked");
+    const body = z
+      .object({
+        amountChips: z.number().int().positive().max(10_000_000),
+        address: z.string().min(26).max(64),
+      })
+      .parse(req.body);
+
+    let created: Awaited<ReturnType<typeof createWithdrawIntent>>;
+    try {
+      created = await createWithdrawIntent({
+        userId: user.id,
+        amountChips: body.amountChips,
+        address: body.address,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Withdraw failed";
+      if (/insufficient|pending|invalid|multiple|minimum|whitelisted|blocked/i.test(msg)) {
+        throw httpError.badRequest(msg);
+      }
+      throw e;
+    }
+
+    try {
+      await notifyUserWithdrawPending({
+        telegramId: created.userTelegramId,
+        amountChips: created.intent.amountChips,
+        amountUsdt: created.intent.amountUsdt,
+      });
+    } catch {
+      /* non-fatal */
+    }
+    try {
+      await notifyAdminsWithdrawRequest({
+        intentId: created.intent.id,
+        amountChips: created.intent.amountChips,
+        amountUsdt: created.intent.amountUsdt,
+        address: created.intent.address,
+        network: created.intent.network,
+        userName: created.userName,
+        userTelegramId: created.userTelegramId,
+      });
+    } catch {
+      /* non-fatal */
+    }
+
+    const fresh = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    return {
+      intent: created.intent,
+      user: toUserDTO(fresh),
+    };
+  });
+
+  app.get("/wallet/withdrawals", async (req) => {
+    const user = await requireUser(app, req);
+    const rows = await prisma.withdrawIntent.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+    return { withdrawals: rows.map(toWithdrawDto) };
   });
 
   app.post("/wallet/deposits/:id/cancel", async (req) => {

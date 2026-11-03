@@ -200,6 +200,43 @@ export const api = {
     request<{ ok: boolean }>(`/wallet/deposits/${encodeURIComponent(id)}/cancel`, {
       method: "POST",
     }),
+  withdrawConfig: () =>
+    request<{
+      enabled: boolean;
+      network: string;
+      asset: string;
+      chipsPerUsdt: number;
+      minChips: number;
+    }>("/wallet/withdraw/config"),
+  createWithdraw: (amountChips: number, address: string) =>
+    request<{
+      intent: {
+        id: string;
+        status: string;
+        amountChips: number;
+        amountUsdt: string;
+        address: string;
+        network: string;
+        asset: string;
+        createdAt: string;
+      };
+      user: UserDTO;
+    }>("/wallet/withdraw", {
+      method: "POST",
+      body: JSON.stringify({ amountChips, address }),
+    }),
+  myWithdrawals: () =>
+    request<{
+      withdrawals: {
+        id: string;
+        status: string;
+        amountChips: number;
+        amountUsdt: string;
+        address: string;
+        network: string;
+        createdAt: string;
+      }[];
+    }>("/wallet/withdrawals"),
   ledger: () => request<{ entries: unknown[] }>("/wallet/ledger"),
   createInvite: (maxUses = 5) =>
     request<{ invite: { code: string; maxUses: number } }>("/invites", {

@@ -1369,6 +1369,55 @@ input:focus-visible {
   gap: 0.45rem;
 }
 
+.pane-subtitle {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.withdraw-history {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(67, 197, 181, 0.14);
+}
+
+.withdraw-list {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.withdraw-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+}
+
+.withdraw-status {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.withdraw-status.status-pending {
+  color: var(--gold-soft, #d4af37);
+}
+
+.withdraw-status.status-paid {
+  color: var(--accent-soft, #43c5b5);
+}
+
+.withdraw-status.status-rejected {
+  color: var(--danger);
+}
+
+.hint-ok {
+  color: var(--accent-soft, #43c5b5);
+}
+
 .deposit-row {
   display: flex;
   flex-wrap: wrap;

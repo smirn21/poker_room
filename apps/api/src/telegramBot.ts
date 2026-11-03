@@ -17,6 +17,16 @@ type TgUpdate = {
     chat: { id: number; type: string };
     from?: { id: number; first_name?: string; language_code?: string };
   };
+  callback_query?: {
+    id: string;
+    data?: string;
+    from: { id: number; language_code?: string };
+    message?: {
+      message_id: number;
+      chat: { id: number };
+      text?: string;
+    };
+  };
 };
 
 type Logger = {
@@ -217,7 +227,234 @@ export async function sendStartGreeting(
   }
 }
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+export async function notifyUserWithdrawPending(opts: {
+  telegramId: string;
+  amountChips: number;
+  amountUsdt: string;
+}): Promise<void> {
+  const chatId = Number(opts.telegramId);
+  if (!Number.isFinite(chatId)) return;
+  await tgCall("sendMessage", {
+    chat_id: chatId,
+    text:
+      `<b>${BRAND_NAME}</b>\n\n` +
+      `Заявка на вывод <b>${opts.amountChips}</b> фишек (~${escapeHtml(opts.amountUsdt)} USDT) принята и <b>в обработке</b>.\n` +
+      "Когда админ отправит выплату, мы сообщим сюда.",
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+  });
+}
+
+export async function notifyUserWithdrawPaid(opts: {
+  telegramId: string;
+  amountUsdt: string;
+  address: string;
+}): Promise<void> {
+  const chatId = Number(opts.telegramId);
+  if (!Number.isFinite(chatId)) return;
+  await tgCall("sendMessage", {
+    chat_id: chatId,
+    text:
+      `<b>${BRAND_NAME}</b>\n\n` +
+      `Выплата <b>${escapeHtml(opts.amountUsdt)} USDT</b> (TRC20) отправлена.\n` +
+      `Адрес: <code>${escapeHtml(opts.address)}</code>`,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+  });
+}
+
+export async function notifyUserWithdrawRejected(opts: {
+  telegramId: string;
+  amountChips: number;
+}): Promise<void> {
+  const chatId = Number(opts.telegramId);
+  if (!Number.isFinite(chatId)) return;
+  await tgCall("sendMessage", {
+    chat_id: chatId,
+    text:
+      `<b>${BRAND_NAME}</b>\n\n` +
+      `Заявка на вывод отклонена. <b>${opts.amountChips}</b> фишек возвращены на баланс.`,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+  });
+}
+
+/** Notify all configured admins with pay/reject buttons. */
+export async function notifyAdminsWithdrawRequest(opts: {
+  intentId: string;
+  amountChips: number;
+  amountUsdt: string;
+  address: string;
+  network: string;
+  userName: string;
+  userTelegramId: string;
+}): Promise<void> {
+  const text =
+    `<b>Вывод USDT</b>\n\n` +
+    `Игрок: ${escapeHtml(opts.userName)} (TG <code>${escapeHtml(opts.userTelegramId)}</code>)\n` +
+    `Фишки: <b>${opts.amountChips}</b>\n` +
+    `Сумма: <b>${escapeHtml(opts.amountUsdt)} USDT</b>\n` +
+    `Сеть: <b>${escapeHtml(opts.network)}</b>\n` +
+    `Адрес:\n<code>${escapeHtml(opts.address)}</code>`;
+
+  const reply_markup = {
+    inline_keyboard: [
+      [
+        {
+          text: "Выплатить",
+          callback_data: `wd:pay:${opts.intentId}`,
+        },
+        {
+          text: "Отклонить",
+          callback_data: `wd:reject:${opts.intentId}`,
+        },
+      ],
+    ],
+  };
+
+  for (const id of config.adminTelegramIds) {
+    const chatId = Number(id);
+    if (!Number.isFinite(chatId)) continue;
+    try {
+      await tgCall("sendMessage", {
+        chat_id: chatId,
+        text,
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+        reply_markup,
+      });
+    } catch {
+      /* one admin fail should not block others */
+    }
+  }
+}
+
+async function handleWithdrawCallback(
+  cq: NonNullable<TgUpdate["callback_query"]>,
+  log: Logger,
+): Promise<void> {
+  const data = cq.data ?? "";
+  const m = data.match(/^wd:(pay|reject):([a-z0-9]+)$/i);
+  if (!m) {
+    await tgCall("answerCallbackQuery", {
+      callback_query_id: cq.id,
+      text: "Unknown action",
+      show_alert: false,
+    });
+    return;
+  }
+
+  const action = m[1]!.toLowerCase() as "pay" | "reject";
+  const intentId = m[2]!;
+  const adminId = String(cq.from.id);
+
+  if (!config.adminTelegramIds.includes(adminId)) {
+    await tgCall("answerCallbackQuery", {
+      callback_query_id: cq.id,
+      text: "Нет прав",
+      show_alert: true,
+    });
+    return;
+  }
+
+  const { payWithdrawIntent, rejectWithdrawIntent } = await import(
+    "./withdrawService.js"
+  );
+
+  try {
+    if (action === "pay") {
+      const r = await payWithdrawIntent(intentId, adminId);
+      try {
+        await notifyUserWithdrawPaid({
+          telegramId: r.userTelegramId,
+          amountUsdt: r.intent.amountUsdt,
+          address: r.intent.address,
+        });
+      } catch (e) {
+        log.warn(
+          { err: e instanceof Error ? e.message : String(e) },
+          "withdraw_user_paid_notify_failed",
+        );
+      }
+      await tgCall("answerCallbackQuery", {
+        callback_query_id: cq.id,
+        text: "Отмечено как выплачено",
+      });
+      if (cq.message) {
+        await tgCall("editMessageText", {
+          chat_id: cq.message.chat.id,
+          message_id: cq.message.message_id,
+          text:
+            `<b>Вывод USDT — выплачено</b>\n\n` +
+            `Игрок: ${escapeHtml(r.userName)} (TG <code>${escapeHtml(r.userTelegramId)}</code>)\n` +
+            `Фишки: <b>${r.intent.amountChips}</b>\n` +
+            `Сумма: <b>${escapeHtml(r.intent.amountUsdt)} USDT</b>\n` +
+            `Сеть: <b>${escapeHtml(r.intent.network)}</b>\n` +
+            `Адрес:\n<code>${escapeHtml(r.intent.address)}</code>\n\n` +
+            `Админ: <code>${escapeHtml(adminId)}</code>`,
+          parse_mode: "HTML",
+          disable_web_page_preview: true,
+        });
+      }
+      log.info({ intentId, adminId }, "withdraw_paid");
+      return;
+    }
+
+    const r = await rejectWithdrawIntent(intentId, adminId);
+    try {
+      await notifyUserWithdrawRejected({
+        telegramId: r.userTelegramId,
+        amountChips: r.intent.amountChips,
+      });
+    } catch (e) {
+      log.warn(
+        { err: e instanceof Error ? e.message : String(e) },
+        "withdraw_user_reject_notify_failed",
+      );
+    }
+    await tgCall("answerCallbackQuery", {
+      callback_query_id: cq.id,
+      text: "Отклонено, фишки возвращены",
+    });
+    if (cq.message) {
+      await tgCall("editMessageText", {
+        chat_id: cq.message.chat.id,
+        message_id: cq.message.message_id,
+        text:
+          `<b>Вывод USDT — отклонено</b>\n\n` +
+          `Игрок: ${escapeHtml(r.userName)} (TG <code>${escapeHtml(r.userTelegramId)}</code>)\n` +
+          `Фишки возвращены: <b>${r.intent.amountChips}</b>\n` +
+          `Адрес:\n<code>${escapeHtml(r.intent.address)}</code>\n\n` +
+          `Админ: <code>${escapeHtml(adminId)}</code>`,
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+      });
+    }
+    log.info({ intentId, adminId }, "withdraw_rejected");
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    await tgCall("answerCallbackQuery", {
+      callback_query_id: cq.id,
+      text: msg.slice(0, 180),
+      show_alert: true,
+    });
+    log.warn({ err: msg, intentId, action }, "withdraw_callback_failed");
+  }
+}
+
 async function handleUpdate(update: TgUpdate, log: Logger): Promise<void> {
+  if (update.callback_query) {
+    await handleWithdrawCallback(update.callback_query, log);
+    return;
+  }
+
   const msg = update.message;
   if (!msg?.text || msg.chat.type !== "private") return;
   const payload = startPayload(msg.text);
@@ -287,7 +524,7 @@ export function startTelegramBot(log: Logger): void {
         const base = botApiBase();
         if (!base) break;
         const res = await fetch(
-          `${base}/getUpdates?timeout=25&offset=${offset}&allowed_updates=${encodeURIComponent(JSON.stringify(["message"]))}`,
+          `${base}/getUpdates?timeout=25&offset=${offset}&allowed_updates=${encodeURIComponent(JSON.stringify(["message", "callback_query"]))}`,
         );
         const data = (await res.json()) as {
           ok?: boolean;

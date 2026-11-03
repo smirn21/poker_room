@@ -126,6 +126,21 @@ export function App() {
   );
   const [buyIn, setBuyIn] = useState(2000);
   const [depositAmt, setDepositAmt] = useState("5000");
+  const [withdrawAmt, setWithdrawAmt] = useState("");
+  const [withdrawAddress, setWithdrawAddress] = useState("");
+  const [withdrawRate, setWithdrawRate] = useState(100);
+  const [withdrawals, setWithdrawals] = useState<
+    {
+      id: string;
+      status: string;
+      amountChips: number;
+      amountUsdt: string;
+      address: string;
+      network: string;
+      createdAt: string;
+    }[]
+  >([]);
+  const [withdrawMsg, setWithdrawMsg] = useState<string | null>(null);
   const [inviteCreated, setInviteCreated] = useState<string | null>(null);
   const [inviteCopied, setInviteCopied] = useState(false);
   const [tgIdCopied, setTgIdCopied] = useState(false);
@@ -218,6 +233,12 @@ export function App() {
   useEffect(() => {
     if (gate === "app" && tab === "profile" && user?.whitelisted && !user.blocked) {
       void loadReferral();
+    }
+  }, [gate, tab, user?.id, user?.whitelisted, user?.blocked]);
+
+  useEffect(() => {
+    if (gate === "app" && tab === "wallet" && user?.whitelisted && !user.blocked) {
+      void refreshWithdrawals();
     }
   }, [gate, tab, user?.id, user?.whitelisted, user?.blocked]);
 
@@ -504,6 +525,49 @@ export function App() {
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errDeposit"));
+    }
+  }
+
+  async function refreshWithdrawals() {
+    try {
+      const [cfg, list] = await Promise.all([
+        api.withdrawConfig(),
+        api.myWithdrawals(),
+      ]);
+      setWithdrawRate(cfg.chipsPerUsdt);
+      setWithdrawals(list.withdrawals);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function makeWithdraw() {
+    if (!user) return;
+    try {
+      setError(null);
+      setWithdrawMsg(null);
+      const chips = Number.parseInt(withdrawAmt.replace(/\D/g, ""), 10);
+      const addr = withdrawAddress.trim();
+      if (!/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(addr)) {
+        setError(t("errWithdrawAddress"));
+        return;
+      }
+      if (
+        !Number.isFinite(chips) ||
+        chips < withdrawRate ||
+        chips % withdrawRate !== 0 ||
+        chips > user.balance
+      ) {
+        setError(t("errWithdrawAmount"));
+        return;
+      }
+      const r = await api.createWithdraw(chips, addr);
+      setUser(r.user);
+      setWithdrawAmt("");
+      setWithdrawMsg(t("withdrawCreated"));
+      await refreshWithdrawals();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("errWithdraw"));
     }
   }
 
@@ -1545,6 +1609,90 @@ export function App() {
                 </p>
               )}
               <p className="hint hint-tight">{t("depositExactNote")}</p>
+            </div>
+          )}
+        </div>
+        <div className="panel panel-compact">
+          <h3 className="pane-subtitle">{t("withdrawTitle")}</h3>
+          <p className="hint hint-tight">
+            {t("withdrawHint", { rate: withdrawRate })}
+          </p>
+          <label htmlFor="wd-amt">
+            {t("chipsToWithdraw")}
+            <input
+              id="wd-amt"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              enterKeyHint="done"
+              autoComplete="off"
+              value={withdrawAmt}
+              onChange={(e) =>
+                setWithdrawAmt(e.target.value.replace(/\D/g, ""))
+              }
+            />
+          </label>
+          {(() => {
+            const chips = Number.parseInt(withdrawAmt.replace(/\D/g, ""), 10);
+            if (
+              !Number.isFinite(chips) ||
+              chips < withdrawRate ||
+              chips % withdrawRate !== 0
+            ) {
+              return null;
+            }
+            const usdt = (chips / withdrawRate).toFixed(2);
+            return (
+              <p className="hint hint-tight">
+                {t("withdrawPreview", { usdt })}
+              </p>
+            );
+          })()}
+          <label htmlFor="wd-addr">
+            {t("withdrawAddress")}
+            <input
+              id="wd-addr"
+              type="text"
+              inputMode="text"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder={t("withdrawAddressPlaceholder")}
+              value={withdrawAddress}
+              onChange={(e) => setWithdrawAddress(e.target.value.trim())}
+            />
+          </label>
+          <button
+            type="button"
+            className="primary-wide"
+            onClick={() => void makeWithdraw()}
+            disabled={
+              !withdrawAmt.replace(/\D/g, "") || !withdrawAddress.trim()
+            }
+          >
+            {t("createWithdraw")}
+          </button>
+          {withdrawMsg && <p className="hint hint-ok">{withdrawMsg}</p>}
+          {withdrawals.length > 0 && (
+            <div className="withdraw-history">
+              <p className="hint hint-tight">{t("withdrawHistory")}</p>
+              <ul className="withdraw-list">
+                {withdrawals.slice(0, 8).map((w) => (
+                  <li key={w.id} className="withdraw-row">
+                    <span>
+                      {w.amountChips} → {w.amountUsdt} USDT
+                    </span>
+                    <span className={`withdraw-status status-${w.status}`}>
+                      {w.status === "pending"
+                        ? t("withdrawPending")
+                        : w.status === "paid"
+                          ? t("withdrawPaid")
+                          : w.status === "rejected"
+                            ? t("withdrawRejected")
+                            : w.status}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </div>
