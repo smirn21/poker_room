@@ -1,10 +1,10 @@
 export const ru = {
-  brand: "Club Hold'em",
+  brand: "Hold'em House",
   openingRoom: "Открываем комнату…",
   inviteOnly: "Только по приглашению. Код клуба или код стола (TBL-…).",
   inviteWelcome: "Рады видеть вас за сукном",
   inviteLead:
-    "Club Hold'em — закрытый Texas Hold'em для своих. Войдите по коду клуба (CLUB-…) от любого участника или по коду стола TBL-… от игрока за столом.",
+    "Hold'em House — закрытый Texas Hold'em для своих. Войдите по коду клуба (CLUB-…) от любого участника или по коду стола TBL-… от игрока за столом.",
   invitePointSeats: "До 9 мест за одним столом",
   invitePointTable:
     "Любой участник клуба может создать код CLUB-…; за столом — код TBL-…",
@@ -13,8 +13,8 @@ export const ru = {
     "Вставьте код ниже. После входа откроется лобби — выберите стол или сядьте по коду.",
   inviteCode: "Код приглашения",
   inviteShareHint: "Поделиться кодом стола",
-  inviteShareText: "Заходи за стол Club Hold'em: {code}",
-  clubInviteShareText: "Приглашение в Club Hold'em: {code}",
+  inviteShareText: "Заходи за стол Hold'em House: {code}",
+  clubInviteShareText: "Приглашение в Hold'em House: {code}",
   clubInviteHint:
     "Создайте код CLUB-… и отправьте другу — он войдёт в клуб и сможет сесть за стол.",
   shareClubInvite: "Поделиться",

@@ -2,7 +2,12 @@
  * Lightweight Telegram bot: /start greeting + Mini App button.
  * Uses long polling so it keeps working when the Cloudflare tunnel URL changes.
  */
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { config } from "./config.js";
+
+const BRAND_NAME = "Hold'em House";
 
 type TgUpdate = {
   update_id: number;
@@ -53,6 +58,84 @@ async function tgCall(
   return data;
 }
 
+function resolveBrandLogoPath(): string | null {
+  const fromEnv = (process.env.BRAND_LOGO_PATH ?? "").trim();
+  const candidates = [
+    fromEnv,
+    join(process.cwd(), "public", "brand", "logo.png"),
+    join(process.cwd(), "..", "web", "public", "brand", "logo.png"),
+    join(homedir(), "poker_room", "apps", "web", "public", "brand", "logo.png"),
+    join(homedir(), "poker_room_static", "brand", "logo.png"),
+  ].filter(Boolean);
+  for (const p of candidates) {
+    if (p && existsSync(p)) return p;
+  }
+  return null;
+}
+
+/** Display name + avatar for the bot (Hold'em House branding). */
+async function syncBotBrand(log: Logger): Promise<void> {
+  try {
+    await tgCall("setMyName", { name: BRAND_NAME });
+  } catch (e) {
+    log.warn(
+      { err: e instanceof Error ? e.message : String(e) },
+      "telegram_set_my_name_failed",
+    );
+  }
+
+  try {
+    await tgCall("setMyDescription", {
+      description:
+        "Hold'em House — закрытый Texas Hold'em. Войдите по коду клуба или стола и откройте мини-приложение.",
+    });
+    await tgCall("setMyShortDescription", {
+      short_description: "Hold'em House · private Hold'em club",
+    });
+  } catch (e) {
+    log.warn(
+      { err: e instanceof Error ? e.message : String(e) },
+      "telegram_set_description_failed",
+    );
+  }
+
+  const logoPath = resolveBrandLogoPath();
+  if (!logoPath) {
+    log.warn({}, "telegram_brand_logo_missing");
+    return;
+  }
+
+  try {
+    const base = botApiBase();
+    if (!base) return;
+    const buf = readFileSync(logoPath);
+    const form = new FormData();
+    form.append(
+      "photo",
+      JSON.stringify({ type: "static", photo: "attach://logo" }),
+    );
+    form.append(
+      "logo",
+      new Blob([new Uint8Array(buf)], { type: "image/png" }),
+      "logo.png",
+    );
+    const res = await fetch(`${base}/setMyProfilePhoto`, {
+      method: "POST",
+      body: form,
+    });
+    const data = (await res.json()) as { ok?: boolean; description?: string };
+    if (!res.ok || data.ok === false) {
+      throw new Error(data.description ?? "setMyProfilePhoto failed");
+    }
+    log.info({ logoPath }, "telegram_profile_photo_ok");
+  } catch (e) {
+    log.warn(
+      { err: e instanceof Error ? e.message : String(e), logoPath },
+      "telegram_set_profile_photo_failed",
+    );
+  }
+}
+
 function startPayload(text: string | undefined): string | null {
   if (!text) return null;
   const m = text.trim().match(/^\/start(?:@\w+)?(?:\s+(.+))?$/i);
@@ -64,7 +147,7 @@ function welcomeCopy(lang?: string): { text: string; button: string } {
   if (ru) {
     return {
       text:
-        "<b>Club Hold'em</b>\n\n" +
+        `<b>${BRAND_NAME}</b>\n\n` +
         "Рады видеть вас за сукном.\n" +
         "Закрытый Texas Hold'em для своих — войдите по коду клуба или стола.\n\n" +
         "Нажмите кнопку ниже, чтобы открыть мини-приложение.",
@@ -73,7 +156,7 @@ function welcomeCopy(lang?: string): { text: string; button: string } {
   }
   return {
     text:
-      "<b>Club Hold'em</b>\n\n" +
+      `<b>${BRAND_NAME}</b>\n\n` +
       "Glad to see you at the felt.\n" +
       "Private Texas Hold'em — enter with a club or table code.\n\n" +
       "Tap the button below to open the mini app.",
@@ -166,6 +249,8 @@ export function startTelegramBot(log: Logger): void {
         "telegram_menu_button_failed",
       );
     }
+
+    await syncBotBrand(log);
 
     log.info({ miniApp: resolveMiniAppUrl() }, "telegram_bot_polling");
 

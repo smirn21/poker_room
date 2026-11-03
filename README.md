@@ -1,4 +1,4 @@
-# Club Hold'em — private Telegram poker room
+# Hold'em House — private Telegram poker room
 
 Invite-only Texas Hold'em Mini App for a closed circle: whitelist + invite codes, Telegram avatars, table chat, chip ledger with crypto deposit intents (admin confirm). Cards payments are out of MVP scope.
 

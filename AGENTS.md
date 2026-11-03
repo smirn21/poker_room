@@ -1,4 +1,4 @@
-# Agent ops — Club Hold'em / PythonAnywhere
+# Agent ops — Hold'em House / PythonAnywhere
 
 Always apply. After **any** code change, config change, or deploy, run a **full verification** yourself before telling the user it’s done. Do not ask the user to “check if it works.”
 

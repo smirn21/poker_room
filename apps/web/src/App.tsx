@@ -5,6 +5,7 @@ import { TableView } from "./TableView";
 import { bindTelegramBackButton, initTelegramChrome } from "./telegram";
 import { useI18n } from "./i18n";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
+import { BrandLogo } from "./BrandLogo";
 import { LobbyFaceCards } from "./LobbyFaceCards";
 import {
   IconArrowRight,
@@ -12,7 +13,6 @@ import {
   IconLobby,
   IconProfile,
   IconRefresh,
-  IconSpadeMark,
   IconTables,
   IconTrash,
   IconUsers,
@@ -553,16 +553,23 @@ export function App() {
 
   const gateHeader = (
     <header className="app-topbar">
-      <h1 className="brand brand-sm">{t("brand")}</h1>
+      <div className="brand-lockup">
+        <BrandLogo size="sm" />
+        <h1 className="brand brand-sm">{t("brand")}</h1>
+      </div>
       <LanguageSwitcher className="lang-switch-compact" />
     </header>
   );
 
   if (gate === "boot") {
     return (
-      <div className="app-shell app-shell-fit">
-        {gateHeader}
-        <p className="sub">{t("openingRoom")}</p>
+      <div className="app-shell app-shell-fit boot-screen">
+        <div className="boot-brand">
+          <BrandLogo size="lg" decorative={false} />
+          <h1 className="brand">{t("brand")}</h1>
+          <p className="sub">{t("openingRoom")}</p>
+        </div>
+        <LanguageSwitcher className="lang-switch-compact boot-lang" />
         {error && (
           <>
             <p className="error">{error}</p>
@@ -1001,9 +1008,10 @@ export function App() {
         <div className="lobby-hello">
           <div className="lobby-brand-row">
             <span className="brand-mark" aria-hidden>
-              <IconSpadeMark size={18} />
+              <BrandLogo size="sm" />
             </span>
             <div className="user-identity">
+              <strong className="lobby-club-name">{t("brand")}</strong>
               <strong>{user.name}</strong>
               <span className="tg-id" title={t("telegramIdLabel")}>
                 {t("telegramIdShort", { id: user.telegramId })}

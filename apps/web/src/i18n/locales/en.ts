@@ -1,12 +1,12 @@
 import type { MessageKey } from "./ru";
 
 export const en: Record<MessageKey, string> = {
-  brand: "Club Hold'em",
+  brand: "Hold'em House",
   openingRoom: "Opening the room…",
   inviteOnly: "Invite-only. Enter a club code or table code (TBL-…).",
   inviteWelcome: "Welcome to the felt",
   inviteLead:
-    "Club Hold'em is private Texas Hold'em for your circle. Enter a club code (CLUB-…) from any member, or a table code (TBL-…) from anyone already seated.",
+    "Hold'em House is private Texas Hold'em for your circle. Enter a club code (CLUB-…) from any member, or a table code (TBL-…) from anyone already seated.",
   invitePointSeats: "Up to 9 seats at one table",
   invitePointTable:
     "Any club member can mint a CLUB-… code; seated players share TBL-…",
@@ -15,8 +15,8 @@ export const en: Record<MessageKey, string> = {
     "Paste the code below. After entry you'll land in the lobby — pick a table or sit by code.",
   inviteCode: "Invite code",
   inviteShareHint: "Share table code",
-  inviteShareText: "Join my Club Hold'em table: {code}",
-  clubInviteShareText: "Join Club Hold'em with invite: {code}",
+  inviteShareText: "Join my Hold'em House table: {code}",
+  clubInviteShareText: "Join Hold'em House with invite: {code}",
   clubInviteHint:
     "Create a CLUB-… code and send it to a friend — they join the club and can sit at a table.",
   shareClubInvite: "Share",
