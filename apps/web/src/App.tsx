@@ -43,25 +43,36 @@ type TableRow = {
  * Read initData before expand/fullscreen — some clients clear it on early fullscreen.
  */
 async function resolveInitData(): Promise<string | null> {
-  const deadline = Date.now() + 5000;
+  const params = new URLSearchParams(window.location.search);
+  const wantDev = params.has("dev");
+  // telegram-web-app.js always defines WebApp; empty initData + platform "unknown"
+  // means we're not in a real Telegram client.
+  const inTelegramClient = () => {
+    const tg = window.Telegram?.WebApp as
+      | { initData?: string; platform?: string }
+      | undefined;
+    if (!tg) return false;
+    const p = (tg.platform ?? "").toLowerCase();
+    return p !== "" && p !== "unknown";
+  };
+
+  const deadline = Date.now() + (wantDev ? 400 : 5000);
   while (Date.now() < deadline) {
     const raw = window.Telegram?.WebApp?.initData;
     if (raw) {
       initTelegramChrome({ fullscreen: false });
       return raw;
     }
+    if (wantDev && !inTelegramClient()) break;
     await new Promise((r) => window.setTimeout(r, 50));
   }
 
-  // Still inside Telegram chrome but no signed payload — last soft ready()
-  if (window.Telegram?.WebApp) {
+  if (window.Telegram?.WebApp?.initData) {
     initTelegramChrome({ fullscreen: false });
-    const again = window.Telegram.WebApp.initData;
-    if (again) return again;
+    return window.Telegram.WebApp.initData;
   }
 
-  const params = new URLSearchParams(window.location.search);
-  if (!params.has("dev")) return null;
+  if (!wantDev) return null;
   const id = params.get("dev") || "1";
   const name = params.get("name") ?? `Player${id}`;
   initTelegramChrome({ fullscreen: false });
