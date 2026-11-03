@@ -227,6 +227,54 @@ export function playWin(): void {
   playCoins(10, 55);
 }
 
+/** Urgent tick when ~10s remain on your turn. */
+export function playTurnUrgent(): void {
+  const c = ensureRunning();
+  if (!c) return;
+  const t0 = c.currentTime;
+  for (let i = 0; i < 3; i++) {
+    const t = t0 + i * 0.14;
+    const osc = c.createOscillator();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(880 - i * 40, t);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.09, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    osc.connect(g);
+    g.connect(c.destination);
+    osc.start(t);
+    osc.stop(t + 0.12);
+  }
+}
+
+/** Telegram haptic + device vibrate for turn urgency. */
+export function vibrateTurnUrgent(): void {
+  try {
+    const tg = (
+      window as unknown as {
+        Telegram?: {
+          WebApp?: {
+            HapticFeedback?: {
+              notificationOccurred?: (t: string) => void;
+              impactOccurred?: (t: string) => void;
+            };
+          };
+        };
+      }
+    ).Telegram?.WebApp?.HapticFeedback;
+    tg?.notificationOccurred?.("warning");
+    tg?.impactOccurred?.("heavy");
+  } catch {
+    /* ignore */
+  }
+  try {
+    navigator.vibrate?.([80, 40, 80, 40, 120]);
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Cascade of metallic coin clinks (pot → winner). */
 export function playCoins(count = 8, gapMs = 50): void {
   unlockAudio();

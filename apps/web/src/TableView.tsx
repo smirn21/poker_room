@@ -26,12 +26,14 @@ import {
   playAction,
   playDealCard,
   playDealSequence,
+  playTurnUrgent,
   playWin,
   unlockAudio,
+  vibrateTurnUrgent,
 } from "./sounds";
 
 const WS = import.meta.env.VITE_WS_URL ?? "http://localhost:3001";
-const REACTIONS = ["😀", "😂", "🔥", "👏", "😎", "😱", "💪", "🎉"];
+const REACTIONS = ["😀", "😂", "😠", "🔥", "👏", "😎", "😱", "💪", "🎉"];
 
 function digitsOnly(raw: string): string {
   return raw.replace(/\D/g, "");
@@ -101,6 +103,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
   const lastPotRef = useRef(0);
   const celebratedHand = useRef(-1);
   const dealtHandSfx = useRef(-1);
+  const turnUrgentWarned = useRef(false);
 
   // Unlock Web Audio on first tap (required in Telegram / iOS)
   useEffect(() => {
@@ -308,6 +311,25 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
   }, [mySeat, state?.board, state?.status, state?.winners, locale]);
 
   const isMyTurn = Boolean(mySeat?.isTurn);
+
+  // Sound + vibrate once when ≤10s remain on your clock
+  useEffect(() => {
+    if (!isMyTurn || turnSecLeft == null || state?.status !== "playing") {
+      if (!isMyTurn || turnSecLeft == null || turnSecLeft > 10) {
+        turnUrgentWarned.current = false;
+      }
+      return;
+    }
+    if (turnSecLeft > 10) {
+      turnUrgentWarned.current = false;
+      return;
+    }
+    if (turnSecLeft <= 10 && turnSecLeft > 0 && !turnUrgentWarned.current) {
+      turnUrgentWarned.current = true;
+      playTurnUrgent();
+      vibrateTurnUrgent();
+    }
+  }, [isMyTurn, turnSecLeft, state?.status]);
 
   // Client fallback if server auto-next stalls after showdown (~7s pause + slack)
   useEffect(() => {
@@ -565,13 +587,15 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
             <div className="win-amount">+{winInfo.amount}</div>
           )}
           {winHand && onFelt && (
-            <div className="hand-name">{winHand}</div>
+            <div className="hand-name hand-name-win">{winHand}</div>
           )}
           {seat.isTurn && !isShowdown && (
             <>
               {turnSecLeft != null && (
                 <div
-                  className={`turn-clock-seat${turnSecLeft <= 5 ? " turn-clock-urgent" : ""}`}
+                  className={`turn-clock-seat${
+                    turnSecLeft <= 10 ? " turn-clock-urgent" : ""
+                  }`}
                 >
                   {t("turnSeconds", { n: turnSecLeft })}
                 </div>
@@ -588,7 +612,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
         <ChipStack amount={seat.stack} size="sm" className="seat-chips" />
         {seat.bet > 0 && !isShowdown && (
           <div
-            className={`bet-stack ${pos.isHero ? "bet-up" : "bet-down"}${
+            className={`bet-stack bet-${pos.betDir}${
               aggressiveBet(seat.lastAction) ? " bet-stack-loud" : ""
             }`}
             aria-label={`${actionText ?? "bet"} ${seat.bet}`}
@@ -956,10 +980,23 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
               </>
             )}
           </div>
-          {handLabel && <div className="hero-strength">{handLabel}</div>}
+          {handLabel && (
+            <div
+              className={`hero-strength${
+                showdownHighlight &&
+                winningSeatIndexes.has(mySeat.seatIndex)
+                  ? " hero-strength-win"
+                  : ""
+              }`}
+            >
+              {handLabel}
+            </div>
+          )}
           {playing && turnSecLeft != null && (
             <div
-              className={`turn-clock-hero${isMyTurn ? " turn-clock-mine" : ""}${turnSecLeft <= 5 ? " turn-clock-urgent" : ""}`}
+              className={`turn-clock-hero${isMyTurn ? " turn-clock-mine" : ""}${
+                turnSecLeft <= 10 ? " turn-clock-urgent" : ""
+              }`}
               aria-live="polite"
             >
               <span className="turn-clock-label">

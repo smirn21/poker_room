@@ -69,7 +69,20 @@ export function formatCard(card: Card): { label: string; red: boolean } {
 
 export type HoleDir = "up" | "down" | "left" | "right";
 
+/** Street bet placement relative to seat — always away from the board. */
+export type BetDir = "out-up" | "out-left" | "out-right" | "in-up";
+
 type OppSlot = { left: number; top: number; hole: HoleDir };
+
+/** Pick a bet side that grows outward from the rim, never into community cards. */
+export function betDirForSlot(leftPct: number, topPct: number): BetDir {
+  if (leftPct <= 24) return "out-left";
+  if (leftPct >= 76) return "out-right";
+  if (topPct <= 30) return "out-up";
+  if (leftPct < 42) return "out-left";
+  if (leftPct > 58) return "out-right";
+  return "out-up";
+}
 
 /**
  * Opponent rim slots for a portrait (vertically stretched) felt.
@@ -77,7 +90,7 @@ type OppSlot = { left: number; top: number; hole: HoleDir };
  */
 const OPP_BY_COUNT: OppSlot[][] = [
   [],
-  [{ left: 50, top: 12, hole: "up" }],
+  [{ left: 50, top: 10, hole: "up" }],
   [
     { left: 18, top: 18, hole: "up" },
     { left: 82, top: 18, hole: "up" },
@@ -134,6 +147,7 @@ export type SeatLayoutPos = {
   top: string;
   isHero: boolean;
   holeDir: HoleDir;
+  betDir: BetDir;
 };
 
 /**
@@ -156,6 +170,7 @@ export function seatLayout(
     top: "88%",
     isHero: true,
     holeDir: "up",
+    betDir: "in-up",
   });
 
   const slots =
@@ -169,6 +184,7 @@ export function seatLayout(
       top: `${slot.top}%`,
       isHero: false,
       holeDir: slot.hole,
+      betDir: betDirForSlot(slot.left, slot.top),
     });
   });
 
