@@ -31,6 +31,17 @@ import {
 type Gate = "boot" | "invite" | "app" | "table" | "admin";
 type Tab = "lobby" | "tables" | "wallet" | "profile";
 
+/** Keep focused wallet fields above the soft keyboard (iOS / Telegram). */
+function scrollFieldAboveKeyboard(el: HTMLElement) {
+  const run = () => {
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+  };
+  window.requestAnimationFrame(run);
+  window.setTimeout(run, 120);
+  window.setTimeout(run, 320);
+  window.setTimeout(run, 520);
+}
+
 type TableRow = {
   id: string;
   name: string;
@@ -1592,12 +1603,7 @@ export function App() {
               onChange={(e) =>
                 setDepositAmt(e.target.value.replace(/\D/g, ""))
               }
-              onFocus={(e) => {
-                const el = e.currentTarget;
-                window.requestAnimationFrame(() => {
-                  el.scrollIntoView({ block: "center", behavior: "smooth" });
-                });
-              }}
+              onFocus={(e) => scrollFieldAboveKeyboard(e.currentTarget)}
             />
           </label>
           <button
@@ -1674,6 +1680,7 @@ export function App() {
               onChange={(e) =>
                 setWithdrawAmt(e.target.value.replace(/\D/g, ""))
               }
+              onFocus={(e) => scrollFieldAboveKeyboard(e.currentTarget)}
             />
           </label>
           {(() => {
@@ -1698,11 +1705,14 @@ export function App() {
               id="wd-addr"
               type="text"
               inputMode="text"
+              enterKeyHint="done"
               autoComplete="off"
+              autoCorrect="off"
               spellCheck={false}
               placeholder={t("withdrawAddressPlaceholder")}
               value={withdrawAddress}
               onChange={(e) => setWithdrawAddress(e.target.value.trim())}
+              onFocus={(e) => scrollFieldAboveKeyboard(e.currentTarget)}
             />
           </label>
           <button

@@ -819,6 +819,21 @@ html.keyboard-open .bottom-nav {
   scroll-padding-bottom: 1.25rem;
 }
 
+/* Keep wallet inputs clear of the soft keyboard */
+.wallet-pane input {
+  scroll-margin-top: 4.5rem;
+  scroll-margin-bottom: min(42vh, 18rem);
+}
+
+html.keyboard-open .wallet-pane {
+  padding-bottom: calc(var(--keyboard-inset, 0px) + 2.5rem);
+  scroll-padding-bottom: calc(var(--keyboard-inset, 0px) + 2.5rem);
+}
+
+html.keyboard-open .wallet-pane input {
+  scroll-margin-bottom: calc(var(--keyboard-inset, 12rem) + 1.25rem);
+}
+
 .profile-card {
   display: flex;
   align-items: center;
