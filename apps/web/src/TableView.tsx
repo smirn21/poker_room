@@ -153,20 +153,6 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
     return () => clearInterval(id);
   }, [state?.turnEndsAt, state?.turnSeconds, state?.status]);
 
-  // Keep raise field near legal minimum when street/actor changes
-  useEffect(() => {
-    if (!state || state.status !== "playing") return;
-    const floor = Math.max(
-      1,
-      (state.callAmount ?? 0) + (state.minRaise ?? 0),
-    );
-    setRaiseAmt((prev) => {
-      const n = parseChips(prev);
-      if (!prev || n < floor) return String(floor);
-      return prev;
-    });
-  }, [state?.handNo, state?.street, state?.minRaise, state?.callAmount, state?.status]);
-
   // Board reveal
   useEffect(() => {
     if (!state) return;
@@ -283,6 +269,33 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
   }, [mySeat, state?.board, state?.status, state?.winners, locale]);
 
   const isMyTurn = Boolean(mySeat?.isTurn);
+
+  /** Engine expects raise-to total: currentBet + minRaise (= myBet + call + minRaise). */
+  const minRaiseTo = useMemo(() => {
+    if (!state || state.status !== "playing") return 0;
+    return Math.max(
+      1,
+      (mySeat?.bet ?? 0) + (state.callAmount ?? 0) + (state.minRaise ?? 0),
+    );
+  }, [state, mySeat?.bet]);
+
+  // Always fill the raise field with the legal minimum on your turn
+  useEffect(() => {
+    if (!state || state.status !== "playing" || !isMyTurn) return;
+    const can =
+      state.legalActions.includes("bet") ||
+      state.legalActions.includes("raise");
+    if (!can || minRaiseTo <= 0) return;
+    setRaiseAmt(String(minRaiseTo));
+  }, [
+    isMyTurn,
+    minRaiseTo,
+    state?.handNo,
+    state?.street,
+    state?.status,
+    state?.legalActions,
+  ]);
+
   const streetLabel = (() => {
     if (state?.street && state.street !== "showdown") {
       const map: Record<string, string> = {
@@ -918,7 +931,14 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
             autoComplete="off"
             value={raiseAmt}
             disabled={!isMyTurn}
+            placeholder={minRaiseTo > 0 ? String(minRaiseTo) : undefined}
             onChange={(e) => setRaiseAmt(digitsOnly(e.target.value))}
+            onBlur={() => {
+              if (!isMyTurn || minRaiseTo <= 0) return;
+              if (parseChips(raiseAmt) < minRaiseTo) {
+                setRaiseAmt(String(minRaiseTo));
+              }
+            }}
             style={{ gridColumn: "1 / 3", margin: 0 }}
           />
           <button
@@ -931,12 +951,14 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
               ) ||
               parseChips(raiseAmt) <= 0
             }
-            onClick={() =>
+            onClick={() => {
+              const amt = Math.max(minRaiseTo, parseChips(raiseAmt));
+              if (amt !== parseChips(raiseAmt)) setRaiseAmt(String(amt));
               act(
                 state?.legalActions.includes("bet") ? "bet" : "raise",
-                parseChips(raiseAmt),
-              )
-            }
+                amt,
+              );
+            }}
           >
             {t("betRaise")}
           </button>
