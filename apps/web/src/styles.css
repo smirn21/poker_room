@@ -1325,15 +1325,11 @@ input:focus-visible {
   width: 2.55rem;
   height: 3.55rem;
   border-radius: 7px;
-  background: linear-gradient(165deg, #fffef9 0%, var(--card-face) 100%);
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 0.28rem 0.3rem;
-  line-height: 1;
-  font-family: var(--font-card);
-  font-weight: 700;
+  object-fit: fill;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .lobby-face-left {
@@ -1348,22 +1344,6 @@ input:focus-visible {
   top: 0.45rem;
   transform: rotate(10deg);
   z-index: 2;
-}
-
-.lobby-face.red {
-  color: #c62828;
-}
-
-.lobby-face.black {
-  color: #1a1a1a;
-}
-
-.lobby-face-rank {
-  font-size: 0.85rem;
-}
-
-.lobby-face-suit {
-  font-size: 0.78rem;
 }
 
 .lobby-faces-teal .lobby-face {
@@ -1624,19 +1604,26 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   text-align: center;
 }
 
-/* —— Playing cards —— */
+/* —— Playing cards (Jumbo Index PNGs, classic red/black) —— */
 .pcard {
   position: relative;
   border-radius: 6px;
-  background: linear-gradient(165deg, #fffef9 0%, var(--card-face) 100%);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.7) inset,
-    0 2px 8px rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  font-family: var(--font-card);
+  background: transparent;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  border: none;
   flex-shrink: 0;
   overflow: hidden;
   transform-origin: center bottom;
+}
+
+.pcard-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .pcard-sm {
@@ -1654,84 +1641,9 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   height: 3.55rem;
 }
 
-.pcard-red {
-  color: #c62828;
-}
-
-.pcard-black {
-  color: #1a1a1a;
-}
-
-.pcard-corner {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  line-height: 1;
-}
-
-.pcard-tl {
-  top: 0.18rem;
-  left: 0.18rem;
-}
-
-.pcard-br {
-  bottom: 0.18rem;
-  right: 0.18rem;
-  transform: rotate(180deg);
-}
-
-.pcard-rank {
-  font-weight: 700;
-  font-size: 0.72rem;
-}
-
-.pcard-sm .pcard-rank {
-  font-size: 0.52rem;
-}
-
-.pcard-lg .pcard-rank {
-  font-size: 0.78rem;
-}
-
-.pcard-suit {
-  font-size: 0.62rem;
-}
-
-.pcard-sm .pcard-suit {
-  font-size: 0.45rem;
-}
-
-.pcard-pip {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 1.05rem;
-  opacity: 0.92;
-}
-
-.pcard-sm .pcard-pip {
-  font-size: 0.72rem;
-}
-
-.pcard-lg .pcard-pip {
-  font-size: 1.2rem;
-}
-
 .pcard-back {
-  background:
-    radial-gradient(circle at 30% 25%, rgba(67, 197, 181, 0.35), transparent 45%),
-    repeating-linear-gradient(
-      135deg,
-      #132428,
-      #132428 5px,
-      #1a3338 5px,
-      #1a3338 10px
-    );
-  border-color: #0d2226;
   box-shadow:
-    0 0 0 1px rgba(67, 197, 181, 0.25) inset,
+    0 0 0 1px rgba(67, 197, 181, 0.2) inset,
     0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
@@ -2918,8 +2830,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
 /* Four-color deck */
 .suit-heart { color: #e53935; }
-.suit-diamond { color: #1e88e5; }
-.suit-club { color: #43a047; }
+.suit-diamond { color: #e53935; }
+.suit-club { color: #1a1a1a; }
 .suit-spade { color: #212121; }
 
 .pcard-hero {

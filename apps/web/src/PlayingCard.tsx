@@ -1,5 +1,5 @@
 import type { Card } from "@poker/shared";
-import { parseCard } from "./cardUtils";
+import { CARD_BACK_URL, cardFaceUrl, parseCard } from "./cardUtils";
 
 interface Props {
   card: Card;
@@ -18,22 +18,20 @@ export function PlayingCard({
   highlight = false,
   dimmed = false,
 }: Props) {
-  const { rank, symbol, colorClass } = parseCard(card);
+  const { rank, symbol } = parseCard(card);
   return (
     <div
-      className={`pcard pcard-${size} ${colorClass} ${highlight ? "pcard-win" : ""} ${dimmed ? "pcard-dim" : ""} ${className}`}
+      className={`pcard pcard-${size} pcard-face ${highlight ? "pcard-win" : ""} ${dimmed ? "pcard-dim" : ""} ${className}`}
       style={{ animationDelay: `${dealDelayMs}ms` }}
       aria-label={`${rank}${symbol}`}
     >
-      <div className="pcard-corner pcard-tl">
-        <span className="pcard-rank">{rank}</span>
-        <span className="pcard-suit">{symbol}</span>
-      </div>
-      <div className="pcard-pip">{symbol}</div>
-      <div className="pcard-corner pcard-br">
-        <span className="pcard-rank">{rank}</span>
-        <span className="pcard-suit">{symbol}</span>
-      </div>
+      <img
+        className="pcard-img"
+        src={cardFaceUrl(card)}
+        alt=""
+        draggable={false}
+        decoding="async"
+      />
     </div>
   );
 }
@@ -52,6 +50,14 @@ export function CardBack({
       className={`pcard pcard-${size} pcard-back ${className}`}
       style={{ animationDelay: `${dealDelayMs}ms` }}
       aria-hidden
-    />
+    >
+      <img
+        className="pcard-img"
+        src={CARD_BACK_URL}
+        alt=""
+        draggable={false}
+        decoding="async"
+      />
+    </div>
   );
 }

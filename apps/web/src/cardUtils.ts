@@ -2,12 +2,41 @@ import type { Card } from "@poker/shared";
 
 export type SuitKey = "h" | "d" | "c" | "s";
 
-/** Four-color deck: ♦ blue, ♥ red, ♣ green, ♠ black */
+const SUIT_FILE: Record<SuitKey, string> = {
+  h: "heart",
+  d: "diamond",
+  c: "club",
+  s: "spade",
+};
+
+/** Jumbo-index PNG deck in /cards (Vertical2, classic red/black, CC0). */
+export function cardFaceUrl(card: Card): string {
+  const rawRank = card.slice(0, -1);
+  const suit = card.slice(-1) as SuitKey;
+  const rankFile =
+    rawRank === "A"
+      ? "Ace"
+      : rawRank === "K"
+        ? "King"
+        : rawRank === "Q"
+          ? "Queen"
+          : rawRank === "J"
+            ? "Jack"
+            : rawRank === "T"
+              ? "10"
+              : rawRank;
+  return `/cards/${SUIT_FILE[suit]}${rankFile}.png`;
+}
+
+export const CARD_BACK_URL = "/cards/blueBack.png";
+
+/** Classic two-color deck for labels: ♥♦ red, ♣♠ black */
 export function parseCard(card: Card): {
   rank: string;
   suit: SuitKey;
   symbol: string;
   colorClass: "suit-heart" | "suit-diamond" | "suit-club" | "suit-spade";
+  red: boolean;
 } {
   const rank = card.slice(0, -1).replace("T", "10");
   const suit = card.slice(-1) as SuitKey;
@@ -21,14 +50,20 @@ export function parseCard(card: Card): {
         : suit === "c"
           ? "suit-club"
           : "suit-spade";
-  return { rank, suit, symbol, colorClass };
+  return {
+    rank,
+    suit,
+    symbol,
+    colorClass,
+    red: suit === "h" || suit === "d",
+  };
 }
 
 export function formatCard(card: Card): { label: string; red: boolean } {
   const p = parseCard(card);
   return {
     label: `${p.rank}${p.symbol}`,
-    red: p.suit === "h" || p.suit === "d",
+    red: p.red,
   };
 }
 
