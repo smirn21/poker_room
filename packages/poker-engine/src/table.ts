@@ -63,6 +63,8 @@ export class HoldEmTable {
   rakeTaken = 0;
   /** True after rake credited to owner for this handNo */
   rakeSettled = false;
+  /** True only after a real multi-way showdown (not win-by-fold). */
+  revealHoleAtShowdown = false;
 
   constructor(tableId: string, config: TableConfig) {
     this.tableId = tableId;
@@ -157,6 +159,7 @@ export class HoldEmTable {
     this.handHistory = [];
     this.rakeTaken = 0;
     this.rakeSettled = false;
+    this.revealHoleAtShowdown = false;
     this.deck = shuffle(makeDeck());
     this.currentBet = 0;
     this.minRaise = this.config.bigBlind;
@@ -409,6 +412,7 @@ export class HoldEmTable {
     this.takeRakeFromPot();
     const sidePots = this.buildSidePots();
     this.winners = [];
+    let contested = false;
 
     for (const pot of sidePots) {
       const eligible = pot.eligible.filter((i) => !this.seats[i].folded);
@@ -418,6 +422,7 @@ export class HoldEmTable {
         this.winners.push({ seatIndex: eligible[0], amount: pot.amount });
         continue;
       }
+      contested = true;
       const scored = eligible.map((i) => ({
         i,
         hand: evaluateBest([...this.seats[i].hole, ...this.board]),
@@ -440,6 +445,8 @@ export class HoldEmTable {
       }
     }
 
+    // Open hole cards only when at least one pot was contested.
+    this.revealHoleAtShowdown = contested;
     this.status = "hand_over";
     this.actionIndex = -1;
     this.armTurnClock();
@@ -457,6 +464,7 @@ export class HoldEmTable {
     this.status = "hand_over";
     this.street = "showdown";
     this.actionIndex = -1;
+    this.revealHoleAtShowdown = false;
     this.armTurnClock();
     this.message = "Everyone folded";
   }
@@ -587,13 +595,19 @@ export class HoldEmTable {
     const seats: PublicSeat[] = this.seats.map((s, i) => {
       const inHand =
         Boolean(s.player) &&
-        this.status !== "waiting" &&
+        this.status === "playing" &&
         s.hole.length > 0 &&
         !s.folded;
+      const isSelf = s.player?.userId === forUserId;
+      // Win-by-fold: muck — only the player sees their own cards.
+      // Contested showdown: open all remaining hands.
       const showCards =
-        this.street === "showdown" && s.player && !s.folded
+        isSelf
           ? s.hole
-          : s.player?.userId === forUserId
+          : this.revealHoleAtShowdown &&
+              this.street === "showdown" &&
+              s.player &&
+              !s.folded
             ? s.hole
             : null;
       return {
