@@ -77,7 +77,11 @@ export class TableManager {
 
   async ensureLoaded(tableId: string): Promise<HoldEmTable> {
     const existing = this.tables.get(tableId);
-    if (existing) return existing.engine;
+    if (existing) {
+      // Keep live tables on the current turn clock (e.g. 45s) after config changes.
+      existing.engine.config.turnSeconds = config.turnSeconds;
+      return existing.engine;
+    }
 
     const row = await prisma.pokerTable.findUniqueOrThrow({
       where: { id: tableId },
@@ -487,13 +491,18 @@ export class TableManager {
   private scheduleAutoNextHand(tableId: string): void {
     const live = this.tables.get(tableId);
     if (!live) return;
-    this.clearAutoNext(tableId);
-    const delay = Math.max(800, config.autoNextHandMs);
+    // Already scheduled — don't reset the delay on every re-emit.
+    if (live.autoNextTimer) return;
+    const delay = Math.max(2500, config.autoNextHandMs);
     live.autoNextTimer = setTimeout(() => {
+      const cur = this.tables.get(tableId);
+      if (cur) cur.autoNextTimer = null;
       void this.withTable(tableId, (eng) => {
-        if (eng.status === "hand_over") {
+        if (eng.status === "hand_over" || eng.status === "waiting") {
           eng.tryStartHand();
         }
+      }).catch((err) => {
+        console.error("auto_next_hand_failed", tableId, err);
       });
     }, delay);
   }

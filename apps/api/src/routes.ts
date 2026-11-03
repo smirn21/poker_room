@@ -690,6 +690,10 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     await tableManager.withTable(id, (engine) => {
       engine.addStack(user.id, body.buyIn);
       tableManager.clearRebuy(id, user.id);
+      // Resume dealing once enough funded players are back.
+      if (engine.status === "waiting" || engine.status === "hand_over") {
+        engine.tryStartHand();
+      }
     });
     await tableManager.maybeTransferHost(id);
 

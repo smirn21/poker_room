@@ -110,7 +110,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
         setFloats((prev) => [...prev, { id, emoji: r.emoji, name: r.name }]);
         window.setTimeout(() => {
           setFloats((prev) => prev.filter((x) => x.id !== id));
-        }, 2200);
+        }, 4400);
       },
     );
 
@@ -142,7 +142,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
       setTurnSecLeft(null);
       return;
     }
-    const total = (state.turnSeconds || 20) * 1000;
+    const total = (state.turnSeconds || 45) * 1000;
     const tick = () => {
       const msLeft = Math.max(0, state.turnEndsAt! - Date.now());
       setTurnLeft(msLeft / total);
@@ -269,6 +269,17 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
   }, [mySeat, state?.board, state?.status, state?.winners, locale]);
 
   const isMyTurn = Boolean(mySeat?.isTurn);
+
+  // Client fallback if server auto-next stalls after showdown
+  useEffect(() => {
+    if (state?.status !== "hand_over") return;
+    const id = window.setTimeout(() => {
+      void api.nextHand(tableId).catch(() => {
+        /* server may already have dealt */
+      });
+    }, 4200);
+    return () => window.clearTimeout(id);
+  }, [state?.status, state?.handNo, tableId]);
 
   /** Engine expects raise-to total: currentBet + minRaise (= myBet + call + minRaise). */
   const minRaiseTo = useMemo(() => {
@@ -870,15 +881,16 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
         </div>
       )}
 
-      {/* Next hand starts automatically after showdown; only start the first deal manually. */}
-      {state?.status === "waiting" && (
+      {/* Server auto-deals after showdown; keep a manual fallback. */}
+      {(state?.status === "waiting" || state?.status === "hand_over") && (
         <button
           type="button"
           className="primary-wide"
           onClick={async () => {
             try {
               setError(null);
-              await api.startHand(tableId);
+              if (state?.status === "waiting") await api.startHand(tableId);
+              else await api.nextHand(tableId);
             } catch (e) {
               setError(
                 e instanceof Error
@@ -888,7 +900,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
             }
           }}
         >
-          {t("startHand")}
+          {state?.status === "waiting" ? t("startHand") : t("nextHand")}
         </button>
       )}
 

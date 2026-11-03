@@ -1909,11 +1909,44 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   color: var(--gold-soft);
 }
 
+.seat.turn {
+  z-index: 9;
+  filter: drop-shadow(0 0 10px rgba(67, 197, 181, 0.45));
+}
+
 .seat.turn .avatar {
   border-color: var(--accent);
   box-shadow:
-    0 0 0 2px rgba(67, 197, 181, 0.55),
-    0 0 14px rgba(67, 197, 181, 0.35);
+    0 0 0 3px rgba(67, 197, 181, 0.75),
+    0 0 0 6px rgba(67, 197, 181, 0.22),
+    0 0 22px rgba(67, 197, 181, 0.55);
+  animation: turnSeatPulse 1.4s ease-in-out infinite;
+}
+
+.seat.turn .seat-meta {
+  border: 1px solid rgba(67, 197, 181, 0.55);
+  background: rgba(20, 48, 44, 0.85);
+}
+
+.seat.turn .name {
+  color: var(--accent-soft);
+  font-weight: 800;
+}
+
+@keyframes turnSeatPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px rgba(67, 197, 181, 0.75),
+      0 0 0 6px rgba(67, 197, 181, 0.22),
+      0 0 18px rgba(67, 197, 181, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgba(67, 197, 181, 0.95),
+      0 0 0 8px rgba(67, 197, 181, 0.35),
+      0 0 28px rgba(67, 197, 181, 0.7);
+  }
 }
 
 .seat-meta {
@@ -3199,12 +3232,12 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   display: flex;
   flex-direction: column;
   align-items: center;
-  animation: floatUp 2.1s ease-out forwards;
+  animation: floatUp 4.2s ease-out forwards;
   pointer-events: none;
 }
-.float-emoji { font-size: 2rem; }
+.float-emoji { font-size: 2.35rem; }
 .float-name {
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: var(--gold-soft);
   background: rgba(0, 0, 0, 0.5);
   padding: 0.1rem 0.4rem;
@@ -3212,8 +3245,9 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 }
 @keyframes floatUp {
   0% { opacity: 0; transform: translate(-50%, 12px) scale(0.7); }
-  15% { opacity: 1; transform: translate(-50%, 0) scale(1.05); }
-  100% { opacity: 0; transform: translate(-50%, -48px) scale(1); }
+  8% { opacity: 1; transform: translate(-50%, 0) scale(1.08); }
+  70% { opacity: 1; transform: translate(-50%, -28px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -64px) scale(1); }
 }
 
 .hero-zone {
@@ -3228,10 +3262,11 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   position: relative;
 }
 .hero-zone.hero-turn {
-  border-color: rgba(67, 197, 181, 0.7);
+  border-color: rgba(67, 197, 181, 0.9);
   box-shadow:
-    0 0 0 1px rgba(67, 197, 181, 0.35),
-    0 0 20px rgba(67, 197, 181, 0.22);
+    0 0 0 2px rgba(67, 197, 181, 0.45),
+    0 0 28px rgba(67, 197, 181, 0.4);
+  animation: turnSeatPulse 1.4s ease-in-out infinite;
 }
 .hero-zone.winner {
   border-color: rgba(212, 175, 55, 0.65);

@@ -150,6 +150,13 @@ export class HoldEmTable {
 
   tryStartHand(): boolean {
     if (this.status === "playing") return false;
+    // Players who sat mid-hand (sittingOut + chips) should join the next deal.
+    // Busted stack=0 stay sittingOut until rebuy.
+    for (const s of this.seats) {
+      if (s.player && s.player.stack > 0 && s.player.sittingOut) {
+        s.player.sittingOut = false;
+      }
+    }
     const active = this.occupiedSeats().filter(
       (i) => this.seats[i].player!.stack > 0 && !this.seats[i].player!.sittingOut,
     );
