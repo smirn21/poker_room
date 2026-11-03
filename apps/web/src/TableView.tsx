@@ -557,8 +557,11 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
             {(seat.name ?? "?")[0]}
           </div>
         )}
-        {seat.inHand && !seat.holeCards && (
-          <div className="opp-backs" key={`backs-${state?.handNo}-${seat.seatIndex}`}>
+        {seat.inHand && !seat.holeCards && onFelt && (
+          <div
+            className={`opp-backs opp-backs-${pos.holeDir}`}
+            key={`backs-${state?.handNo}-${seat.seatIndex}`}
+          >
             <CardBack
               size="sm"
               className="hole-deal"
@@ -860,27 +863,6 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
         <div className="felt-rail" />
 
         <div className="board-zone">
-          <div className="pot-area pot-area-top">
-            {potDisplay > 0 ? (
-              <div className="pot-caption pot-caption-solo">
-                {t("potLabel", { amount: potDisplay })}
-              </div>
-            ) : (
-              <div className="pot-empty">{t("potZero")}</div>
-            )}
-            {state?.rakeTaken ? (
-              <div className="hint pot-rake">
-                {t("rakeTaken", { amount: state.rakeTaken })}
-              </div>
-            ) : state?.rakePercent ? (
-              <div className="hint pot-rake pot-rake-dim">
-                {t("rakeRule", {
-                  percent: state.rakePercent,
-                  cap: state.rakeCapBb,
-                })}
-              </div>
-            ) : null}
-          </div>
           <div className="board street-pulse" key={boardAnimKey}>
             {revealedBoard.map((c, idx) => (
               <PlayingCard
@@ -899,18 +881,39 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
               <div key={`ph-${i}`} className="board-slot" />
             ))}
           </div>
-          {/* Chips live under the board so bets are readable */}
-          {potDisplay > 0 && (
-            <div className="pot-chips-under" aria-hidden>
-              <ChipStack
-                amount={potDisplay}
-                size="md"
-                mode="piles"
-                maxChips={12}
-                showLabel={false}
-              />
-            </div>
-          )}
+          {/* Pot cluster ONLY under board — never above into top seats */}
+          <div className="pot-cluster">
+            {potDisplay > 0 ? (
+              <div className="pot-caption pot-caption-solo">
+                {t("potLabel", { amount: potDisplay })}
+              </div>
+            ) : (
+              <div className="pot-empty">{t("potZero")}</div>
+            )}
+            {potDisplay > 0 && (
+              <div className="pot-chips-under" aria-hidden>
+                <ChipStack
+                  amount={potDisplay}
+                  size="md"
+                  mode="piles"
+                  maxChips={12}
+                  showLabel={false}
+                />
+              </div>
+            )}
+            {state?.rakeTaken ? (
+              <div className="hint pot-rake">
+                {t("rakeTaken", { amount: state.rakeTaken })}
+              </div>
+            ) : state?.rakePercent ? (
+              <div className="hint pot-rake pot-rake-dim">
+                {t("rakeRule", {
+                  percent: state.rakePercent,
+                  cap: state.rakeCapBb,
+                })}
+              </div>
+            ) : null}
+          </div>
         </div>
 
         {flying.map((f) => (

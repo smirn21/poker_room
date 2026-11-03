@@ -1735,31 +1735,43 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 .board-zone {
   position: absolute;
   left: 50%;
-  /* Slightly lower so top-seat bets clear the pot / flop */
-  top: 52%;
+  /* Mid-lower felt: clears top-rim seats; pot sits under cards */
+  top: 56%;
   transform: translate(-50%, -50%);
   z-index: 12;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.2rem;
-  /* Wide enough for 5× ~2× board cards */
-  width: min(96%, 460px);
+  gap: 0.28rem;
+  /* Keep board/pot inside a narrow center corridor so rim seats never collide */
+  width: min(58%, 230px);
+  max-width: 58%;
   pointer-events: none;
+}
+
+/* Caption + chips only under the board — one group, one job */
+.pot-cluster {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.18rem;
+  z-index: 13;
+  position: relative;
+  min-height: 1.5rem;
 }
 
 .pot-chips-under {
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  min-height: 1.85rem;
-  margin-top: 0.2rem;
+  min-height: 1.5rem;
+  margin-top: 0;
   z-index: 13;
   position: relative;
 }
 
 .pot-chips-under .chip-stack {
-  transform: scale(1.08);
+  transform: scale(1.05);
 }
 
 .pot-chips-under .chip-piles {
@@ -2004,7 +2016,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 /* —— Seats —— */
 .seat {
   position: absolute;
-  width: 4.6rem;
+  width: 3.7rem;
   transform: translate(-50%, -50%);
   text-align: center;
   z-index: 5;
@@ -2012,6 +2024,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   flex-direction: column;
   align-items: center;
   gap: 0.1rem;
+  /* Seat chrome stays in its box; backs/bets are absolute toward the rim */
+  overflow: visible;
 }
 
 .seat.hero {
@@ -2403,26 +2417,22 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .board-zone {
-    top: 48%;
-    width: min(96%, 400px);
-    gap: 0.08rem;
-    z-index: 14;
+    top: 56%;
+    width: min(58%, 210px);
+    gap: 0.18rem;
+    z-index: 12;
   }
 
   .table-screen-over .board-zone {
-    top: 50%;
+    top: 54%;
   }
 
-  .pot-area {
-    min-height: 0;
-  }
-
-  .pot-area-top {
-    margin-bottom: 0.05rem;
+  .pot-cluster {
+    gap: 0.1rem;
   }
 
   .pot-chips-under {
-    min-height: 1.35rem;
+    min-height: 1.2rem;
   }
 
   .pot-chips-under .chip-static,
@@ -2434,6 +2444,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
   .pot-caption {
     margin-top: 0;
+    font-size: 0.62rem;
   }
 
   .table-screen-over .pot-rake,
@@ -2503,8 +2514,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .board {
-    gap: 0.3rem;
-    min-height: 7.1rem;
+    gap: 0.22rem;
+    min-height: 0;
   }
 
   .pot-caption {
@@ -2686,9 +2697,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .opp-backs {
-    display: flex;
     gap: 1px;
-    justify-content: center;
   }
 
   .opp-backs .pcard-sm {
@@ -2880,9 +2889,9 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .board-zone {
-    top: 48%;
-    width: min(98%, 380px);
-    gap: 0.06rem;
+    top: 56%;
+    width: min(56%, 200px);
+    gap: 0.12rem;
   }
 
   .table-screen-playing .chat-panel .chat,
@@ -3043,13 +3052,18 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   flex-direction: column-reverse;
 }
 
-/* Top rim: push bets ABOVE the seat (outside the oval) */
+/* Top/side rim: push bets ABOVE the seat (clear of board & phone edges) */
 .bet-stack.bet-out-up {
   bottom: calc(100% + 0.18rem);
   top: auto;
   left: 50%;
   transform: translateX(-50%);
   flex-direction: column-reverse;
+}
+
+/* When face-down holes also sit above the seat, park the bet further out */
+.seat:has(.opp-backs-up) .bet-stack.bet-out-up {
+  bottom: calc(100% + 1.65rem);
 }
 
 /* Left / right rim: push bets outside horizontally */
@@ -3513,10 +3527,39 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   color: #ffcc80;
 }
 
+/* Face-down hole cards — absolute, toward the rim (never into pot) */
 .opp-backs {
+  position: absolute;
   display: flex;
   gap: 1px;
-  margin: 0.1rem 0;
+  margin: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.opp-backs-up {
+  left: 50%;
+  bottom: calc(100% + 0.08rem);
+  transform: translateX(-50%);
+}
+
+.opp-backs-down {
+  left: 50%;
+  top: calc(100% + 0.08rem);
+  transform: translateX(-50%);
+}
+
+.opp-backs-left {
+  right: calc(100% + 0.08rem);
+  left: auto;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.opp-backs-right {
+  left: calc(100% + 0.08rem);
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .top-tools {
