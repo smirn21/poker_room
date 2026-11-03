@@ -138,6 +138,9 @@ void ensureTronhooksAligned(app.log).then(() => {
   app.log.info({ tronhooks: tronhooksStatus() }, "tronhooks_boot_status");
 });
 
+const { startTelegramBot } = await import("./telegramBot.js");
+startTelegramBot(app.log);
+
 app.log.info(
   {
     tronhooks: tronhooksStatus(),

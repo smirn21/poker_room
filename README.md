@@ -35,8 +35,9 @@ Second player: http://localhost:5173/?dev=2 — redeem the invite code printed b
 ## Telegram
 
 1. Create a bot via BotFather, set `TELEGRAM_BOT_TOKEN`.
-2. Set Mini App URL to your HTTPS frontend.
+2. Set Mini App URL to your HTTPS frontend (BotFather → Menu Button / Mini App).
 3. Set `DEV_BYPASS_AUTH=0` and `ADMIN_TELEGRAM_IDS` to your Telegram user id(s).
+4. API long-polls Telegram: `/start` sends a welcome message with a bottom **Открыть клуб** Web App button (`MINI_APP_URL` or `CORS_ORIGIN`).
 
 ## Scripts
 
