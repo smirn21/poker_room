@@ -2237,9 +2237,18 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     pointer-events: none;
   }
 
-  .top-tools .lang-switch-compact,
-  .top-tools .icon-btn {
+  .top-tools .lang-switch-compact {
     display: none;
+  }
+
+  .top-tools .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.2rem;
+    min-height: 2.2rem;
+    padding: 0.35rem 0.45rem;
+    font-size: 1.2rem;
   }
 
   .table-screen-playing .chat-panel .chat,
@@ -3120,6 +3129,19 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   padding: 0.4rem 0.55rem;
   border-radius: 10px;
   font-size: 1.05rem;
+}
+
+.emoji-tool-btn-on {
+  background: rgba(67, 197, 181, 0.28);
+  box-shadow: 0 0 0 1px rgba(67, 197, 181, 0.45);
+}
+
+.emoji-compose-btn {
+  flex-shrink: 0;
+  min-width: 2.4rem;
+  min-height: 2.4rem;
+  font-size: 1.25rem;
+  padding: 0.3rem;
 }
 
 .emoji-bar {

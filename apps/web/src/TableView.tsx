@@ -601,9 +601,10 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
           <LanguageSwitcher className="lang-switch-compact" />
           <button
             type="button"
-            className="icon-btn"
+            className={`icon-btn emoji-tool-btn${showEmoji ? " emoji-tool-btn-on" : ""}`}
             onClick={() => setShowEmoji((v) => !v)}
-            aria-label="Emoji"
+            aria-label={t("reactEmoji")}
+            title={t("reactEmoji")}
           >
             😊
           </button>
@@ -951,6 +952,15 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
           ))}
         </div>
         <form className="row chat-compose" onSubmit={sendChat}>
+          <button
+            type="button"
+            className={`icon-btn emoji-compose-btn${showEmoji ? " emoji-tool-btn-on" : ""}`}
+            onClick={() => setShowEmoji((v) => !v)}
+            aria-label={t("reactEmoji")}
+            title={t("reactEmoji")}
+          >
+            😊
+          </button>
           <input
             value={chatText}
             onChange={(e) => setChatText(e.target.value)}

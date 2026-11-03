@@ -193,6 +193,7 @@ export function App() {
   const [buyIn, setBuyIn] = useState("2000");
   const [smallBlind, setSmallBlind] = useState("50");
   const [bigBlind, setBigBlind] = useState("100");
+  const [newTableName, setNewTableName] = useState("");
   const [depositAmt, setDepositAmt] = useState("5000");
   const [withdrawAmt, setWithdrawAmt] = useState("");
   const [withdrawAddress, setWithdrawAddress] = useState("");
@@ -497,7 +498,9 @@ export function App() {
       }
       setSmallBlind(String(sb));
       setBigBlind(String(bb));
+      const name = newTableName.trim().slice(0, 40);
       const r = await api.createTable({
+        ...(name ? { name } : {}),
         smallBlind: sb,
         bigBlind: bb,
         maxSeats: 9,
@@ -1620,6 +1623,22 @@ export function App() {
             </label>
           </div>
           <p className="hint hint-tight">{t("blindsHint")}</p>
+          <label htmlFor="table-name-new">
+            {t("tableNameField")}
+            <input
+              id="table-name-new"
+              type="text"
+              maxLength={40}
+              enterKeyHint="next"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder={t("tableNamePlaceholder")}
+              value={newTableName}
+              onChange={(e) => setNewTableName(e.target.value.slice(0, 40))}
+              onFocus={(e) => scrollFieldAboveKeyboard(e.currentTarget)}
+            />
+          </label>
           <label htmlFor="buyin">
             {t("buyIn")}
             <input
