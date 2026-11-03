@@ -223,4 +223,51 @@ export function playWin(): void {
   sg.connect(c.destination);
   shim.start(t0 + 0.35);
   shim.stop(t0 + 0.95);
+
+  playCoins(10, 55);
+}
+
+/** Cascade of metallic coin clinks (pot → winner). */
+export function playCoins(count = 8, gapMs = 50): void {
+  unlockAudio();
+  for (let i = 0; i < count; i++) {
+    window.setTimeout(() => playCoinClink(i), i * gapMs);
+  }
+}
+
+function playCoinClink(index = 0): void {
+  const c = ensureRunning();
+  if (!c) return;
+  const t0 = c.currentTime;
+  const base = 980 + (index % 5) * 90 + Math.random() * 40;
+
+  const osc = c.createOscillator();
+  osc.type = "square";
+  osc.frequency.setValueAtTime(base, t0);
+  osc.frequency.exponentialRampToValueAtTime(base * 0.55, t0 + 0.09);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(0.07, t0 + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.12);
+  const hp = c.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 600;
+  osc.connect(hp);
+  hp.connect(g);
+  g.connect(c.destination);
+  osc.start(t0);
+  osc.stop(t0 + 0.14);
+
+  // Tiny metallic ring
+  const ring = c.createOscillator();
+  ring.type = "sine";
+  ring.frequency.setValueAtTime(base * 1.7, t0);
+  const rg = c.createGain();
+  rg.gain.setValueAtTime(0.0001, t0);
+  rg.gain.exponentialRampToValueAtTime(0.045, t0 + 0.01);
+  rg.gain.exponentialRampToValueAtTime(0.001, t0 + 0.16);
+  ring.connect(rg);
+  rg.connect(c.destination);
+  ring.start(t0);
+  ring.stop(t0 + 0.18);
 }

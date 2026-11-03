@@ -57,6 +57,9 @@ interface FlyingChip {
   dx: number;
   dy: number;
   delay: number;
+  /** Start offset from pot center (vacuum swirl) */
+  ox?: number;
+  oy?: number;
 }
 
 interface FloatReact {
@@ -229,8 +232,9 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
     const felt = feltRef.current;
     if (!felt) return;
     const feltBox = felt.getBoundingClientRect();
+    // Pot chips sit under the board (~58% down the felt)
     const potX = feltBox.width / 2;
-    const potY = feltBox.height * 0.42;
+    const potY = feltBox.height * 0.58;
     const chips: FlyingChip[] = [];
     let id = 0;
 
@@ -243,26 +247,32 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
       const dy = seatY - potY;
       const piles = amountToChips(
         Math.max(w.amount, lastPotRef.current / state.winners.length),
-        { maxChips: 8 },
+        { maxChips: 14 },
       );
       let delay = 0;
       for (const pile of piles) {
         for (let i = 0; i < pile.count; i++) {
+          // Tight spiral start, then vacuum toward winner
+          const spread = 10 + Math.random() * 18;
+          const ang = Math.random() * Math.PI * 2;
           chips.push({
             id: `f-${state.handNo}-${id++}`,
             value: pile.value,
-            dx: dx + (Math.random() * 24 - 12),
-            dy: dy + (Math.random() * 18 - 9),
+            dx: dx + Math.cos(ang) * (Math.random() * 8),
+            dy: dy + Math.sin(ang) * (Math.random() * 8),
             delay,
+            ox: Math.cos(ang) * spread,
+            oy: Math.sin(ang) * spread * 0.55,
           });
-          delay += 45;
+          delay += 28;
         }
       }
     }
 
     setFlying(chips);
     setPotDisplay(0);
-    const t = window.setTimeout(() => setFlying([]), 900 + chips.length * 45);
+    const clearAt = 1100 + chips.length * 28;
+    const t = window.setTimeout(() => setFlying([]), clearAt);
     return () => window.clearTimeout(t);
   }, [state, layout]);
 
@@ -502,10 +512,6 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
         ? actionLabel(seat.lastAction, locale)
         : null;
     const winHand = localizeHandName(winInfo?.handName, locale);
-    const showBetAmount =
-      !isShowdown &&
-      seat.bet > 0 &&
-      (aggressiveBet(seat.lastAction) || seat.isSb || seat.isBb);
     const badges = [
       seat.isDealer ? "D" : null,
       seat.isSb ? "SB" : null,
@@ -545,16 +551,14 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
         )}
         <div className="seat-meta">
           <div className="name">{seat.name}</div>
-          {actionText && !seat.isTurn && (
+          {/* Non-bet actions stay by the name; bet/raise/all-in live on the bet stack */}
+          {actionText &&
+            !seat.isTurn &&
+            !(seat.bet > 0 && aggressiveBet(seat.lastAction)) && (
             <div
-              className={`action-tag action-${seat.lastAction ?? "fold"}${
-                aggressiveBet(seat.lastAction) ? " action-tag-bet" : ""
-              }`}
+              className={`action-tag action-${seat.lastAction ?? "fold"}`}
             >
               {actionText}
-              {showBetAmount && aggressiveBet(seat.lastAction)
-                ? ` ${seat.bet}`
-                : ""}
             </div>
           )}
           {isWinner && winInfo && winInfo.amount > 0 && (
@@ -587,10 +591,20 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
             className={`bet-stack ${pos.isHero ? "bet-up" : "bet-down"}${
               aggressiveBet(seat.lastAction) ? " bet-stack-loud" : ""
             }`}
+            aria-label={`${actionText ?? "bet"} ${seat.bet}`}
           >
+            {actionText && aggressiveBet(seat.lastAction) && !seat.isTurn && (
+              <div
+                className={`action-tag action-tag-on-bet action-${seat.lastAction ?? "raise"} action-tag-bet`}
+              >
+                {actionText}
+              </div>
+            )}
             <ChipStack
               amount={seat.bet}
-              size={aggressiveBet(seat.lastAction) ? "md" : "sm"}
+              size="md"
+              mode="compact"
+              className="bet-chip-visible"
             />
           </div>
         )}
@@ -617,7 +631,9 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
     if (!onFelt) {
       return (
         <div
-          className={`seat hero-inline ${seat.isTurn ? "turn" : ""} ${seat.folded ? "folded" : ""} ${isWinner ? "winner" : ""}`}
+          className={`seat hero-inline ${seat.isTurn ? "turn" : ""} ${seat.folded ? "folded" : ""} ${isWinner ? "winner" : ""}${
+            seat.bet > 0 && !isShowdown ? " seat-betting" : ""
+          }`}
         >
           {body}
         </div>
@@ -627,7 +643,9 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
     return (
       <div
         key={seat.seatIndex}
-        className={`seat ${seat.isTurn ? "turn" : ""} ${seat.folded ? "folded" : ""} ${isWinner ? "winner" : ""}`}
+        className={`seat ${seat.isTurn ? "turn" : ""} ${seat.folded ? "folded" : ""} ${isWinner ? "winner" : ""}${
+          seat.bet > 0 && !isShowdown ? " seat-betting" : ""
+        }`}
         style={{ left: pos.left, top: pos.top }}
       >
         {body}
@@ -818,13 +836,10 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
         <div className="felt-rail" />
 
         <div className="board-zone">
-          <div className="pot-area">
+          <div className="pot-area pot-area-top">
             {potDisplay > 0 ? (
-              <div className="pot-stack">
-                <ChipStack amount={potDisplay} size="md" />
-                <div className="pot-caption">
-                  {t("potLabel", { amount: potDisplay })}
-                </div>
+              <div className="pot-caption pot-caption-solo">
+                {t("potLabel", { amount: potDisplay })}
               </div>
             ) : (
               <div className="pot-empty">{t("potZero")}</div>
@@ -860,16 +875,30 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
               <div key={`ph-${i}`} className="board-slot" />
             ))}
           </div>
+          {/* Chips live under the board so bets are readable */}
+          {potDisplay > 0 && (
+            <div className="pot-chips-under" aria-hidden>
+              <ChipStack
+                amount={potDisplay}
+                size="md"
+                mode="piles"
+                maxChips={12}
+                showLabel={false}
+              />
+            </div>
+          )}
         </div>
 
         {flying.map((f) => (
           <span
             key={f.id}
-            className={`chip chip-fly chip-v${f.value}`}
+            className={`chip chip-fly chip-vacuum chip-v${f.value}`}
             style={
               {
                 "--dx": `${f.dx}px`,
                 "--dy": `${f.dy}px`,
+                "--ox": `${f.ox ?? 0}px`,
+                "--oy": `${f.oy ?? 0}px`,
                 animationDelay: `${f.delay}ms`,
               } as React.CSSProperties
             }
