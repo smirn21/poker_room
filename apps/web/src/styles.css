@@ -1166,6 +1166,16 @@ input:focus-visible {
   overscroll-behavior: contain;
 }
 
+/* Lobby: keep flex column from .table-list-fit (do not let .table-list grid
+   shrink rows under content — that clipped enter buttons via overflow:hidden). */
+.table-list.table-list-fit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  grid-template-rows: none;
+  align-content: start;
+}
+
 .table-item {
   display: flex;
   justify-content: space-between;
@@ -1183,14 +1193,17 @@ input:focus-visible {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 0.35rem;
-  align-items: stretch;
-  padding: 0.85rem 0.85rem 0.85rem 0.95rem;
+  align-items: center;
+  padding: 0.85rem 0.85rem 0.95rem 0.95rem;
   border-radius: var(--radius);
   background:
     linear-gradient(135deg, rgba(18, 24, 28, 0.95) 0%, rgba(12, 18, 20, 0.98) 100%);
   border: 1px solid rgba(67, 197, 181, 0.18);
-  overflow: hidden;
-  min-height: 7.2rem;
+  /* visible: overflow:hidden + grid auto-rows used to shrink cards and clip CTAs */
+  overflow: visible;
+  flex: 0 0 auto;
+  min-height: 0;
+  height: auto;
 }
 
 .table-card-teal {
