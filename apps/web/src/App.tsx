@@ -32,14 +32,59 @@ type Gate = "boot" | "invite" | "app" | "table" | "admin";
 type Tab = "lobby" | "tables" | "wallet" | "profile";
 
 /** Keep focused wallet fields above the soft keyboard (iOS / Telegram). */
+function nearestScrollParent(el: HTMLElement): HTMLElement | null {
+  let node: HTMLElement | null = el.parentElement;
+  while (node) {
+    const { overflowY } = getComputedStyle(node);
+    if (
+      (overflowY === "auto" || overflowY === "scroll" || overflowY === "overlay") &&
+      node.scrollHeight > node.clientHeight + 1
+    ) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return null;
+}
+
+/** Keep focused wallet fields in the visible viewport above the soft keyboard. */
 function scrollFieldAboveKeyboard(el: HTMLElement) {
   const run = () => {
-    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    const vv = window.visualViewport;
+    const viewTop = vv?.offsetTop ?? 0;
+    const viewBottom = viewTop + (vv?.height ?? window.innerHeight);
+    // Keep field in the upper half so labels + caret stay clear of the keyboard.
+    const targetTop = viewTop + Math.min(120, (viewBottom - viewTop) * 0.22);
+    const targetBottom = viewTop + (viewBottom - viewTop) * 0.48;
+    const rect = el.getBoundingClientRect();
+    const scroller = nearestScrollParent(el);
+    if (!scroller) {
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+      return;
+    }
+    let delta = 0;
+    if (rect.bottom > targetBottom) delta = rect.bottom - targetBottom;
+    else if (rect.top < targetTop) delta = rect.top - targetTop;
+    if (Math.abs(delta) > 2) {
+      scroller.scrollTop += delta;
+    }
   };
+
+  run();
   window.requestAnimationFrame(run);
-  window.setTimeout(run, 120);
-  window.setTimeout(run, 320);
-  window.setTimeout(run, 520);
+  const delays = [80, 180, 320, 480, 700];
+  const timers = delays.map((ms) => window.setTimeout(run, ms));
+  const vv = window.visualViewport;
+  const onVv = () => run();
+  vv?.addEventListener("resize", onVv);
+  vv?.addEventListener("scroll", onVv);
+  const clear = () => {
+    for (const id of timers) window.clearTimeout(id);
+    vv?.removeEventListener("resize", onVv);
+    vv?.removeEventListener("scroll", onVv);
+    el.removeEventListener("blur", clear);
+  };
+  el.addEventListener("blur", clear, { once: true });
 }
 
 type TableRow = {
@@ -1587,82 +1632,6 @@ export function App() {
           </div>
         )}
         <div className="panel panel-compact">
-          <p className="hint hint-tight">{t("walletHintUsdt")}</p>
-          <label htmlFor="dep">
-            {t("chipsToBuy")}
-            <input
-              id="dep"
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              enterKeyHint="done"
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-              value={depositAmt}
-              onChange={(e) =>
-                setDepositAmt(e.target.value.replace(/\D/g, ""))
-              }
-              onFocus={(e) => scrollFieldAboveKeyboard(e.currentTarget)}
-            />
-          </label>
-          <button
-            type="button"
-            className="primary-wide"
-            onClick={() => void makeDeposit()}
-            disabled={!depositAmt.replace(/\D/g, "")}
-          >
-            {t("createUsdtDeposit")}
-          </button>
-          {depositInstr && (
-            <div className="deposit-paybox">
-              <p className="hint hint-tight">{t("depositExactHint")}</p>
-              <div className="deposit-row">
-                <span className="deposit-label">{t("depositNetwork")}</span>
-                <strong>USDT · TRC20</strong>
-              </div>
-              <div className="deposit-row">
-                <span className="deposit-label">{t("depositAmount")}</span>
-                <strong className="mono">{depositInstr.amountUsdt}</strong>
-                <button
-                  type="button"
-                  className="secondary btn-compact"
-                  onClick={() => void copyDepositField("amt")}
-                >
-                  {depositCopied === "amt" ? t("copied") : t("copy")}
-                </button>
-              </div>
-              <div className="deposit-row">
-                <span className="deposit-label">{t("depositAddress")}</span>
-                <strong className="mono mono-wrap">{depositInstr.address}</strong>
-                <button
-                  type="button"
-                  className="secondary btn-compact"
-                  onClick={() => void copyDepositField("addr")}
-                >
-                  {depositCopied === "addr" ? t("copied") : t("copy")}
-                </button>
-              </div>
-              {depositInstr.expiresAt && (
-                <p className="hint">
-                  {t("expiresAt", {
-                    t: new Date(depositInstr.expiresAt).toLocaleString(),
-                  })}
-                </p>
-              )}
-              {depositInstr.reference && (
-                <p className="hint">
-                  <RichText
-                    template={t("reference")}
-                    values={{ ref: <strong>{depositInstr.reference}</strong> }}
-                  />
-                </p>
-              )}
-              <p className="hint hint-tight">{t("depositExactNote")}</p>
-            </div>
-          )}
-        </div>
-        <div className="panel panel-compact">
           <h3 className="pane-subtitle">{t("withdrawTitle")}</h3>
           <p className="hint hint-tight">
             {t("withdrawHint", { rate: withdrawRate })}
@@ -1674,7 +1643,7 @@ export function App() {
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
-              enterKeyHint="done"
+              enterKeyHint="next"
               autoComplete="off"
               value={withdrawAmt}
               onChange={(e) =>
@@ -1747,6 +1716,82 @@ export function App() {
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+        </div>
+        <div className="panel panel-compact">
+          <p className="hint hint-tight">{t("walletHintUsdt")}</p>
+          <label htmlFor="dep">
+            {t("chipsToBuy")}
+            <input
+              id="dep"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              enterKeyHint="done"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              value={depositAmt}
+              onChange={(e) =>
+                setDepositAmt(e.target.value.replace(/\D/g, ""))
+              }
+              onFocus={(e) => scrollFieldAboveKeyboard(e.currentTarget)}
+            />
+          </label>
+          <button
+            type="button"
+            className="primary-wide"
+            onClick={() => void makeDeposit()}
+            disabled={!depositAmt.replace(/\D/g, "")}
+          >
+            {t("createUsdtDeposit")}
+          </button>
+          {depositInstr && (
+            <div className="deposit-paybox">
+              <p className="hint hint-tight">{t("depositExactHint")}</p>
+              <div className="deposit-row">
+                <span className="deposit-label">{t("depositNetwork")}</span>
+                <strong>USDT · TRC20</strong>
+              </div>
+              <div className="deposit-row">
+                <span className="deposit-label">{t("depositAmount")}</span>
+                <strong className="mono">{depositInstr.amountUsdt}</strong>
+                <button
+                  type="button"
+                  className="secondary btn-compact"
+                  onClick={() => void copyDepositField("amt")}
+                >
+                  {depositCopied === "amt" ? t("copied") : t("copy")}
+                </button>
+              </div>
+              <div className="deposit-row">
+                <span className="deposit-label">{t("depositAddress")}</span>
+                <strong className="mono mono-wrap">{depositInstr.address}</strong>
+                <button
+                  type="button"
+                  className="secondary btn-compact"
+                  onClick={() => void copyDepositField("addr")}
+                >
+                  {depositCopied === "addr" ? t("copied") : t("copy")}
+                </button>
+              </div>
+              {depositInstr.expiresAt && (
+                <p className="hint">
+                  {t("expiresAt", {
+                    t: new Date(depositInstr.expiresAt).toLocaleString(),
+                  })}
+                </p>
+              )}
+              {depositInstr.reference && (
+                <p className="hint">
+                  <RichText
+                    template={t("reference")}
+                    values={{ ref: <strong>{depositInstr.reference}</strong> }}
+                  />
+                </p>
+              )}
+              <p className="hint hint-tight">{t("depositExactNote")}</p>
             </div>
           )}
         </div>

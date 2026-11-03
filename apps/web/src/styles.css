@@ -819,19 +819,29 @@ html.keyboard-open .bottom-nav {
   scroll-padding-bottom: 1.25rem;
 }
 
-/* Keep wallet inputs clear of the soft keyboard */
+/* Keep wallet inputs clear of the soft keyboard (iOS / Telegram WebView) */
+.wallet-pane {
+  scroll-padding-top: 4.5rem;
+  scroll-padding-bottom: min(48vh, 20rem);
+}
+
 .wallet-pane input {
   scroll-margin-top: 4.5rem;
-  scroll-margin-bottom: min(42vh, 18rem);
+  scroll-margin-bottom: min(48vh, 20rem);
 }
 
 html.keyboard-open .wallet-pane {
-  padding-bottom: calc(var(--keyboard-inset, 0px) + 2.5rem);
-  scroll-padding-bottom: calc(var(--keyboard-inset, 0px) + 2.5rem);
+  padding-bottom: calc(var(--keyboard-inset, 0px) + 4rem);
+  scroll-padding-bottom: calc(var(--keyboard-inset, 0px) + 4rem);
 }
 
 html.keyboard-open .wallet-pane input {
-  scroll-margin-bottom: calc(var(--keyboard-inset, 12rem) + 1.25rem);
+  scroll-margin-bottom: calc(var(--keyboard-inset, 14rem) + 2rem);
+}
+
+/* Hide bottom nav while typing so the field stays in the visible half */
+html.keyboard-open .app-shell-nav .bottom-nav {
+  display: none;
 }
 
 .profile-card {
