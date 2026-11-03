@@ -1833,7 +1833,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 .board-slot {
   width: min(5.6rem, 22vw, calc((100% + 3.2rem) / 5));
   height: auto;
-  aspect-ratio: 3.05 / 4.25;
+  aspect-ratio: 2 / 3;
   flex-shrink: 0;
   margin-inline-start: -0.45rem;
   position: relative;
@@ -1921,26 +1921,32 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* Deck PNGs are 210×315 (2:3) — contain avoids top/bottom crop */
+  object-fit: contain;
+  object-position: center;
   background: #1a2426;
   pointer-events: none;
   user-select: none;
   -webkit-user-drag: none;
 }
 
+/* Box ratios match deck art (2:3) so faces aren't clipped */
 .pcard-sm {
   width: 1.7rem;
-  height: 2.35rem;
+  height: auto;
+  aspect-ratio: 2 / 3;
 }
 
 .pcard-md {
   width: 2.25rem;
-  height: 3.15rem;
+  height: auto;
+  aspect-ratio: 2 / 3;
 }
 
 .pcard-lg {
   width: 3.05rem;
-  height: 4.25rem;
+  height: auto;
+  aspect-ratio: 2 / 3;
 }
 
 .pcard-back {
@@ -2243,7 +2249,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 /* Match board card footprint */
 .hole-opp .pcard-lg {
   width: 2.55rem;
-  height: 3.55rem;
+  height: auto;
+  aspect-ratio: 2 / 3;
 }
 
 .hole-hero {
@@ -2530,7 +2537,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
   .pcard-lg {
     width: 2.55rem;
-    height: 3.55rem;
+    height: auto;
+    aspect-ratio: 2 / 3;
   }
 
   /* Board ~2× mobile lg — fan overlap keeps rim seats clear */
@@ -2538,7 +2546,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   .board-slot {
     width: min(5.1rem, 20vw, calc((100% + 2.8rem) / 5));
     height: auto;
-    aspect-ratio: 2.55 / 3.55;
+    aspect-ratio: 2 / 3;
     margin-inline-start: -0.4rem;
   }
 
@@ -2715,7 +2723,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
   .hole-opp .pcard-lg {
     width: 2.45rem;
-    height: 3.4rem;
+    height: auto;
+    aspect-ratio: 2 / 3;
   }
 
   .hole-opp .pcard-lg .pcard-rank {
@@ -2736,7 +2745,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
   .opp-backs .pcard-sm {
     width: 1.05rem;
-    height: 1.45rem;
+    height: auto;
+    aspect-ratio: 2 / 3;
   }
 
   /* Gap under felt so hero-strength / winner pill don't collide with the rail */
@@ -2788,7 +2798,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
   .pcard-hero {
     width: 3.15rem;
-    height: 4.4rem;
+    height: auto;
+    aspect-ratio: 2 / 3;
   }
 
   .pcard-hero .pcard-rank {
@@ -2893,19 +2904,21 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
   .pcard-hero {
     width: 2.85rem;
-    height: 3.95rem;
+    height: auto;
+    aspect-ratio: 2 / 3;
   }
 
   .pcard-lg {
     width: 2.35rem;
-    height: 3.25rem;
+    height: auto;
+    aspect-ratio: 2 / 3;
   }
 
   .board .pcard-lg,
   .board-slot {
     width: min(4.8rem, 19vw, calc((100% + 2.4rem) / 5));
     height: auto;
-    aspect-ratio: 2.35 / 3.25;
+    aspect-ratio: 2 / 3;
     margin-inline-start: -0.35rem;
   }
 
@@ -3417,7 +3430,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
 .pcard-hero {
   width: 3.4rem;
-  height: 4.7rem;
+  height: auto;
+  aspect-ratio: 2 / 3;
 }
 .pcard-hero .pcard-rank { font-size: 1.05rem; }
 .pcard-hero .pcard-suit { font-size: 0.85rem; }
