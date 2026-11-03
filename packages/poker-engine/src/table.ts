@@ -427,12 +427,19 @@ export class HoldEmTable {
     this.winners = [];
     let contested = false;
 
+    const stillInCount = this.seats.filter((s) => s.player && !s.folded).length;
+
     for (const pot of sidePots) {
       const eligible = pot.eligible.filter((i) => !this.seats[i].folded);
       if (eligible.length === 0) continue;
       if (eligible.length === 1) {
+        // Return chips to the sole eligible seat. At a multi-way showdown this is
+        // an uncalled bet — credit the stack but do NOT mark them as a hand winner
+        // (otherwise both players show «ПОБЕДА» when only one took the pot).
         this.pay(eligible[0], pot.amount);
-        this.winners.push({ seatIndex: eligible[0], amount: pot.amount });
+        if (stillInCount <= 1) {
+          this.winners.push({ seatIndex: eligible[0], amount: pot.amount });
+        }
         continue;
       }
       contested = true;
@@ -449,12 +456,21 @@ export class HoldEmTable {
         const amt = share + (rem > 0 ? 1 : 0);
         if (rem > 0) rem -= 1;
         this.pay(w.i, amt);
-        this.winners.push({
-          seatIndex: w.i,
-          amount: amt,
-          handName: w.hand.name,
-          handCards: w.hand.cards,
-        });
+        const existing = this.winners.find((x) => x.seatIndex === w.i);
+        if (existing) {
+          existing.amount += amt;
+          if (!existing.handName) {
+            existing.handName = w.hand.name;
+            existing.handCards = w.hand.cards;
+          }
+        } else {
+          this.winners.push({
+            seatIndex: w.i,
+            amount: amt,
+            handName: w.hand.name,
+            handCards: w.hand.cards,
+          });
+        }
       }
     }
 

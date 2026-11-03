@@ -573,22 +573,24 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
     <div
       className={`table-screen${playing ? " table-screen-playing" : ""}${isMyTurn ? " table-screen-turn" : ""}${state?.status === "hand_over" ? " table-screen-over" : ""}`}
     >
+      {tableName && (
+        <div className="table-title-row">
+          <button
+            type="button"
+            className="table-name-chip table-name-chip-hero"
+            onClick={() => isHost && setEditingName(true)}
+            disabled={!isHost}
+            title={isHost ? t("renameTable") : tableName}
+          >
+            {tableName}
+          </button>
+        </div>
+      )}
       <div className="table-topbar">
         <button type="button" className="secondary table-back-btn" onClick={onBack}>
           {t("lobby")}
         </button>
         <div className="table-status">
-          {tableName && (
-            <button
-              type="button"
-              className="table-name-chip"
-              onClick={() => isHost && setEditingName(true)}
-              disabled={!isHost}
-              title={isHost ? t("renameTable") : tableName}
-            >
-              {tableName}
-            </button>
-          )}
           <span className="street-pill">{streetLabel || "—"}</span>
           {tableInviteCode && (
             <span className="table-code-inline" title={t("inviteTableHint")}>

@@ -21,4 +21,13 @@ describe("handEval", () => {
     assert.equal(h.name, "Straight");
     assert.equal(h.values[0], 5);
   });
+
+  it("two pair beats one pair (holdem board)", () => {
+    const board: Card[] = ["Qc", "2h", "5s", "6s", "7s"];
+    const twoPair = evaluateBest(["5c", "7h", ...board]);
+    const onePair = evaluateBest(["6h", "Jc", ...board]);
+    assert.equal(twoPair.name, "Two Pair");
+    assert.equal(onePair.name, "One Pair");
+    assert.ok(compareHands(twoPair, onePair) > 0);
+  });
 });

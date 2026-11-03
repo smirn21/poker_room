@@ -1536,6 +1536,27 @@ input:focus-visible {
   z-index: 2;
 }
 
+.table-title-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  min-width: 0;
+  margin: 0 0 0.2rem;
+  padding: 0 0.15rem;
+}
+
+.table-name-chip-hero {
+  max-width: min(92%, 20rem);
+  font-size: 0.95rem;
+  font-weight: 800;
+  padding: 0.28rem 0.75rem;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .table-topbar {
   display: flex;
   align-items: center;
@@ -1723,8 +1744,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 }
 
 .pcard-lg {
-  width: 2.55rem;
-  height: 3.55rem;
+  width: 3.05rem;
+  height: 4.25rem;
 }
 
 .pcard-back {
@@ -2109,13 +2130,14 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     gap: 0.25rem 0.35rem;
   }
 
-  .table-name-chip {
-    max-width: 5.5rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 0.72rem;
-    padding: 0.18rem 0.4rem;
+  .table-title-row {
+    margin-bottom: 0.12rem;
+  }
+
+  .table-name-chip-hero {
+    max-width: min(94%, 18rem);
+    font-size: 0.88rem;
+    padding: 0.22rem 0.65rem;
   }
 
   .street-pill {
@@ -2265,18 +2287,18 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .pcard-lg {
-    width: 2rem;
-    height: 2.8rem;
+    width: 2.55rem;
+    height: 3.55rem;
   }
 
   .board-slot {
-    width: 2rem;
-    height: 2.8rem;
+    width: 2.55rem;
+    height: 3.55rem;
   }
 
   .board {
-    gap: 0.18rem;
-    min-height: 2.8rem;
+    gap: 0.22rem;
+    min-height: 3.55rem;
   }
 
   .pot-caption {
@@ -2403,20 +2425,20 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .hole-opp .pcard-lg {
-    width: 2rem;
-    height: 2.8rem;
+    width: 2.45rem;
+    height: 3.4rem;
   }
 
   .hole-opp .pcard-lg .pcard-rank {
-    font-size: 0.72rem;
+    font-size: 0.82rem;
   }
 
   .hole-opp .pcard-lg .pcard-suit {
-    font-size: 0.58rem;
+    font-size: 0.68rem;
   }
 
   .hole-opp .pcard-lg .pcard-pip {
-    font-size: 1.05rem;
+    font-size: 1.2rem;
   }
 
   .opp-backs {
@@ -2478,20 +2500,20 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .pcard-hero {
-    width: 2.45rem;
-    height: 3.4rem;
+    width: 3.15rem;
+    height: 4.4rem;
   }
 
   .pcard-hero .pcard-rank {
-    font-size: 0.85rem;
+    font-size: 1rem;
   }
 
   .pcard-hero .pcard-suit {
-    font-size: 0.7rem;
+    font-size: 0.82rem;
   }
 
   .pcard-hero .pcard-pip {
-    font-size: 1.2rem;
+    font-size: 1.45rem;
   }
 
   .hero-cards {
@@ -2583,6 +2605,16 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .pcard-hero {
+    width: 2.85rem;
+    height: 3.95rem;
+  }
+
+  .pcard-lg {
+    width: 2.35rem;
+    height: 3.25rem;
+  }
+
+  .board-slot {
     width: 2.35rem;
     height: 3.25rem;
   }
