@@ -617,11 +617,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
     let cashOut = seat.stack;
     await tableManager.withTable(id, (engine) => {
-      if (engine.status === "playing") {
-        throw httpError.badRequest("Finish the hand first");
-      }
+      // Leave anytime: mid-hand forces a fold; remaining stack returns to wallet.
       const left = engine.leave(user.id);
-      cashOut = left?.stack ?? seat.stack;
+      cashOut = Math.max(0, left?.stack ?? seat.stack);
       tableManager.clearRebuy(id, user.id);
     });
 

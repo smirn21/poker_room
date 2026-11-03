@@ -108,16 +108,29 @@ export class HoldEmTable {
   leave(userId: string): SeatPlayer | null {
     const idx = this.seats.findIndex((s) => s.player?.userId === userId);
     if (idx < 0) return null;
-    if (this.status === "playing" && !this.seats[idx].folded) {
-      // force fold then remove after hand — for MVP allow leave between hands only
+    if (this.status === "playing" && this.seats[idx].player && !this.seats[idx].folded) {
       if (this.actionIndex === idx) {
+        // Fold on their turn (advances the hand); seat remains until we remove below.
         this.applyAction(userId, { type: "fold" });
       } else {
         this.seats[idx].folded = true;
+        this.seats[idx].lastAction = "fold";
+        const contenders = this.seats
+          .map((s, i) => ({ s, i }))
+          .filter(({ s }) => s.player && !s.folded);
+        if (contenders.length === 1) {
+          this.awardSingle(contenders[0].i);
+        }
       }
     }
-    const p = this.seats[idx].player;
-    this.seats[idx] = emptySeat();
+    const removeIdx = this.seats.findIndex((s) => s.player?.userId === userId);
+    if (removeIdx < 0) return null;
+    const p = this.seats[removeIdx].player;
+    this.seats[removeIdx] = emptySeat();
+    if (this.status === "playing" && this.actionIndex === removeIdx) {
+      this.actionIndex = this.nextActor(removeIdx, true);
+      this.armTurnClock();
+    }
     if (this.status !== "playing") this.maybeWaiting();
     return p;
   }

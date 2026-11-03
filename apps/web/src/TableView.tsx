@@ -307,6 +307,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
   }
 
   async function leave() {
+    if (!window.confirm(t("confirmLeave"))) return;
     try {
       const r = await api.leaveTable(tableId);
       onUser(r.user);
@@ -404,11 +405,6 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errRebuy"));
     }
-  }
-
-  async function nextHand() {
-    celebratedHand.current = -1;
-    await api.nextHand(tableId);
   }
 
   function sendChat(e: React.FormEvent) {
@@ -858,15 +854,15 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
         </div>
       )}
 
-      {(state?.status === "hand_over" || state?.status === "waiting") && (
+      {/* Next hand starts automatically after showdown; only start the first deal manually. */}
+      {state?.status === "waiting" && (
         <button
           type="button"
           className="primary-wide"
           onClick={async () => {
             try {
               setError(null);
-              if (state?.status === "waiting") await api.startHand(tableId);
-              else await nextHand();
+              await api.startHand(tableId);
             } catch (e) {
               setError(
                 e instanceof Error
@@ -876,7 +872,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
             }
           }}
         >
-          {state?.status === "waiting" ? t("startHand") : t("nextHand")}
+          {t("startHand")}
         </button>
       )}
 

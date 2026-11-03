@@ -2337,9 +2337,10 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .seat-chips .chip-label {
-    font-size: 0.52rem;
-    background: rgba(0, 0, 0, 0.5);
-    padding: 0.05rem 0.22rem;
+    font-size: 0.82rem;
+    font-weight: 800;
+    background: rgba(0, 0, 0, 0.55);
+    padding: 0.12rem 0.35rem;
     border-radius: 999px;
   }
 
@@ -2364,9 +2365,10 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .bet-stack .chip-label {
-    font-size: 0.48rem;
+    font-size: 0.72rem;
+    font-weight: 800;
     background: rgba(0, 0, 0, 0.55);
-    padding: 0.05rem 0.22rem;
+    padding: 0.08rem 0.28rem;
     border-radius: 999px;
   }
 
@@ -2673,11 +2675,13 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 }
 
 .chip-label {
-  font-size: 0.62rem;
-  font-weight: 700;
-  color: var(--gold-soft);
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--gold);
   font-variant-numeric: tabular-nums;
-  line-height: 1;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
 }
 
 .chip-v1 {
@@ -2969,15 +2973,32 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 }
 
 .action-tag {
-  font-size: 0.55rem;
+  font-size: 0.78rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
-  margin-top: 0.1rem;
+  letter-spacing: 0.03em;
+  margin-top: 0.12rem;
+  padding: 0.08rem 0.35rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  display: inline-block;
+  line-height: 1.15;
+  text-transform: uppercase;
 }
-.action-check, .action-call { color: #81c784; }
-.action-bet, .action-raise { color: #ef5350; }
-.action-fold { color: #b0bec5; }
-.action-all-in { color: #ffd54f; }
+.action-check, .action-call { color: #a5d6a7; }
+.action-bet, .action-raise { color: #ff8a80; }
+.action-fold { color: #cfd8dc; }
+.action-all-in { color: #ffe082; }
+
+.hero-zone .seat-chips .chip-label,
+.hero-inline .seat-chips .chip-label {
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.hero-zone .action-tag,
+.hero-inline .action-tag {
+  font-size: 0.9rem;
+}
 
 .turn-bar {
   margin-top: 0.2rem;
@@ -3055,16 +3076,27 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 }
 
 .actions-idle {
-  opacity: 0.55;
+  opacity: 1;
 }
 
 .actions-idle button,
 .actions-idle input {
   pointer-events: none;
+  opacity: 0.34;
+  filter: grayscale(0.55) brightness(0.72);
+  box-shadow: none !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.45) !important;
+  background: rgba(20, 28, 26, 0.55) !important;
 }
 
 .actions-armed {
   opacity: 1;
+}
+
+.actions-armed button:disabled {
+  opacity: 0.4;
+  filter: grayscale(0.35);
 }
 
 .rebuy-need-deposit {

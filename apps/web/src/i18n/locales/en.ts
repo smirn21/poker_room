@@ -188,6 +188,8 @@ export const en: Record<MessageKey, string> = {
   lobby: "Lobby",
   handNo: "Hand #{n}",
   leave: "Leave",
+  confirmLeave:
+    "Leave the table? Your table chips will return to your main balance.",
   inviteTable: "Code",
   inviteTableHint: "Copy",
   inviteTableCopied: "Copied",

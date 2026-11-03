@@ -73,6 +73,10 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL ?? "file:./dev.db",
   /** Seconds a busted player has to rebuy before being removed */
   rebuyGraceSeconds: Number(process.env.REBUY_GRACE_SECONDS ?? 300),
+  /** Seconds per player action */
+  turnSeconds: Number(process.env.TURN_SECONDS ?? 45),
+  /** Pause after hand_over before auto-dealing the next hand (ms) */
+  autoNextHandMs: Number(process.env.AUTO_NEXT_HAND_MS ?? 2800),
 
   /** USDT TRC20 club receive address (Trust Wallet / your wallet). */
   tronUsdtAddress: (process.env.TRON_USDT_ADDRESS ?? "").trim(),

@@ -21,6 +21,7 @@ interface LiveTable {
   engine: HoldEmTable;
   mutex: AsyncMutex;
   turnTimer: NodeJS.Timeout | null;
+  autoNextTimer: NodeJS.Timeout | null;
   name: string;
   createdById: string;
   inviteCode: string | null;
@@ -66,6 +67,7 @@ export class TableManager {
   invalidate(tableId: string): void {
     const live = this.tables.get(tableId);
     if (live?.turnTimer) clearTimeout(live.turnTimer);
+    if (live?.autoNextTimer) clearTimeout(live.autoNextTimer);
     if (live) {
       for (const t of live.rebuyTimers.values()) clearTimeout(t);
       live.rebuyTimers.clear();
@@ -86,7 +88,7 @@ export class TableManager {
       smallBlind: row.smallBlind,
       bigBlind: row.bigBlind,
       maxSeats: row.maxSeats,
-      turnSeconds: 20,
+      turnSeconds: config.turnSeconds,
       rakePercent: row.rakePercent ?? 5,
       rakeCapBb: row.rakeCapBb ?? 3,
       noFlopNoDrop: true,
@@ -115,6 +117,7 @@ export class TableManager {
       engine,
       mutex: new AsyncMutex(),
       turnTimer: null,
+      autoNextTimer: null,
       name: row.name,
       createdById: row.createdById,
       inviteCode,
@@ -150,6 +153,11 @@ export class TableManager {
         await this.maybeTransferHost(tableId);
       }
       this.scheduleTurnTimer(tableId);
+      if (live.engine.status === "hand_over") {
+        this.scheduleAutoNextHand(tableId);
+      } else {
+        this.clearAutoNext(tableId);
+      }
       // re-emit after host/rebuy enrichment
       this.emit(tableId, live.engine);
       return result;
@@ -463,6 +471,28 @@ export class TableManager {
       void this.withTable(tableId, (eng) => {
         if (eng.status === "playing" && eng.turnEndsAt && Date.now() >= eng.turnEndsAt - 100) {
           eng.timeoutCurrentActor();
+        }
+      });
+    }, delay);
+  }
+
+  private clearAutoNext(tableId: string): void {
+    const live = this.tables.get(tableId);
+    if (!live?.autoNextTimer) return;
+    clearTimeout(live.autoNextTimer);
+    live.autoNextTimer = null;
+  }
+
+  /** After showdown, deal the next hand without a manual button press. */
+  private scheduleAutoNextHand(tableId: string): void {
+    const live = this.tables.get(tableId);
+    if (!live) return;
+    this.clearAutoNext(tableId);
+    const delay = Math.max(800, config.autoNextHandMs);
+    live.autoNextTimer = setTimeout(() => {
+      void this.withTable(tableId, (eng) => {
+        if (eng.status === "hand_over") {
+          eng.tryStartHand();
         }
       });
     }, delay);

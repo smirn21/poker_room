@@ -186,6 +186,8 @@ export const ru = {
   lobby: "Лобби",
   handNo: "Раздача #{n}",
   leave: "Выйти",
+  confirmLeave:
+    "Точно выйти со стола? Фишки со стола вернутся на основной баланс.",
   inviteTable: "Код",
   inviteTableHint: "Копировать",
   inviteTableCopied: "Скопировано",
