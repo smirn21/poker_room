@@ -29,6 +29,8 @@ import {
   IconUsers,
   IconWallet,
 } from "./Icons";
+import { preloadDeckImages } from "./preloadCards";
+import { unlockAudio } from "./sounds";
 
 type Gate = "boot" | "invite" | "app" | "table" | "admin";
 type Tab = "lobby" | "tables" | "wallet" | "profile";
@@ -320,6 +322,18 @@ export function App() {
     void boot();
     return () => {
       document.documentElement.classList.remove("invite-compose");
+    };
+  }, []);
+
+  // Warm deck PNGs + unlock audio on first gesture (Telegram / iOS)
+  useEffect(() => {
+    preloadDeckImages();
+    const unlock = () => unlockAudio();
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("touchstart", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("touchstart", unlock);
     };
   }, []);
 

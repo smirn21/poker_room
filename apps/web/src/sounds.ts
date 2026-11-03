@@ -2,6 +2,7 @@
 
 let ctx: AudioContext | null = null;
 let unlocked = false;
+let resumeHooked = false;
 
 function getCtx(): AudioContext | null {
   if (typeof window === "undefined") return null;
@@ -19,19 +20,47 @@ function getCtx(): AudioContext | null {
   }
 }
 
+function hookResumeListeners(): void {
+  if (resumeHooked || typeof window === "undefined") return;
+  resumeHooked = true;
+  const kick = () => {
+    void ensureRunning();
+  };
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") kick();
+  });
+  window.addEventListener("pageshow", kick);
+  window.addEventListener("focus", kick);
+  // iOS often suspends after gesture ends — re-resume on every pointer
+  window.addEventListener("pointerdown", kick, { passive: true });
+  window.addEventListener("touchstart", kick, { passive: true });
+}
+
 /** Call from a user gesture so iOS/Telegram allows playback. */
 export function unlockAudio(): void {
   const c = getCtx();
   if (!c) return;
   unlocked = true;
+  hookResumeListeners();
   if (c.state === "suspended") void c.resume();
+  // Prime a near-silent buffer so subsequent plays aren't dropped cold
+  try {
+    const buf = c.createBuffer(1, 1, c.sampleRate);
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    src.connect(c.destination);
+    src.start(0);
+  } catch {
+    /* ignore */
+  }
 }
 
 function ensureRunning(): AudioContext | null {
   const c = getCtx();
-  if (!c || !unlocked) return null;
+  if (!c) return null;
+  if (!unlocked) return null;
   if (c.state === "suspended") void c.resume();
-  return c;
+  return c.state === "running" || c.state === "suspended" ? c : null;
 }
 
 /** Soft card flick / slap onto felt. */
@@ -40,7 +69,6 @@ export function playDealCard(index = 0): void {
   if (!c) return;
   const t0 = c.currentTime + index * 0.002;
 
-  // Brief noise = paper/card texture
   const n = Math.max(1, Math.floor(c.sampleRate * 0.045));
   const buf = c.createBuffer(1, n, c.sampleRate);
   const data = buf.getChannelData(0);
@@ -63,7 +91,6 @@ export function playDealCard(index = 0): void {
   noise.start(t0);
   noise.stop(t0 + 0.06);
 
-  // Soft body thump
   const osc = c.createOscillator();
   osc.type = "triangle";
   osc.frequency.setValueAtTime(140 + (index % 4) * 8, t0);
@@ -103,13 +130,14 @@ export function playAction(action: ActionSfx): void {
   if (!c) return;
   const t0 = c.currentTime;
 
-  const tone = (freq: number, dur: number, gain = 0.16, type: OscillatorType = "sine") => {
+  const click = (freq: number, dur: number, type: OscillatorType = "square") => {
     const osc = c.createOscillator();
     osc.type = type;
     osc.frequency.setValueAtTime(freq, t0);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.55, t0 + dur);
     const g = c.createGain();
     g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(gain, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.11, t0 + 0.008);
     g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
     osc.connect(g);
     g.connect(c.destination);
@@ -117,70 +145,47 @@ export function playAction(action: ActionSfx): void {
     osc.stop(t0 + dur + 0.02);
   };
 
-  const click = (freq = 2200, gain = 0.1) => {
-    const n = Math.max(1, Math.floor(c.sampleRate * 0.018));
-    const buf = c.createBuffer(1, n, c.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < n; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3);
-    }
-    const src = c.createBufferSource();
-    src.buffer = buf;
-    const bp = c.createBiquadFilter();
-    bp.type = "bandpass";
-    bp.frequency.value = freq;
-    bp.Q.value = 1.2;
-    const g = c.createGain();
-    g.gain.value = gain;
-    src.connect(bp);
-    bp.connect(g);
-    g.connect(c.destination);
-    src.start(t0);
-    src.stop(t0 + 0.03);
-  };
-
   switch (action) {
     case "fold":
-      // Soft descending “discard”
-      tone(280, 0.12, 0.14, "triangle");
-      tone(180, 0.16, 0.1, "sine");
-      click(900, 0.06);
+      click(180, 0.12, "triangle");
       break;
     case "check":
-      // Short knock
-      tone(420, 0.07, 0.12, "triangle");
-      click(1600, 0.08);
+      click(660, 0.07);
       break;
     case "call":
-      // Confident mid tap
-      tone(520, 0.09, 0.15, "sine");
-      tone(780, 0.07, 0.08, "triangle");
-      click(1400, 0.07);
+      click(520, 0.09);
       break;
     case "bet":
+      click(740, 0.1);
+      break;
     case "raise":
-      // Punchier push
-      tone(640, 0.08, 0.16, "square");
-      tone(960, 0.1, 0.1, "sine");
-      click(2000, 0.09);
+      click(880, 0.08);
+      window.setTimeout(() => {
+        const t1 = c.currentTime;
+        const osc = c.createOscillator();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(1100, t1);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.09, t1);
+        g.gain.exponentialRampToValueAtTime(0.001, t1 + 0.1);
+        osc.connect(g);
+        g.connect(c.destination);
+        osc.start(t1);
+        osc.stop(t1 + 0.12);
+      }, 55);
       break;
     case "all-in":
-      // Bold double hit
-      tone(700, 0.1, 0.18, "square");
+      click(420, 0.12, "sawtooth");
       window.setTimeout(() => {
-        const c2 = ensureRunning();
-        if (!c2) return;
-        const t1 = c2.currentTime;
-        const osc = c2.createOscillator();
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(880, t1);
-        osc.frequency.exponentialRampToValueAtTime(440, t1 + 0.18);
-        const g = c2.createGain();
-        g.gain.setValueAtTime(0.0001, t1);
-        g.gain.exponentialRampToValueAtTime(0.14, t1 + 0.02);
+        const t1 = c.currentTime;
+        const osc = c.createOscillator();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(980, t1);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.12, t1);
         g.gain.exponentialRampToValueAtTime(0.001, t1 + 0.22);
         osc.connect(g);
-        g.connect(c2.destination);
+        g.connect(c.destination);
         osc.start(t1);
         osc.stop(t1 + 0.24);
       }, 70);
@@ -191,10 +196,11 @@ export function playAction(action: ActionSfx): void {
 
 /** Bright win chime + soft sparkle. */
 export function playWin(): void {
+  unlockAudio();
   const c = ensureRunning();
   if (!c) return;
   const t0 = c.currentTime;
-  const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
+  const notes = [523.25, 659.25, 783.99, 1046.5];
 
   notes.forEach((freq, i) => {
     const start = t0 + i * 0.11;
@@ -211,7 +217,6 @@ export function playWin(): void {
     osc.stop(start + 0.5);
   });
 
-  // Soft shimmer layer
   const shim = c.createOscillator();
   shim.type = "sine";
   shim.frequency.setValueAtTime(1568, t0 + 0.35);
@@ -229,6 +234,7 @@ export function playWin(): void {
 
 /** Urgent tick when ~10s remain on your turn. */
 export function playTurnUrgent(): void {
+  unlockAudio();
   const c = ensureRunning();
   if (!c) return;
   const t0 = c.currentTime;
@@ -306,7 +312,6 @@ function playCoinClink(index = 0): void {
   osc.start(t0);
   osc.stop(t0 + 0.14);
 
-  // Tiny metallic ring
   const ring = c.createOscillator();
   ring.type = "sine";
   ring.frequency.setValueAtTime(base * 1.7, t0);

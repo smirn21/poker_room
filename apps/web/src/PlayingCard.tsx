@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { Card } from "@poker/shared";
 import { CARD_BACK_URL, cardFaceUrl, parseCard } from "./cardUtils";
 
@@ -19,6 +20,11 @@ export function PlayingCard({
   dimmed = false,
 }: Props) {
   const { rank, symbol } = parseCard(card);
+  const face = cardFaceUrl(card);
+  const [src, setSrc] = useState(face);
+  useEffect(() => {
+    setSrc(face);
+  }, [face]);
   return (
     <div
       className={`pcard pcard-${size} pcard-face ${highlight ? "pcard-win" : ""} ${dimmed ? "pcard-dim" : ""} ${className}`}
@@ -27,10 +33,15 @@ export function PlayingCard({
     >
       <img
         className="pcard-img"
-        src={cardFaceUrl(card)}
+        src={src}
         alt=""
         draggable={false}
         decoding="async"
+        loading="eager"
+        fetchPriority="high"
+        onError={() => {
+          if (src !== CARD_BACK_URL) setSrc(CARD_BACK_URL);
+        }}
       />
     </div>
   );
@@ -57,6 +68,7 @@ export function CardBack({
         alt=""
         draggable={false}
         decoding="async"
+        loading="eager"
       />
     </div>
   );

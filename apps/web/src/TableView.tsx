@@ -98,6 +98,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
   const [rebuyAmt, setRebuyAmt] = useState("2000");
   const [rebuyLeft, setRebuyLeft] = useState<number | null>(null);
   const feltRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
   const prevBoardLen = useRef(0);
   const prevHandNo = useRef(0);
   const lastPotRef = useRef(0);
@@ -117,6 +118,13 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
       window.removeEventListener("keydown", unlock);
     };
   }, []);
+
+  // Keep chat pinned to the newest message
+  useEffect(() => {
+    const el = chatRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages]);
 
   useEffect(() => {
     const token = getToken();
@@ -508,18 +516,19 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
     setShowEmoji(false);
   }
 
-  const winnerText =
-    state?.winners
-      ?.map((w) => {
-        const name =
-          state.seats.find((s) => s.seatIndex === w.seatIndex)?.name ??
-          t("seatN", { n: w.seatIndex + 1 });
-        const hand = localizeHandName(w.handName, locale);
-        return `${name} +${w.amount}${hand ? ` · ${hand}` : ""}`;
-      })
-      .join(" · ") ?? "";
-
   const isShowdown = state?.status === "hand_over";
+  const winnerText =
+    isShowdown && state?.winners?.length
+      ? state.winners
+          .map((w) => {
+            const name =
+              state.seats.find((s) => s.seatIndex === w.seatIndex)?.name ??
+              t("seatN", { n: w.seatIndex + 1 });
+            const hand = localizeHandName(w.handName, locale);
+            return `${name} +${w.amount}${hand ? ` · ${hand}` : ""}`;
+          })
+          .join(" · ")
+      : "";
   const aggressiveBet =
     (a: string | null | undefined) =>
       a === "bet" || a === "raise" || a === "all-in";
@@ -954,7 +963,9 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
       {/* Hero strip */}
       {mySeat && (
         <div
-          className={`hero-zone ${isMyTurn ? "hero-turn" : ""} ${winningSeatIndexes.has(mySeat.seatIndex) ? "winner" : ""}`}
+          className={`hero-zone ${isMyTurn ? "hero-turn" : ""} ${winningSeatIndexes.has(mySeat.seatIndex) ? "winner" : ""}${
+            showdownHighlight ? " hero-zone-showdown" : ""
+          }`}
         >
           {renderSeat(mySeat, false)}
           <div
@@ -983,17 +994,9 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
               </>
             )}
           </div>
-          {handLabel && (
-            <div
-              className={`hero-strength${
-                showdownHighlight &&
-                winningSeatIndexes.has(mySeat.seatIndex)
-                  ? " hero-strength-win"
-                  : ""
-              }`}
-            >
-              {handLabel}
-            </div>
+          {/* During showdown the hand name lives in the winner banner — avoid overlap */}
+          {handLabel && !showdownHighlight && (
+            <div className="hero-strength">{handLabel}</div>
           )}
           {playing && turnSecLeft != null && (
             <div
@@ -1108,7 +1111,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
       )}
 
       <div className="panel chat-panel">
-        <div className="chat">
+        <div className="chat" ref={chatRef}>
           {messages.map((m) => (
             <div key={m.id} className="msg">
               <strong>{m.name}</strong>: {m.text}

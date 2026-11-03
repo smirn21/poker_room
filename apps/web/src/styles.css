@@ -1835,7 +1835,13 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   height: auto;
   aspect-ratio: 3.05 / 4.25;
   flex-shrink: 0;
-  margin-inline-start: -0.72rem;
+  margin-inline-start: -0.45rem;
+  position: relative;
+  z-index: 1;
+}
+
+.board .pcard-lg.pcard-win {
+  z-index: 3;
 }
 
 .board .pcard-lg:first-child,
@@ -1862,11 +1868,15 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 }
 
 .winner-banner-felt {
-  margin: 0.2rem auto 0.05rem;
+  position: relative;
+  z-index: 20;
+  margin: 0.25rem auto 0.35rem;
   align-self: center;
   max-width: min(96%, 360px);
   text-align: center;
   padding: 0.45rem 0.75rem 0.55rem;
+  /* Keep clear of hero cards / strength pill */
+  flex-shrink: 0;
 }
 
 .winner-banner-title {
@@ -1911,7 +1921,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: fill;
+  object-fit: cover;
+  background: #1a2426;
   pointer-events: none;
   user-select: none;
   -webkit-user-drag: none;
@@ -2466,12 +2477,11 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
   .winner-banner,
   .winner-banner-felt {
-    font-size: 0.62rem;
-    padding: 0.18rem 0.45rem;
-    max-width: min(90%, 220px);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-size: 0.68rem;
+    padding: 0.28rem 0.55rem;
+    max-width: min(96%, 320px);
+    overflow: visible;
+    white-space: normal;
   }
 
   .winner-banner-felt {
@@ -2479,10 +2489,16 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     left: auto;
     bottom: auto;
     transform: none;
-    z-index: 15;
-    margin: 0.1rem auto 0;
+    z-index: 20;
+    margin: 0.2rem auto 0.3rem;
     align-self: center;
     pointer-events: none;
+  }
+
+  .winner-banner-body {
+    font-size: 0.78rem;
+    line-height: 1.25;
+    white-space: normal;
   }
 
   .top-tools .lang-switch-compact {
@@ -2523,7 +2539,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     width: min(5.1rem, 20vw, calc((100% + 2.8rem) / 5));
     height: auto;
     aspect-ratio: 2.55 / 3.55;
-    margin-inline-start: -0.65rem;
+    margin-inline-start: -0.4rem;
   }
 
   .board .pcard-lg:first-child,
@@ -2752,7 +2768,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .winner-banner-felt {
-    max-width: min(92%, 240px);
+    max-width: min(96%, 300px);
   }
 
   .hero-inline {
@@ -2890,7 +2906,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     width: min(4.8rem, 19vw, calc((100% + 2.4rem) / 5));
     height: auto;
     aspect-ratio: 2.35 / 3.25;
-    margin-inline-start: -0.55rem;
+    margin-inline-start: -0.35rem;
   }
 
   .board .pcard-lg:first-child,
@@ -3260,22 +3276,40 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   color: var(--accent-soft);
 }
 
+/* Glow only — no big scale (was covering neighbors / looking like missing cards) */
 .pcard-win {
   box-shadow:
-    0 0 0 3px #ffe082,
-    0 0 0 5px rgba(255, 179, 0, 0.55),
-    0 0 22px rgba(255, 213, 79, 0.75),
-    0 4px 14px rgba(0, 0, 0, 0.45) !important;
-  transform: translateY(-6px) scale(1.18);
+    0 0 0 2px #ffe082,
+    0 0 0 4px rgba(255, 179, 0, 0.5),
+    0 0 16px rgba(255, 213, 79, 0.65),
+    0 3px 10px rgba(0, 0, 0, 0.4) !important;
+  transform: translateY(-2px) scale(1.04);
   z-index: 4;
-  filter: brightness(1.08) saturate(1.15);
+  filter: brightness(1.08) saturate(1.12);
   animation: winCardPulse 1.1s ease-in-out infinite;
 }
 
+.board .pcard-win {
+  transform: translateY(-2px) scale(1.05);
+}
+
+.hero-cards .pcard-win {
+  transform: translateY(-1px) scale(1.03);
+}
+
 .pcard-dim {
-  opacity: 0.32;
-  filter: grayscale(0.5) brightness(0.75);
-  transform: scale(0.92);
+  opacity: 0.45;
+  filter: grayscale(0.4) brightness(0.82);
+  transform: none;
+}
+
+.hero-zone-showdown {
+  margin-top: 0.15rem;
+}
+
+.hero-zone-showdown .hero-cards {
+  position: relative;
+  z-index: 1;
 }
 
 @keyframes winCardPulse {
