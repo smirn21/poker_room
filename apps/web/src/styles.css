@@ -1486,6 +1486,100 @@ input:focus-visible {
   margin: 0.5rem 0;
 }
 
+/* Center framed notices (errors + short toasts) */
+.center-notice {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding:
+    max(1rem, env(safe-area-inset-top, 0px))
+    max(1rem, env(safe-area-inset-right, 0px))
+    max(1rem, env(safe-area-inset-bottom, 0px))
+    max(1rem, env(safe-area-inset-left, 0px));
+  background: rgba(4, 10, 12, 0.55);
+  animation: centerNoticeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  pointer-events: auto;
+}
+
+.center-notice-frame {
+  width: min(92vw, 22rem);
+  padding: 1.15rem 1.25rem 1rem;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 224, 130, 0.75);
+  background:
+    linear-gradient(165deg, rgba(18, 28, 26, 0.96), rgba(8, 14, 14, 0.98));
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(0, 0, 0, 0.4) inset;
+  text-align: center;
+}
+
+.center-notice-error .center-notice-frame {
+  border-color: rgba(255, 138, 128, 0.85);
+}
+
+.center-notice-ok .center-notice-frame {
+  border-color: rgba(67, 197, 181, 0.85);
+}
+
+.center-notice-text {
+  margin: 0;
+  font-size: clamp(1.05rem, 4.2vw, 1.35rem);
+  font-weight: 850;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  color: #fff8e1;
+  /* Contoured / outlined label */
+  -webkit-text-stroke: 0.9px rgba(0, 0, 0, 0.85);
+  paint-order: stroke fill;
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.9),
+    0 0 12px rgba(0, 0, 0, 0.35);
+}
+
+.center-notice-error .center-notice-text {
+  color: #ffe0db;
+  -webkit-text-stroke: 0.95px rgba(80, 10, 10, 0.9);
+}
+
+.center-notice-ok .center-notice-text {
+  color: #d7fff6;
+  -webkit-text-stroke: 0.9px rgba(0, 40, 35, 0.85);
+}
+
+.center-notice-dismiss {
+  margin-top: 0.85rem;
+  min-width: 5.5rem;
+  padding: 0.45rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 224, 130, 0.45);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff8e1;
+  font-weight: 750;
+  font-size: 0.9rem;
+}
+
+.center-notice-error .center-notice-dismiss {
+  border-color: rgba(255, 138, 128, 0.5);
+}
+
+.center-notice-ok .center-notice-dismiss {
+  border-color: rgba(67, 197, 181, 0.55);
+}
+
+@keyframes centerNoticeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .tabs {
   display: flex;
   gap: 0.4rem;

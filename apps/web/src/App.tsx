@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import type { UserDTO } from "@poker/shared";
 import { api, setToken } from "./api";
 import { TableView } from "./TableView";
@@ -16,6 +16,8 @@ import { useI18n } from "./i18n";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
 import { BrandLogo } from "./BrandLogo";
 import { LobbyFaceCards } from "./LobbyFaceCards";
+import { CenterNotice } from "./CenterNotice";
+import { localizeApiError } from "./localizeApiError";
 import {
   IconArrowRight,
   IconChip,
@@ -176,7 +178,7 @@ export function App() {
   const [gate, setGate] = useState<Gate>("boot");
   const [tab, setTab] = useState<Tab>("lobby");
   const [user, setUser] = useState<UserDTO | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setErrorRaw] = useState<string | null>(null);
   const [inviteCode, setInviteCode] = useState("");
   const [tables, setTables] = useState<TableRow[]>([]);
   const [rakePercent, setRakePercent] = useState(5);
@@ -209,7 +211,7 @@ export function App() {
       createdAt: string;
     }[]
   >([]);
-  const [withdrawMsg, setWithdrawMsg] = useState<string | null>(null);
+  const [okNotice, setOkNoticeRaw] = useState<string | null>(null);
   const [inviteCreated, setInviteCreated] = useState<string | null>(null);
   const [inviteCopied, setInviteCopied] = useState(false);
   const [tgIdCopied, setTgIdCopied] = useState(false);
@@ -273,14 +275,42 @@ export function App() {
     blockedReason: string | null;
   } | null>(null);
   const [blockReason, setBlockReason] = useState("");
-  const [adjustMsg, setAdjustMsg] = useState<string | null>(null);
-  const [referral, setReferral] = useState<{
+    const [referral, setReferral] = useState<{
     code: string;
     inviteesCount: number;
     telegramStartLink: string | null;
     miniAppLink: string;
   } | null>(null);
   const [referralCopied, setReferralCopied] = useState(false);
+
+  const setError = useCallback((msg: string | null) => {
+    setOkNoticeRaw(null);
+    setErrorRaw(msg == null ? null : localizeApiError(msg));
+  }, []);
+
+  const setOkNotice = useCallback((msg: string | null) => {
+    setErrorRaw(null);
+    setOkNoticeRaw(msg);
+  }, []);
+
+  const clearNotice = useCallback(() => {
+    setErrorRaw(null);
+    setOkNoticeRaw(null);
+  }, []);
+
+  const withNotice = useCallback(
+    (node: ReactNode) => (
+      <>
+        <CenterNotice
+          text={error ?? okNotice}
+          variant={error ? "error" : "ok"}
+          onClose={clearNotice}
+        />
+        {node}
+      </>
+    ),
+    [error, okNotice, clearNotice],
+  );
 
   useEffect(() => {
     initTelegramChrome();
@@ -450,11 +480,8 @@ export function App() {
   }
 
   function mapJoinError(raw: string): string {
-    if (/table not found/i.test(raw)) return t("errTableCode");
-    if (/table full/i.test(raw)) return t("errTableFull");
-    if (/insufficient/i.test(raw)) return t("errInsufficient");
-    if (/not whitelisted/i.test(raw)) return t("errInvite");
-    return raw || t("errJoin");
+    if (!raw.trim()) return t("errJoin");
+    return localizeApiError(raw);
   }
 
   /** Lobby: sit by TBL-… / table id via join (not club redeem — that is silent for members). */
@@ -514,14 +541,14 @@ export function App() {
   async function saveClubRake() {
     try {
       setError(null);
-      setAdjustMsg(null);
+      setOkNotice(null);
       const r = await api.updateClubSettings({
         rakePercent: Math.max(0, Math.min(20, Math.floor(rakePercent))),
         rakeCapBb: Math.max(0, Math.min(20, Math.floor(rakeCapBb))),
       });
       setRakePercent(r.rakePercent);
       setRakeCapBb(r.rakeCapBb);
-      setAdjustMsg(t("clubRakeSaved", { n: r.tablesUpdated }));
+      setOkNotice(t("clubRakeSaved", { n: r.tablesUpdated }));
       await refreshTables();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errClubRake"));
@@ -627,7 +654,7 @@ export function App() {
     if (!user) return;
     try {
       setError(null);
-      setWithdrawMsg(null);
+      setOkNotice(null);
       const chips = Number.parseInt(withdrawAmt.replace(/\D/g, ""), 10);
       const addr = withdrawAddress.trim();
       if (!/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(addr)) {
@@ -646,7 +673,7 @@ export function App() {
       const r = await api.createWithdraw(chips, addr);
       setUser(r.user);
       setWithdrawAmt("");
-      setWithdrawMsg(t("withdrawCreated"));
+      setOkNotice(t("withdrawCreated"));
       await refreshWithdrawals();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errWithdraw"));
@@ -660,6 +687,7 @@ export function App() {
     try {
       await navigator.clipboard.writeText(text);
       setDepositCopied(kind);
+      setOkNotice(t("noticeCopied"));
       window.setTimeout(() => setDepositCopied(null), 2000);
     } catch {
       setError(t("copyFailed"));
@@ -671,6 +699,7 @@ export function App() {
     try {
       await navigator.clipboard.writeText(String(user.telegramId));
       setTgIdCopied(true);
+      setOkNotice(t("noticeCopied"));
       window.setTimeout(() => setTgIdCopied(false), 2000);
     } catch {
       setError(t("copyFailed"));
@@ -705,6 +734,7 @@ export function App() {
     try {
       await navigator.clipboard.writeText(inviteCreated);
       setInviteCopied(true);
+      setOkNotice(t("noticeCopied"));
       window.setTimeout(() => setInviteCopied(false), 2000);
     } catch {
       setError(t("copyFailed"));
@@ -728,7 +758,7 @@ export function App() {
 
   async function openAdmin() {
     setError(null);
-    setAdjustMsg(null);
+    setOkNotice(null);
     setAdjustTarget(null);
     setGate("admin");
     const [deps, house, club, um] = await Promise.all([
@@ -767,7 +797,7 @@ export function App() {
     try {
       setError(null);
       const r = await api.pollDeposits();
-      setAdjustMsg(
+      setOkNotice(
         t("depositPollOk", {
           matched: r.matched,
           unmatched: r.unmatched,
@@ -785,9 +815,9 @@ export function App() {
       setError(null);
       const r = await api.registerTronhooksWatch(false);
       if (r.secret) {
-        setAdjustMsg(t("tronhooksSecretOnce", { secret: r.secret }));
+        setOkNotice(t("tronhooksSecretOnce", { secret: r.secret }));
       } else {
-        setAdjustMsg(r.hint ?? t("registerTronhooks"));
+        setOkNotice(r.hint ?? t("registerTronhooks"));
       }
       await refreshAdminDeposits();
     } catch (e) {
@@ -799,7 +829,7 @@ export function App() {
     const id = adjustTgId.trim();
     if (!id) return;
     setError(null);
-    setAdjustMsg(null);
+    setOkNotice(null);
     try {
       const r = await api.lookupUserByTelegram(id);
       setAdjustTarget(r.user);
@@ -820,7 +850,7 @@ export function App() {
     const id = adjustTgId.trim();
     if (!id) return;
     setError(null);
-    setAdjustMsg(null);
+    setOkNotice(null);
     try {
       if (block) {
         const r = await api.blockUser(id, blockReason.trim() || undefined);
@@ -834,14 +864,14 @@ export function App() {
               }
             : m,
         );
-        setAdjustMsg(t("blockOk"));
+        setOkNotice(t("blockOk"));
       } else {
         const r = await api.unblockUser(id);
         setAdjustTarget(r.user);
         setAdjustMeta((m) =>
           m ? { ...m, blockedAt: null, blockedReason: null } : m,
         );
-        setAdjustMsg(t("unblockOk"));
+        setOkNotice(t("unblockOk"));
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errBlock"));
@@ -872,6 +902,7 @@ export function App() {
     try {
       await navigator.clipboard.writeText(url);
       setReferralCopied(true);
+      setOkNotice(t("noticeCopied"));
       window.setTimeout(() => setReferralCopied(false), 2000);
     } catch {
       setError(t("copyFailed"));
@@ -883,11 +914,11 @@ export function App() {
     const amt = Math.abs(Math.floor(adjustAmt));
     if (!id || amt < 1) return;
     setError(null);
-    setAdjustMsg(null);
+    setOkNotice(null);
     try {
       const r = await api.adjustBalance(id, sign * amt);
       setAdjustTarget(r.user);
-      setAdjustMsg(t("adjustOk", { balance: r.user.balance }));
+      setOkNotice(t("adjustOk", { balance: r.user.balance }));
       if (user && r.user.id === user.id) setUser(r.user);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errAdjust"));
@@ -905,7 +936,7 @@ export function App() {
   );
 
   if (gate === "boot") {
-    return (
+    return withNotice(
       <div className="app-shell app-shell-fit boot-screen">
         <div className="boot-brand">
           <BrandLogo size="lg" decorative={false} />
@@ -914,23 +945,20 @@ export function App() {
         </div>
         <LanguageSwitcher className="lang-switch-compact boot-lang" />
         {error && (
-          <>
-            <p className="error">{error}</p>
-            <button
+          <button
               type="button"
               className="primary-wide"
               onClick={() => void boot()}
             >
               {t("retryAuth")}
             </button>
-          </>
         )}
-      </div>
+      </div>,
     );
   }
 
   if (gate === "invite" || (user && !user.whitelisted)) {
-    return (
+    return withNotice(
       <div className="app-shell app-shell-fit invite-gate">
         {gateHeader}
         <div className="invite-gate-body">
@@ -970,7 +998,7 @@ export function App() {
             <button type="button" onClick={redeem} className="primary-wide">
               {t("enter")}
             </button>
-            {error && <p className="error">{error}</p>}
+            
             <button
               type="button"
               className="secondary primary-wide"
@@ -980,14 +1008,14 @@ export function App() {
             </button>
           </div>
         </div>
-      </div>
+      </div>,
     );
   }
 
-  if (!user) return null;
+  if (!user) return withNotice(null);
 
   if (gate === "table" && tableId) {
-    return (
+    return withNotice(
       <div className="app-shell app-shell-fit">
         <TableView
           tableId={tableId}
@@ -1007,12 +1035,12 @@ export function App() {
             setTab("wallet");
           }}
         />
-      </div>
+      </div>,
     );
   }
 
   if (gate === "admin") {
-    return (
+    return withNotice(
       <div className="app-shell app-shell-fit">
         <header className="app-topbar">
           <button
@@ -1078,7 +1106,7 @@ export function App() {
                   setAdjustTgId(e.target.value.replace(/[^\d]/g, ""));
                   setAdjustTarget(null);
                   setAdjustMeta(null);
-                  setAdjustMsg(null);
+                  setOkNotice(null);
                 }}
                 placeholder="123456789"
               />
@@ -1177,7 +1205,7 @@ export function App() {
                 {t("debitBalance")}
               </button>
             </div>
-            {adjustMsg && <p className="ok-msg">{adjustMsg}</p>}
+            
           </section>
 
           <section className="panel panel-compact admin-card">
@@ -1336,8 +1364,7 @@ export function App() {
             </div>
           </section>
         </div>
-        {error && <p className="error">{error}</p>}
-      </div>
+      </div>,
     );
   }
 
@@ -1521,7 +1548,7 @@ export function App() {
             {t("sitByCode")}
           </button>
         </div>
-        {error && <p className="error lobby-code-error">{error}</p>}
+        
         <div className="table-list table-list-fit">
           {tables.map((tbl, i) => (
             <div
@@ -1657,7 +1684,7 @@ export function App() {
             {t("createTableSit")}
           </button>
         </div>
-        {error && <p className="error">{error}</p>}
+        
       </div>
     );
   } else if (tab === "wallet") {
@@ -1751,7 +1778,7 @@ export function App() {
           >
             {t("createWithdraw")}
           </button>
-          {withdrawMsg && <p className="hint hint-ok">{withdrawMsg}</p>}
+          
           {withdrawals.length > 0 && (
             <div className="withdraw-history">
               <p className="hint hint-tight">{t("withdrawHistory")}</p>
@@ -1852,7 +1879,7 @@ export function App() {
             </div>
           )}
         </div>
-        {error && <p className="error">{error}</p>}
+        
       </div>
     );
   } else {
@@ -1988,17 +2015,17 @@ export function App() {
             </section>
           </>
         )}
-        {error && <p className="error">{error}</p>}
+        
         <p className="hint center-hint hint-tight">{t("profileHint")}</p>
       </div>
     );
   }
 
-  return (
+  return withNotice(
     <div className="app-shell app-shell-nav">
       {topbar}
       <main className="app-main">{body}</main>
       {bottomNav}
-    </div>
+    </div>,
   );
 }

@@ -20,14 +20,8 @@ import {
 import { useI18n } from "./i18n";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
 import { tableInviteDeepLink } from "./telegramLinks";
-
-function mapTableError(
-  msg: string,
-  t: (key: "errNeedPlayers") => string,
-): string {
-  if (/need at least 2 seated players/i.test(msg)) return t("errNeedPlayers");
-  return msg;
-}
+import { CenterNotice } from "./CenterNotice";
+import { localizeApiError } from "./localizeApiError";
 
 const WS = import.meta.env.VITE_WS_URL ?? "http://localhost:3001";
 const REACTIONS = ["😀", "😂", "🔥", "👏", "😎", "😱", "💪", "🎉"];
@@ -70,7 +64,13 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
   const [messages, setMessages] = useState<ChatMessageDTO[]>([]);
   const [chatText, setChatText] = useState("");
   const [raiseAmt, setRaiseAmt] = useState("200");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setErrorRaw] = useState<string | null>(null);
+  const [okNotice, setOkNotice] = useState<string | null>(null);
+
+  const setError = (msg: string | null) => {
+    setOkNotice(null);
+    setErrorRaw(msg == null ? null : localizeApiError(msg));
+  };
   const [socket, setSocket] = useState<Socket | null>(null);
   const [boardAnimKey, setBoardAnimKey] = useState(0);
   const [revealedBoard, setRevealedBoard] = useState<Card[]>([]);
@@ -98,7 +98,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
 
     s.on("table:state", (st: PublicTableState) => setState(st));
     s.on("table:error", (e: { message: string }) =>
-      setError(mapTableError(e.message, t)),
+      setError(e.message),
     );
     s.on("chat:message", (m: ChatMessageDTO) =>
       setMessages((prev) => [...prev, m]),
@@ -385,16 +385,19 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
           text: shareBody,
         });
         setInviteCopied(true);
+        setOkNotice(t("noticeCopied"));
         window.setTimeout(() => setInviteCopied(false), 2000);
         return;
       }
       await navigator.clipboard.writeText(shareBody);
       setInviteCopied(true);
+      setOkNotice(t("noticeCopied"));
       window.setTimeout(() => setInviteCopied(false), 2000);
     } catch {
       try {
         await navigator.clipboard.writeText(`${link}\n${tableInviteCode}`);
         setInviteCopied(true);
+        setOkNotice(t("noticeCopied"));
         window.setTimeout(() => setInviteCopied(false), 2000);
       } catch {
         setError(t("copyFailed"));
@@ -671,7 +674,14 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
         </div>
       </div>
 
-      {error && <p className="error">{error}</p>}
+      <CenterNotice
+        text={error ?? okNotice}
+        variant={error ? "error" : "ok"}
+        onClose={() => {
+          setErrorRaw(null);
+          setOkNotice(null);
+        }}
+      />
 
       {editingName && isHost && (
         <div className="table-rename-row">
@@ -915,11 +925,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
               if (state?.status === "waiting") await api.startHand(tableId);
               else await api.nextHand(tableId);
             } catch (e) {
-              setError(
-                e instanceof Error
-                  ? mapTableError(e.message, t)
-                  : t("errStart"),
-              );
+              setError(e instanceof Error ? e.message : t("errStart"));
             }
           }}
         >
