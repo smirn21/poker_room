@@ -1755,13 +1755,13 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 @keyframes holeDeal {
   0% {
     opacity: 0;
-    transform: translateY(-36px) scale(0.55) rotate(-12deg);
-    filter: blur(2px);
+    transform: translate(28px, -52px) scale(0.42) rotate(-18deg);
+    filter: blur(3px) brightness(1.25);
   }
-  70% {
+  55% {
     opacity: 1;
     filter: none;
-    transform: translateY(2px) scale(1.04) rotate(2deg);
+    transform: translate(-2px, 4px) scale(1.06) rotate(3deg);
   }
   100% {
     opacity: 1;
@@ -1796,7 +1796,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 }
 
 .pcard.hole-deal {
-  animation: holeDeal 0.55s var(--ease-out) both;
+  animation: holeDeal 0.7s var(--ease-out) both;
+  transform-origin: center top;
 }
 
 .pcard.street-reveal {
@@ -2012,7 +2013,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   font-size: 0.8rem;
 }
 
-.actions-live input[type="number"] {
+.actions-live input[type="number"],
+.actions-live input[inputmode="numeric"] {
   min-height: 2.4rem;
   margin: 0;
 }
@@ -2240,10 +2242,17 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     display: none;
   }
 
+  .table-screen-playing .chat-panel .chat,
+  .table-screen-turn .chat-panel .chat,
+  .table-screen-over .chat-panel .chat {
+    max-height: 2.6rem;
+  }
+
   .table-screen-playing .chat-panel,
   .table-screen-turn .chat-panel,
   .table-screen-over .chat-panel {
-    display: none;
+    margin-top: 0.15rem;
+    padding: 0.35rem 0.45rem;
   }
 
   .pcard-lg {
@@ -2495,7 +2504,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     border-radius: 10px;
   }
 
-  .actions-live input[type="number"] {
+  .actions-live input[type="number"],
+  .actions-live input[inputmode="numeric"] {
     min-height: 2.55rem;
     font-size: 1rem;
   }
@@ -2580,11 +2590,10 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     gap: 0.04rem;
   }
 
-  /* Same as ≤430px width: hide chat only in-hand, keep it while waiting */
-  .table-screen-playing .chat-panel,
-  .table-screen-turn .chat-panel,
-  .table-screen-over .chat-panel {
-    display: none;
+  .table-screen-playing .chat-panel .chat,
+  .table-screen-turn .chat-panel .chat,
+  .table-screen-over .chat-panel .chat {
+    max-height: 2.4rem;
   }
 }
 
@@ -2972,7 +2981,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
 .turn-bar {
   margin-top: 0.2rem;
-  height: 3px;
+  height: 4px;
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.15);
   overflow: hidden;
@@ -2983,6 +2992,83 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   transform-origin: left center;
   background: linear-gradient(90deg, var(--accent), var(--gold), #e53935);
   transition: transform 0.1s linear;
+}
+
+.turn-clock-seat {
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+  letter-spacing: 0.02em;
+  margin-top: 0.08rem;
+}
+
+.turn-clock-hero {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.45rem;
+  margin-top: 0.25rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(212, 168, 75, 0.35);
+  font-variant-numeric: tabular-nums;
+}
+
+.turn-clock-label {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.turn-clock-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--gold);
+  min-width: 2.4rem;
+  text-align: right;
+}
+
+.turn-clock-mine {
+  border-color: rgba(67, 197, 181, 0.55);
+  box-shadow: 0 0 14px rgba(67, 197, 181, 0.25);
+}
+
+.turn-clock-mine .turn-clock-value {
+  color: var(--accent);
+}
+
+.turn-clock-urgent .turn-clock-value,
+.turn-clock-urgent.turn-clock-seat {
+  color: #ff7043;
+  animation: turnPulse 0.7s ease-in-out infinite;
+}
+
+@keyframes turnPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.actions-idle {
+  opacity: 0.55;
+}
+
+.actions-idle button,
+.actions-idle input {
+  pointer-events: none;
+}
+
+.actions-armed {
+  opacity: 1;
+}
+
+.rebuy-need-deposit {
+  color: #ffcc80;
 }
 
 .opp-backs {

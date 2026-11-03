@@ -997,6 +997,12 @@ export function App() {
               setTab("lobby");
             });
           }}
+          onTopUp={() => {
+            rememberPendingTable(tableId);
+            setTableId(null);
+            setGate("app");
+            setTab("wallet");
+          }}
         />
       </div>
     );

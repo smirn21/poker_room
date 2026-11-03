@@ -46,6 +46,8 @@ interface Props {
   user: UserDTO;
   onBack: () => void;
   onUser: (u: UserDTO) => void;
+  /** Leave table UI for wallet top-up; seat stays until rebuy grace ends. */
+  onTopUp?: () => void;
 }
 
 interface FlyingChip {
@@ -62,12 +64,12 @@ interface FloatReact {
   name: string;
 }
 
-export function TableView({ tableId, user, onBack, onUser }: Props) {
+export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
   const { t, locale } = useI18n();
   const [state, setState] = useState<PublicTableState | null>(null);
   const [messages, setMessages] = useState<ChatMessageDTO[]>([]);
   const [chatText, setChatText] = useState("");
-  const [raiseAmt, setRaiseAmt] = useState(200);
+  const [raiseAmt, setRaiseAmt] = useState("200");
   const [error, setError] = useState<string | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [boardAnimKey, setBoardAnimKey] = useState(0);
@@ -75,6 +77,7 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
   const [flying, setFlying] = useState<FlyingChip[]>([]);
   const [potDisplay, setPotDisplay] = useState(0);
   const [turnLeft, setTurnLeft] = useState(1);
+  const [turnSecLeft, setTurnSecLeft] = useState<number | null>(null);
   const [showEmoji, setShowEmoji] = useState(false);
   const [floats, setFloats] = useState<FloatReact[]>([]);
   const [inviteCopied, setInviteCopied] = useState(false);
@@ -132,21 +135,37 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
     }
   }, [state?.pot, state?.status, state]);
 
-  // Turn timer bar
+  // Turn timer bar + countdown seconds
   useEffect(() => {
     if (!state?.turnEndsAt || state.status !== "playing") {
       setTurnLeft(1);
+      setTurnSecLeft(null);
       return;
     }
     const total = (state.turnSeconds || 20) * 1000;
     const tick = () => {
-      const left = Math.max(0, (state.turnEndsAt! - Date.now()) / total);
-      setTurnLeft(left);
+      const msLeft = Math.max(0, state.turnEndsAt! - Date.now());
+      setTurnLeft(msLeft / total);
+      setTurnSecLeft(Math.ceil(msLeft / 1000));
     };
     tick();
     const id = window.setInterval(tick, 100);
     return () => clearInterval(id);
   }, [state?.turnEndsAt, state?.turnSeconds, state?.status]);
+
+  // Keep raise field near legal minimum when street/actor changes
+  useEffect(() => {
+    if (!state || state.status !== "playing") return;
+    const floor = Math.max(
+      1,
+      (state.callAmount ?? 0) + (state.minRaise ?? 0),
+    );
+    setRaiseAmt((prev) => {
+      const n = parseChips(prev);
+      if (!prev || n < floor) return String(floor);
+      return prev;
+    });
+  }, [state?.handNo, state?.street, state?.minRaise, state?.callAmount, state?.status]);
 
   // Board reveal
   useEffect(() => {
@@ -451,9 +470,17 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
           </div>
         )}
         {seat.inHand && !seat.holeCards && (
-          <div className="opp-backs">
-            <CardBack size="sm" />
-            <CardBack size="sm" />
+          <div className="opp-backs" key={`backs-${state?.handNo}-${seat.seatIndex}`}>
+            <CardBack
+              size="sm"
+              className="hole-deal"
+              dealDelayMs={seat.seatIndex * 45}
+            />
+            <CardBack
+              size="sm"
+              className="hole-deal"
+              dealDelayMs={seat.seatIndex * 45 + 110}
+            />
           </div>
         )}
         <div className="seat-meta">
@@ -469,12 +496,21 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
             <div className="hand-name">{winHand}</div>
           )}
           {seat.isTurn && !isShowdown && (
-            <div className="turn-bar">
-              <div
-                className="turn-bar-fill"
-                style={{ transform: `scaleX(${turnLeft})` }}
-              />
-            </div>
+            <>
+              {turnSecLeft != null && (
+                <div
+                  className={`turn-clock-seat${turnSecLeft <= 5 ? " turn-clock-urgent" : ""}`}
+                >
+                  {t("turnSeconds", { n: turnSecLeft })}
+                </div>
+              )}
+              <div className="turn-bar">
+                <div
+                  className="turn-bar-fill"
+                  style={{ transform: `scaleX(${turnLeft})` }}
+                />
+              </div>
+            </>
           )}
         </div>
         <ChipStack amount={seat.stack} size="sm" className="seat-chips" />
@@ -625,6 +661,11 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
             <p className="hint hint-tight">
               {t("rebuyHint", { sec: rebuyLeft ?? "…" })}
             </p>
+            {user.balance <= 0 || user.balance < parseChips(rebuyAmt, 1) ? (
+              <p className="hint hint-tight rebuy-need-deposit">
+                {t("rebuyNeedDeposit")}
+              </p>
+            ) : null}
             <label htmlFor="rebuy-amt">
               {t("buyIn")}
               <input
@@ -641,9 +682,24 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
             <p className="hint">
               {t("balanceShort")}: {user.balance}
             </p>
+            {(user.balance <= 0 ||
+              parseChips(rebuyAmt) > user.balance) &&
+              onTopUp && (
+                <button
+                  type="button"
+                  className="primary-wide"
+                  onClick={() => onTopUp()}
+                >
+                  {t("rebuyTopUp")}
+                </button>
+              )}
             <button
               type="button"
-              className="primary-wide"
+              className={
+                user.balance > 0 && parseChips(rebuyAmt) <= user.balance
+                  ? "primary-wide"
+                  : "secondary primary-wide"
+              }
               onClick={() => void doRebuy()}
               disabled={
                 parseChips(rebuyAmt) <= 0 ||
@@ -708,7 +764,7 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
                 card={c}
                 size="lg"
                 className="street-reveal"
-                dealDelayMs={0}
+                dealDelayMs={idx * 90}
                 highlight={showdownHighlight && winningCards.has(c)}
                 dimmed={showdownHighlight && !winningCards.has(c)}
               />
@@ -759,14 +815,17 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
           className={`hero-zone ${isMyTurn ? "hero-turn" : ""} ${winningSeatIndexes.has(mySeat.seatIndex) ? "winner" : ""}`}
         >
           {renderSeat(mySeat, false)}
-          <div className="hero-cards">
+          <div
+            className="hero-cards"
+            key={`hero-cards-${state?.handNo}-${mySeat.holeCards?.join(",") ?? "backs"}`}
+          >
             {mySeat.holeCards?.map((c, i) => (
               <PlayingCard
                 key={`${state?.handNo}-hole-${c}`}
                 card={c}
                 size="hero"
                 className="hole-deal"
-                dealDelayMs={i * 130}
+                dealDelayMs={i * 140}
                 highlight={showdownHighlight && winningCards.has(c)}
                 dimmed={
                   showdownHighlight &&
@@ -777,12 +836,25 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
             ))}
             {mySeat.inHand && !mySeat.holeCards && (
               <>
-                <CardBack size="lg" className="hole-deal" dealDelayMs={0} />
-                <CardBack size="lg" className="hole-deal" dealDelayMs={130} />
+                <CardBack size="lg" className="hole-deal" dealDelayMs={40} />
+                <CardBack size="lg" className="hole-deal" dealDelayMs={180} />
               </>
             )}
           </div>
           {handLabel && <div className="hero-strength">{handLabel}</div>}
+          {playing && turnSecLeft != null && (
+            <div
+              className={`turn-clock-hero${isMyTurn ? " turn-clock-mine" : ""}${turnSecLeft <= 5 ? " turn-clock-urgent" : ""}`}
+              aria-live="polite"
+            >
+              <span className="turn-clock-label">
+                {isMyTurn ? t("turnYours") : t("turnWaiting")}
+              </span>
+              <span className="turn-clock-value">
+                {t("turnSeconds", { n: turnSecLeft })}
+              </span>
+            </div>
+          )}
         </div>
       )}
 
@@ -808,11 +880,13 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
         </button>
       )}
 
-      {isMyTurn && (
-        <div className="actions actions-live">
+      {mySeat && playing && (
+        <div
+          className={`actions actions-live${isMyTurn ? " actions-armed" : " actions-idle"}`}
+        >
           <button
             type="button"
-            disabled={!state?.legalActions.includes("fold")}
+            disabled={!isMyTurn || !state?.legalActions.includes("fold")}
             onClick={() => act("fold")}
           >
             {t("fold")}
@@ -820,6 +894,7 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
           <button
             type="button"
             disabled={
+              !isMyTurn ||
               !(
                 state?.legalActions.includes("check") ||
                 state?.legalActions.includes("call")
@@ -833,29 +908,36 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
           </button>
           <button
             type="button"
-            disabled={!state?.legalActions.includes("all-in")}
+            disabled={!isMyTurn || !state?.legalActions.includes("all-in")}
             onClick={() => act("all-in")}
           >
             {t("allIn")}
           </button>
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            enterKeyHint="done"
+            autoComplete="off"
             value={raiseAmt}
-            onChange={(e) => setRaiseAmt(Number(e.target.value))}
+            disabled={!isMyTurn}
+            onChange={(e) => setRaiseAmt(digitsOnly(e.target.value))}
             style={{ gridColumn: "1 / 3", margin: 0 }}
           />
           <button
             type="button"
             disabled={
+              !isMyTurn ||
               !(
                 state?.legalActions.includes("bet") ||
                 state?.legalActions.includes("raise")
-              )
+              ) ||
+              parseChips(raiseAmt) <= 0
             }
             onClick={() =>
               act(
                 state?.legalActions.includes("bet") ? "bet" : "raise",
-                raiseAmt,
+                parseChips(raiseAmt),
               )
             }
           >
@@ -864,26 +946,24 @@ export function TableView({ tableId, user, onBack, onUser }: Props) {
         </div>
       )}
 
-      {!isMyTurn && (
-        <div className="panel chat-panel">
-          <div className="chat">
-            {messages.map((m) => (
-              <div key={m.id} className="msg">
-                <strong>{m.name}</strong>: {m.text}
-              </div>
-            ))}
-          </div>
-          <form className="row chat-compose" onSubmit={sendChat}>
-            <input
-              value={chatText}
-              onChange={(e) => setChatText(e.target.value)}
-              placeholder={t("chatPlaceholder")}
-              style={{ margin: 0, flex: 1 }}
-            />
-            <button type="submit">{t("send")}</button>
-          </form>
+      <div className="panel chat-panel">
+        <div className="chat">
+          {messages.map((m) => (
+            <div key={m.id} className="msg">
+              <strong>{m.name}</strong>: {m.text}
+            </div>
+          ))}
         </div>
-      )}
+        <form className="row chat-compose" onSubmit={sendChat}>
+          <input
+            value={chatText}
+            onChange={(e) => setChatText(e.target.value)}
+            placeholder={t("chatPlaceholder")}
+            style={{ margin: 0, flex: 1 }}
+          />
+          <button type="submit">{t("send")}</button>
+        </form>
+      </div>
     </div>
   );
 }
