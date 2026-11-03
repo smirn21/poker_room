@@ -162,8 +162,8 @@ button.primary-wide {
   height: var(--vv-height, 100svh);
   max-height: var(--vv-height, 100svh);
   overflow: hidden;
-  /* Reserve space for fixed bottom-nav (icons + labels + safe inset) */
-  padding-bottom: calc(var(--safe-bottom) + 4.75rem);
+  /* Bottom nav is in-flow (not fixed) — it owns safe-area padding */
+  padding-bottom: 0;
 }
 
 /* Keyboard covers the home indicator — drop that padding while composing */
@@ -172,7 +172,11 @@ html.keyboard-open .app-shell {
 }
 
 html.keyboard-open .app-shell-nav {
-  padding-bottom: 0.45rem;
+  padding-bottom: 0;
+}
+
+html.keyboard-open .bottom-nav {
+  padding-bottom: 0.35rem;
 }
 
 .app-topbar {
@@ -580,16 +584,17 @@ html.keyboard-open .app-shell-nav {
 }
 
 .bottom-nav {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 0;
-  width: min(440px, 100%);
+  /* In-flow under .app-main — never overlays table cards */
+  position: relative;
+  flex-shrink: 0;
+  width: auto;
+  margin-left: calc(-1 * (var(--safe-left) + 0.65rem));
+  margin-right: calc(-1 * (var(--safe-right) + 0.65rem));
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.15rem;
-  padding: 0.35rem 0.45rem calc(var(--safe-bottom) + 0.35rem);
-  background: rgba(11, 15, 18, 0.94);
+  padding: 0.4rem 0.45rem calc(var(--safe-bottom) + 0.45rem);
+  background: rgba(11, 15, 18, 0.96);
   border-top: 1px solid rgba(67, 197, 181, 0.12);
   backdrop-filter: blur(12px);
   z-index: 40;
@@ -731,10 +736,8 @@ html.keyboard-open .app-shell-nav {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
-  padding-bottom: 1.25rem;
+  padding-bottom: 0.85rem;
   overscroll-behavior: contain;
-  /* Keep last card clear of the fixed bottom nav while scrolling */
-  scroll-padding-bottom: 1.25rem;
 }
 
 .table-item-compact {
