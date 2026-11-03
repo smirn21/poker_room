@@ -598,9 +598,6 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
           {isWinner && winInfo && winInfo.amount > 0 && (
             <div className="win-amount">+{winInfo.amount}</div>
           )}
-          {winHand && onFelt && (
-            <div className="hand-name hand-name-win">{winHand}</div>
-          )}
           {seat.isTurn && !isShowdown && (
             <>
               {turnSecLeft != null && (
@@ -622,6 +619,11 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
           )}
         </div>
         <ChipStack amount={seat.stack} size="sm" className="seat-chips" />
+        {winHand && onFelt && (
+          <div className="hand-name hand-name-win" title={winHand}>
+            {winHand}
+          </div>
+        )}
         {seat.bet > 0 && !isShowdown && (
           <div
             className={`bet-stack bet-${pos.betDir}${

@@ -2616,6 +2616,12 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     font-size: 0.45rem;
   }
 
+  .hand-name-win {
+    max-width: min(11.5rem, 82vw);
+    font-size: 0.64rem;
+    padding: 0.12rem 0.45rem;
+  }
+
   /* Amount label only — chip glyph + label read as «5k 1.9k» and inflate height */
   .seat-chips.chip-compact {
     gap: 0;
@@ -3191,19 +3197,30 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   text-overflow: ellipsis;
 }
 
+/* Full combo name — escape the narrow seat so «Две пары» isn't «ДВ…» */
 .hand-name-win {
-  font-size: 0.72rem;
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 0.12rem);
+  transform: translateX(-50%);
+  z-index: 19;
+  width: max-content;
+  max-width: min(12rem, 78vw);
+  font-size: 0.7rem;
   font-weight: 900;
   letter-spacing: 0.02em;
-  max-width: 6.5rem;
-  padding: 0.12rem 0.4rem;
-  border-radius: 7px;
-  background: linear-gradient(180deg, rgba(255, 224, 130, 0.95), #ffb300);
+  padding: 0.14rem 0.5rem;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255, 224, 130, 0.98), #ffb300);
   color: #2a1a00;
   box-shadow:
     0 0 0 1px rgba(255, 213, 79, 0.7),
     0 4px 14px rgba(255, 179, 0, 0.45);
   text-transform: uppercase;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  pointer-events: none;
 }
 
 .pot-stack {
