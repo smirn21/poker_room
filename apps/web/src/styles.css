@@ -157,16 +157,27 @@ button.primary-wide {
 .app-shell-nav {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
-  height: 100svh;
-  height: var(--vv-height, 100svh);
-  max-height: var(--vv-height, 100svh);
   overflow: hidden;
 }
 
-/* Higher specificity so media queries cannot re-add bottom padding under the nav */
+/*
+ * Pin lobby shell to the real WebView box (Telegram iPhone).
+ * 100dvh / --vv-height alone often overshoots; nav then sits below the fold
+ * and table cards look clipped at the screen edge.
+ */
 .app-shell.app-shell-nav {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: min(440px, 100%);
+  height: auto;
+  max-height: none;
+  margin-left: auto;
+  margin-right: auto;
   padding-bottom: 0;
+  box-sizing: border-box;
 }
 
 /* Keyboard covers the home indicator — drop that padding while composing */
@@ -174,7 +185,11 @@ html.keyboard-open .app-shell {
   padding-bottom: 0.45rem;
 }
 
-html.keyboard-open .app-shell-nav {
+html.keyboard-open .app-shell.app-shell-nav {
+  top: var(--vv-offset-top, 0px);
+  bottom: auto;
+  height: var(--vv-height, 100%);
+  max-height: var(--vv-height, 100%);
   padding-bottom: 0;
 }
 
