@@ -125,6 +125,8 @@ export function App() {
     readPendingTableId(),
   );
   const [buyIn, setBuyIn] = useState(2000);
+  const [smallBlind, setSmallBlind] = useState(50);
+  const [bigBlind, setBigBlind] = useState(100);
   const [depositAmt, setDepositAmt] = useState("5000");
   const [withdrawAmt, setWithdrawAmt] = useState("");
   const [withdrawAddress, setWithdrawAddress] = useState("");
@@ -421,9 +423,17 @@ export function App() {
   async function createTable() {
     try {
       setError(null);
+      const sb = Math.max(1, Math.floor(smallBlind));
+      const bb = Math.max(sb * 2, Math.floor(bigBlind));
+      if (bb < sb * 2) {
+        setError(t("errBlinds"));
+        return;
+      }
+      setSmallBlind(sb);
+      setBigBlind(bb);
       const r = await api.createTable({
-        smallBlind: 50,
-        bigBlind: 100,
+        smallBlind: sb,
+        bigBlind: bb,
         maxSeats: 9,
       });
       await join(r.table.id);
@@ -1490,6 +1500,37 @@ export function App() {
       <div className="tab-pane">
         <h2 className="pane-title">{t("createTableTitle")}</h2>
         <div className="panel panel-compact create-grid">
+          <div className="blinds-row">
+            <label htmlFor="sb">
+              {t("smallBlind")}
+              <input
+                id="sb"
+                type="number"
+                min={1}
+                step={1}
+                value={smallBlind}
+                onChange={(e) => {
+                  const sb = Math.max(1, Number(e.target.value) || 1);
+                  setSmallBlind(sb);
+                  setBigBlind(sb * 2);
+                }}
+              />
+            </label>
+            <label htmlFor="bb">
+              {t("bigBlind")}
+              <input
+                id="bb"
+                type="number"
+                min={2}
+                step={1}
+                value={bigBlind}
+                onChange={(e) =>
+                  setBigBlind(Math.max(1, Number(e.target.value) || 1))
+                }
+              />
+            </label>
+          </div>
+          <p className="hint hint-tight">{t("blindsHint")}</p>
           <label htmlFor="buyin">
             {t("buyIn")}
             <input
@@ -1517,6 +1558,9 @@ export function App() {
               balance: <span className="balance">{user.balance}</span>,
             }}
           />
+        </p>
+        <p className="hint hint-tight wallet-rate">
+          {t("chipsRate", { rate: withdrawRate })}
         </p>
         {pendingTableId && (
           <div className="panel panel-compact pending-table-panel">

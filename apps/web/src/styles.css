@@ -777,6 +777,18 @@ html.keyboard-open .bottom-nav {
   margin: 0;
 }
 
+.blinds-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.wallet-rate {
+  margin: 0 0 0.65rem;
+  font-weight: 600;
+  color: var(--gold-soft, #d4af37);
+}
+
 .create-grid input {
   margin-top: 0.2rem;
 }
