@@ -1177,12 +1177,26 @@ export function App() {
     body = (
       <div className="tab-pane">
         <div className="lobby-hello">
-          <div className="lobby-brand-row">
-            <span className="brand-mark" aria-hidden>
-              <BrandLogo size="sm" />
-            </span>
+          <div className="lobby-hero">
+            <BrandLogo size="lg" decorative={false} className="lobby-hero-logo" />
+            <h1 className="lobby-hero-brand">{t("brand")}</h1>
+          </div>
+          <div className="lobby-player-row">
+            {user.avatarUrl ? (
+              <img
+                className="lobby-player-avatar"
+                src={user.avatarUrl}
+                alt=""
+                width={44}
+                height={44}
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="lobby-player-avatar lobby-player-avatar-fallback">
+                {(user.name ?? "?")[0]}
+              </div>
+            )}
             <div className="user-identity">
-              <strong className="lobby-club-name">{t("brand")}</strong>
               <strong>{user.name}</strong>
               <span className="tg-id" title={t("telegramIdLabel")}>
                 {t("telegramIdShort", { id: user.telegramId })}

@@ -238,6 +238,57 @@ html.keyboard-open .app-shell-nav {
   gap: 0.55rem;
 }
 
+.lobby-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.15rem 0 0.35rem;
+  text-align: center;
+}
+
+.lobby-hero-logo.brand-logo-lg {
+  width: 4.75rem;
+  height: 4.75rem;
+  border-radius: 1.15rem;
+}
+
+.lobby-hero-brand {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--gold-soft);
+  line-height: 1.15;
+}
+
+.lobby-player-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.15rem;
+}
+
+.lobby-player-avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(212, 175, 55, 0.45);
+  flex-shrink: 0;
+  background: rgba(12, 14, 16, 0.9);
+}
+
+.lobby-player-avatar-fallback {
+  display: grid;
+  place-items: center;
+  background: #234;
+  color: var(--gold-soft);
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
 .brand-mark {
   display: grid;
   place-items: center;
@@ -589,14 +640,20 @@ html.keyboard-open .app-shell-nav {
 .lobby-hello {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.35rem;
 }
 
 .user-identity {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.35rem 0.55rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.user-identity strong {
+  font-size: 1rem;
+  line-height: 1.2;
 }
 
 .tg-id {
