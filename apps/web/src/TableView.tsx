@@ -681,7 +681,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
     return (
       <div
         key={seat.seatIndex}
-        className={`seat ${seat.isTurn ? "turn" : ""} ${seat.folded ? "folded" : ""} ${isWinner ? "winner" : ""}${
+        className={`seat seat-rim-${pos.rim}${pos.sideLeft ? " seat-side-left" : " seat-side-right"} ${seat.isTurn ? "turn" : ""} ${seat.folded ? "folded" : ""} ${isWinner ? "winner" : ""}${
           seat.bet > 0 && !isShowdown ? " seat-betting" : ""
         }`}
         style={{ left: pos.left, top: pos.top }}

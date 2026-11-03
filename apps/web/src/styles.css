@@ -1747,8 +1747,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
    * Wide enough for large street cards, but not full felt width —
    * rim seats stay outside this corridor.
    */
-  width: min(82%, 340px);
-  max-width: 82%;
+  width: min(88%, 360px);
+  max-width: 88%;
   pointer-events: none;
 }
 
@@ -1818,35 +1818,27 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
 .board {
   display: flex;
-  gap: 0;
+  gap: 0.22rem;
   justify-content: center;
   align-items: center;
   width: 100%;
-  min-height: 7.2rem;
+  min-height: 6.2rem;
 }
 
-/*
- * Large street cards (~2× seat lg). Slight horizontal overlap (fan)
- * so 5 big cards fit without eating into rim seats.
- */
+/* Large street cards — no fan overlap; width fits 5 across the corridor */
 .board .pcard-lg,
 .board-slot {
-  width: min(5.6rem, 22vw, calc((100% + 3.2rem) / 5));
+  width: min(4.85rem, calc((100% - 0.88rem) / 5));
   height: auto;
   aspect-ratio: 2 / 3;
   flex-shrink: 0;
-  margin-inline-start: -0.45rem;
+  margin-inline-start: 0;
   position: relative;
   z-index: 1;
 }
 
 .board .pcard-lg.pcard-win {
   z-index: 3;
-}
-
-.board .pcard-lg:first-child,
-.board-slot:first-child {
-  margin-inline-start: 0;
 }
 
 .board-slot {
@@ -2448,7 +2440,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
   .board-zone {
     top: 55%;
-    width: min(84%, 310px);
+    width: min(90%, 330px);
     gap: 0.18rem;
     z-index: 12;
   }
@@ -2541,23 +2533,17 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     aspect-ratio: 2 / 3;
   }
 
-  /* Board ~2× mobile lg — fan overlap keeps rim seats clear */
   .board .pcard-lg,
   .board-slot {
-    width: min(5.1rem, 20vw, calc((100% + 2.8rem) / 5));
+    width: min(4.6rem, calc((100% - 0.7rem) / 5));
     height: auto;
     aspect-ratio: 2 / 3;
-    margin-inline-start: -0.4rem;
-  }
-
-  .board .pcard-lg:first-child,
-  .board-slot:first-child {
     margin-inline-start: 0;
   }
 
   .board {
-    gap: 0;
-    min-height: 6.4rem;
+    gap: 0.18rem;
+    min-height: 5.6rem;
   }
 
   .pot-caption {
@@ -2617,9 +2603,9 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   }
 
   .hand-name-win {
-    max-width: min(11.5rem, 82vw);
-    font-size: 0.64rem;
-    padding: 0.12rem 0.45rem;
+    max-width: min(9.5rem, 42vw);
+    font-size: 0.58rem;
+    padding: 0.1rem 0.38rem;
   }
 
   /* Amount label only — chip glyph + label read as «5k 1.9k» and inflate height */
@@ -2757,10 +2743,25 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
   /* Gap under felt so hero-strength / winner pill don't collide with the rail */
   .hero-zone {
-    padding: 0.28rem 0.4rem;
-    margin: 0.55rem 0 0.12rem;
+    padding: 0.5rem 0.45rem;
+    margin: 0.4rem 0 0.12rem;
     gap: 0.35rem;
     flex-shrink: 0;
+    overflow: visible;
+  }
+
+  /* Showdown: keep opp hole cards smaller so they don't eat the win badge / title */
+  .table-screen-over .hole-opp .pcard-lg {
+    width: 2.05rem;
+  }
+
+  .table-screen-over .seat .badge-win {
+    position: relative;
+    z-index: 14;
+  }
+
+  .table-screen-over .hole-opp {
+    z-index: 8;
   }
 
   .hero-strength {
@@ -2922,20 +2923,15 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
   .board .pcard-lg,
   .board-slot {
-    width: min(4.8rem, 19vw, calc((100% + 2.4rem) / 5));
+    width: min(4.2rem, calc((100% - 0.6rem) / 5));
     height: auto;
     aspect-ratio: 2 / 3;
-    margin-inline-start: -0.35rem;
-  }
-
-  .board .pcard-lg:first-child,
-  .board-slot:first-child {
     margin-inline-start: 0;
   }
 
   .board {
-    gap: 0;
-    min-height: 5.8rem;
+    gap: 0.15rem;
+    min-height: 5.2rem;
   }
 
   .chat {
@@ -3197,19 +3193,16 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   text-overflow: ellipsis;
 }
 
-/* Full combo name — escape the narrow seat so «Две пары» isn't «ДВ…» */
+/* Full combo name — beside the seat on the top rim so it never covers the board */
 .hand-name-win {
   position: absolute;
-  left: 50%;
-  top: calc(100% + 0.12rem);
-  transform: translateX(-50%);
   z-index: 19;
   width: max-content;
-  max-width: min(12rem, 78vw);
-  font-size: 0.7rem;
+  max-width: min(10.5rem, 46vw);
+  font-size: 0.66rem;
   font-weight: 900;
   letter-spacing: 0.02em;
-  padding: 0.14rem 0.5rem;
+  padding: 0.12rem 0.45rem;
   border-radius: 8px;
   background: linear-gradient(180deg, rgba(255, 224, 130, 0.98), #ffb300);
   color: #2a1a00;
@@ -3221,6 +3214,25 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   overflow: visible;
   text-overflow: clip;
   pointer-events: none;
+  /* Default: under seat (side / mid rims) */
+  left: 50%;
+  top: calc(100% + 0.14rem);
+  transform: translateX(-50%);
+}
+
+/* Top rim: park label beside avatar — never down into the flop */
+.seat-rim-top.seat-side-left .hand-name-win {
+  left: calc(100% + 0.28rem);
+  right: auto;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.seat-rim-top.seat-side-right .hand-name-win {
+  right: calc(100% + 0.28rem);
+  left: auto;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .pot-stack {
@@ -3307,24 +3319,25 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 }
 
 /* Glow only — no big scale (was covering neighbors / looking like missing cards) */
+/* Glow only — no scale (scale made board cards pile onto neighbors) */
 .pcard-win {
   box-shadow:
     0 0 0 2px #ffe082,
     0 0 0 4px rgba(255, 179, 0, 0.5),
-    0 0 16px rgba(255, 213, 79, 0.65),
+    0 0 14px rgba(255, 213, 79, 0.6),
     0 3px 10px rgba(0, 0, 0, 0.4) !important;
-  transform: translateY(-2px) scale(1.04);
+  transform: none;
   z-index: 4;
-  filter: brightness(1.08) saturate(1.12);
+  filter: brightness(1.06) saturate(1.1);
   animation: winCardPulse 1.1s ease-in-out infinite;
 }
 
 .board .pcard-win {
-  transform: translateY(-2px) scale(1.05);
+  transform: none;
 }
 
 .hero-cards .pcard-win {
-  transform: translateY(-1px) scale(1.03);
+  transform: none;
 }
 
 .pcard-dim {
@@ -3722,12 +3735,13 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  padding: 0.55rem 0.65rem;
+  padding: 0.65rem 0.65rem;
   margin: 0.25rem 0 0.45rem;
   border-radius: var(--radius);
   background: rgba(18, 24, 28, 0.85);
   border: 1px solid rgba(67, 197, 181, 0.16);
   position: relative;
+  overflow: visible;
 }
 .hero-zone.hero-turn {
   border-color: rgba(67, 197, 181, 0.9);
@@ -3752,6 +3766,14 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   gap: 0.35rem;
   flex: 1;
   justify-content: center;
+  align-items: center;
+  overflow: visible;
+  padding-block: 0.12rem;
+  min-width: 0;
+}
+
+.hero-cards .pcard {
+  overflow: hidden; /* clip img to rounded card; box is 2:3 so face isn't cropped */
 }
 .hero-strength {
   position: absolute;

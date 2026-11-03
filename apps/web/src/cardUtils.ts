@@ -146,12 +146,25 @@ const OPP_BY_COUNT: OppSlot[][] = [
   ],
 ];
 
+/** Which rim arc — drives where win-combo labels / hole cards may grow. */
+export type RimZone = "top" | "left" | "right" | "mid";
+
+export function rimForSlot(leftPct: number, topPct: number): RimZone {
+  if (topPct <= 22) return "top";
+  if (leftPct <= 22) return "left";
+  if (leftPct >= 78) return "right";
+  return "mid";
+}
+
 export type SeatLayoutPos = {
   left: string;
   top: string;
   isHero: boolean;
   holeDir: HoleDir;
   betDir: BetDir;
+  rim: RimZone;
+  /** Seat is on the left half of the felt (for label side). */
+  sideLeft: boolean;
 };
 
 /**
@@ -175,6 +188,8 @@ export function seatLayout(
     isHero: true,
     holeDir: "up",
     betDir: "in-up",
+    rim: "mid",
+    sideLeft: true,
   });
 
   const slots =
@@ -189,6 +204,8 @@ export function seatLayout(
       isHero: false,
       holeDir: slot.hole,
       betDir: betDirForSlot(slot.left, slot.top),
+      rim: rimForSlot(slot.left, slot.top),
+      sideLeft: slot.left <= 50,
     });
   });
 
