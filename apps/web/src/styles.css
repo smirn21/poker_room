@@ -1648,7 +1648,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   flex-direction: column;
   align-items: center;
   gap: 0.28rem;
-  width: min(92%, 280px);
+  /* Wide enough for 5× ~2× board cards */
+  width: min(96%, 460px);
   pointer-events: none;
 }
 
@@ -1678,18 +1679,26 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
 .board {
   display: flex;
-  gap: 0.28rem;
+  gap: 0.35rem;
   justify-content: center;
   align-items: center;
-  min-height: 3.6rem;
+  width: 100%;
+  min-height: 7.2rem;
+}
+
+/* Community cards: ~2× former .pcard-lg (3.05×4.25 → 6.1×8.5), capped to fit 5 across */
+.board .pcard-lg,
+.board-slot {
+  width: min(6.1rem, calc((100% - 1.4rem) / 5));
+  height: auto;
+  aspect-ratio: 3.05 / 4.25;
 }
 
 .board-slot {
-  width: 2.55rem;
-  height: 3.55rem;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px dashed rgba(67, 197, 181, 0.22);
   background: rgba(0, 0, 0, 0.22);
+  flex-shrink: 0;
 }
 
 .winner-banner {
@@ -2271,8 +2280,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
   .board-zone {
     top: 48%;
-    width: min(88%, 220px);
-    gap: 0.04rem;
+    width: min(96%, 400px);
+    gap: 0.08rem;
     z-index: 14;
   }
 
@@ -2351,14 +2360,17 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     height: 3.55rem;
   }
 
+  /* Board stays ~2× previous mobile lg (2.55→5.1) */
+  .board .pcard-lg,
   .board-slot {
-    width: 2.55rem;
-    height: 3.55rem;
+    width: min(5.1rem, calc((100% - 1.2rem) / 5));
+    height: auto;
+    aspect-ratio: 2.55 / 3.55;
   }
 
   .board {
-    gap: 0.22rem;
-    min-height: 3.55rem;
+    gap: 0.3rem;
+    min-height: 7.1rem;
   }
 
   .pot-caption {
@@ -2692,9 +2704,16 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     height: 3.25rem;
   }
 
+  .board .pcard-lg,
   .board-slot {
-    width: 2.35rem;
-    height: 3.25rem;
+    width: min(4.7rem, calc((100% - 1rem) / 5));
+    height: auto;
+    aspect-ratio: 2.35 / 3.25;
+  }
+
+  .board {
+    gap: 0.25rem;
+    min-height: 6.5rem;
   }
 
   .chat {
@@ -2708,7 +2727,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
   .board-zone {
     top: 48%;
-    gap: 0.04rem;
+    width: min(98%, 380px);
+    gap: 0.06rem;
   }
 
   .table-screen-playing .chat-panel .chat,
