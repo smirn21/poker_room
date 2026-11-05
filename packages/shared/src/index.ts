@@ -140,3 +140,71 @@ export interface UserDTO {
   blocked: boolean;
   personalInviteCode?: string | null;
 }
+
+/** Parts of a deep-link invite payload (REF alone, TBL alone, or REF_TBL). */
+export interface InvitePayloadParts {
+  /** Personal referral code REF-… when present. */
+  refCode: string | null;
+  /** Open-table code TBL-… when present. */
+  tableCode: string | null;
+  /** Single legacy token (CLUB-/REF-/TBL-/raw) when not a composite. */
+  singleCode: string | null;
+}
+
+/**
+ * Normalize Telegram start / startapp / ?invite= payloads.
+ * Accepts REF-…, TBL-…, CLUB-…, ref_XXXX, and composite REF-…_TBL-….
+ */
+export function normalizeInviteToken(raw: string): string {
+  let c = raw.trim();
+  if (!c) return "";
+  // Telegram /start sometimes uses ref_XXXX without the REF- prefix.
+  if (/^ref[_-]/i.test(c) && !/^ref-/i.test(c)) {
+    c = c.replace(/^ref[_-]/i, "");
+    if (!/^(REF|CLUB|TBL)-/i.test(c)) {
+      c = `REF-${c}`;
+    }
+  }
+  return c.toUpperCase();
+}
+
+/** Build startapp / ?invite= param that invites via REF and opens a table. */
+export function composeTableReferralParam(
+  refCode: string,
+  tableCode: string,
+): string {
+  return `${refCode.trim().toUpperCase()}_${tableCode.trim().toUpperCase()}`;
+}
+
+/** Split REF_TBL composites or return a single invite token. */
+export function parseInvitePayload(raw: string): InvitePayloadParts {
+  const c = normalizeInviteToken(raw);
+  if (!c) {
+    return { refCode: null, tableCode: null, singleCode: null };
+  }
+  const composite = c.match(
+    /^(REF-[A-Z0-9]+)[_]+(TBL-[A-Z0-9]+)$/,
+  );
+  if (composite) {
+    return {
+      refCode: composite[1]!,
+      tableCode: composite[2]!,
+      singleCode: null,
+    };
+  }
+  const swapped = c.match(/^(TBL-[A-Z0-9]+)[_]+(REF-[A-Z0-9]+)$/);
+  if (swapped) {
+    return {
+      refCode: swapped[2]!,
+      tableCode: swapped[1]!,
+      singleCode: null,
+    };
+  }
+  if (c.startsWith("REF-")) {
+    return { refCode: c, tableCode: null, singleCode: c };
+  }
+  if (c.startsWith("TBL-")) {
+    return { refCode: null, tableCode: c, singleCode: c };
+  }
+  return { refCode: null, tableCode: null, singleCode: c };
+}

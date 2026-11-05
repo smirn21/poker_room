@@ -6,7 +6,10 @@ import { prisma } from "./db.js";
 import { validateInitData } from "./telegramAuth.js";
 import { tableManager } from "./tableManager.js";
 import { httpError } from "./errors.js";
-import type { UserDTO } from "@poker/shared";
+import {
+  parseInvitePayload,
+  type UserDTO,
+} from "@poker/shared";
 import {
   allocateUniqueUsdtMicro,
   confirmDepositIntent,
@@ -83,14 +86,11 @@ function newPersonalInviteCode(): string {
 
 /** Normalize CLUB-/TBL-/REF- and Telegram start payloads like ref_XXXX. */
 export function normalizeInviteCode(raw: string): string {
-  let c = raw.trim();
-  if (/^ref[_-]/i.test(c)) {
-    c = c.replace(/^ref[_-]/i, "");
-    if (!/^(REF|CLUB|TBL)-/i.test(c)) {
-      c = `REF-${c}`;
-    }
+  const parts = parseInvitePayload(raw);
+  if (parts.refCode && parts.tableCode) {
+    return `${parts.refCode}_${parts.tableCode}`;
   }
-  return c.toUpperCase();
+  return parts.singleCode ?? parts.refCode ?? parts.tableCode ?? "";
 }
 
 async function ensurePersonalInviteCode(userId: string): Promise<string> {
@@ -224,16 +224,34 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   app.post("/auth/invite", async (req) => {
     const user = await requireUser(app, req);
     const body = z.object({ code: z.string().min(3) }).parse(req.body);
-    const code = normalizeInviteCode(body.code);
+    const parts = parseInvitePayload(body.code);
+    const tableLookup = parts.tableCode;
+    const refLookup = parts.refCode;
+    const single = parts.singleCode;
 
-    // Table invite (TBL-…) → whitelist if needed + return tableId for immediate seat
-    const tableByCode = await prisma.pokerTable.findFirst({
-      where: { inviteCode: code, status: "open" },
-      select: { id: true, createdById: true },
-    });
-    if (tableByCode) {
+    const openTable = tableLookup
+      ? await prisma.pokerTable.findFirst({
+          where: { inviteCode: tableLookup, status: "open" },
+          select: { id: true, createdById: true },
+        })
+      : null;
+
+    const refOwner = refLookup
+      ? await prisma.user.findFirst({
+          where: { personalInviteCode: refLookup },
+          select: { id: true },
+        })
+      : null;
+
+    // Composite REF_TBL or bare TBL → seat at table after club entry.
+    if (openTable) {
       let u = user;
       if (!user.whitelisted) {
+        // Prefer personal REF attribution; fall back to table host for legacy TBL links.
+        const referrerId = refOwner?.id ?? openTable.createdById;
+        if (refLookup && !refOwner) {
+          throw httpError.badRequest("Invalid invite");
+        }
         u = await prisma.$transaction(async (tx) => {
           const updated = await tx.user.update({
             where: { id: user.id },
@@ -242,29 +260,31 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
               balance: { increment: config.signupBonus },
             },
           });
-          await attributeReferrer(user.id, tableByCode.createdById, tx);
+          await attributeReferrer(user.id, referrerId, tx);
           await tx.ledgerEntry.create({
             data: {
               userId: updated.id,
               kind: "signup_bonus",
               amount: config.signupBonus,
-              meta: JSON.stringify({ tableInvite: code }),
+              meta: JSON.stringify({
+                invite: refLookup ?? tableLookup,
+                tableInvite: tableLookup,
+                kind: refOwner ? "ref_table" : "table",
+              }),
             },
           });
           return updated;
         });
         await ensurePersonalInviteCode(u.id).catch(() => undefined);
-        u = (await prisma.user.findUniqueOrThrow({ where: { id: u.id } }));
+        u = await prisma.user.findUniqueOrThrow({ where: { id: u.id } });
+      } else if (refLookup && !refOwner) {
+        throw httpError.badRequest("Invalid invite");
       }
-      return { user: toUserDTO(u), tableId: tableByCode.id };
+      return { user: toUserDTO(u), tableId: openTable.id };
     }
 
-    // Personal REF-… link (unlimited, owned by one member)
-    const refOwner = await prisma.user.findFirst({
-      where: { personalInviteCode: code },
-      select: { id: true },
-    });
-    if (refOwner) {
+    // Personal REF-… only (no table).
+    if (refOwner && !tableLookup) {
       if (user.whitelisted) {
         return { user: toUserDTO(user) };
       }
@@ -282,7 +302,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
             userId: u.id,
             kind: "signup_bonus",
             amount: config.signupBonus,
-            meta: JSON.stringify({ invite: code, kind: "ref" }),
+            meta: JSON.stringify({ invite: refLookup, kind: "ref" }),
           },
         });
         return u;
@@ -294,22 +314,62 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       return { user: toUserDTO(fresh) };
     }
 
-    const invite = await prisma.invite.findUnique({
-      where: { code },
-    });
+    // Composite asked for a table that is gone / closed.
+    if (tableLookup) {
+      if (user.whitelisted) {
+        throw httpError.badRequest("Table not found");
+      }
+      // Still allow club entry via REF if table already closed.
+      if (refOwner) {
+        const updated = await prisma.$transaction(async (tx) => {
+          const u = await tx.user.update({
+            where: { id: user.id },
+            data: {
+              whitelisted: true,
+              balance: { increment: config.signupBonus },
+            },
+          });
+          await attributeReferrer(user.id, refOwner.id, tx);
+          await tx.ledgerEntry.create({
+            data: {
+              userId: u.id,
+              kind: "signup_bonus",
+              amount: config.signupBonus,
+              meta: JSON.stringify({
+                invite: refLookup,
+                kind: "ref",
+                tableMiss: tableLookup,
+              }),
+            },
+          });
+          return u;
+        });
+        await ensurePersonalInviteCode(updated.id).catch(() => undefined);
+        const fresh = await prisma.user.findUniqueOrThrow({
+          where: { id: updated.id },
+        });
+        return { user: toUserDTO(fresh) };
+      }
+      throw httpError.badRequest("Table not found");
+    }
 
-    // Already in the club: known CLUB-/REF- is a no-op; unknown / TBL- miss must error
-    // so lobby "sit by code" and shared links don't silently stay on the lobby.
+    const clubCode = single && !single.startsWith("REF-") && !single.startsWith("TBL-")
+      ? single
+      : null;
+    const invite = clubCode
+      ? await prisma.invite.findUnique({ where: { code: clubCode } })
+      : null;
+
+    // Already in the club: known CLUB is a no-op; unknown codes error.
     if (user.whitelisted) {
       if (invite) {
         return { user: toUserDTO(user) };
       }
-      if (code.startsWith("TBL-")) {
-        throw httpError.badRequest("Table not found");
-      }
       throw httpError.badRequest("Invalid invite");
     }
 
+    // New members: referral / table links only — no manual CLUB mint path in UI,
+    // but honour existing CLUB rows if somehow redeemed via deep link.
     if (!invite) throw httpError.badRequest("Invalid invite");
     if (invite.expiresAt && invite.expiresAt < new Date()) {
       throw httpError.badRequest("Invite expired");

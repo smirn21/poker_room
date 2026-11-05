@@ -1,27 +1,28 @@
 export const ru = {
   brand: "Hold'em House",
   openingRoom: "Открываем комнату…",
-  inviteOnly: "Только по приглашению. Код клуба или код стола (TBL-…).",
+  inviteOnly: "Только по приглашению — нужна реферальная ссылка от участника.",
   inviteWelcome: "Рады видеть вас за сукном",
   inviteLead:
-    "Hold'em House — закрытый Texas Hold'em для своих. Войдите по коду клуба (CLUB-…) от любого участника или по коду стола TBL-… от игрока за столом.",
+    "Hold'em House — закрытый Texas Hold'em. Вход только по персональной ссылке-приглашению от участника клуба.",
   invitePointSeats: "До 9 мест за одним столом",
   invitePointTable:
-    "Любой участник клуба может создать код CLUB-…; за столом — код TBL-…",
+    "Участник делится ссылкой из профиля или прямо со стола",
   invitePointWallet: "Фишки через кошелёк клуба (USDT TRC20)",
   inviteHow:
-    "Вставьте код ниже. После входа откроется лобби — выберите стол или сядьте по коду.",
+    "Откройте Mini App по ссылке-приглашению из Telegram. Без ссылки войти нельзя.",
+  inviteNeedLink:
+    "Если вы здесь без приглашения — попросите у участника клуба его реф-ссылку и откройте её в Telegram.",
   inviteCode: "Код приглашения",
-  inviteShareHint: "Поделиться столом",
-  inviteShareText:
-    "Заходи за стол Hold'em House\n{link}\nКод: {code}",
+  inviteShareHint: "Пригласить за стол",
+  inviteShareText: "Заходи за стол Hold'em House\n{link}",
   tableWaitingDeposit:
     "Стол ждёт вас — пополните баланс, затем нажмите «Сесть за стол».",
   sitPendingTable: "Сесть за стол",
   pendingTableHint: "После пополнения можно сесть по приглашению.",
   clubInviteShareText: "Приглашение в Hold'em House: {code}",
   clubInviteHint:
-    "Создайте код CLUB-… и отправьте другу — он войдёт в клуб и сможет сесть за стол.",
+    "Поделитесь реф-ссылкой — друг войдёт в клуб и сможет сесть за стол.",
   shareClubInvite: "Поделиться",
   tableCodeJoin: "Код стола",
   tableCodePlaceholder: "TBL-XXXXXX",
@@ -164,7 +165,7 @@ export const ru = {
   copyFailed: "Не удалось скопировать",
   referralTitle: "Ваша реф-ссылка",
   referralHint:
-    "Постоянная ссылка: кто откроет её и войдёт в клуб, будет записан как ваш приглашённый.",
+    "Единственный способ пригласить в клуб. Кто откроет ссылку — войдёт под вашим приглашением. Со стола можно отправить ссылку, которая сразу садит за ваш стол.",
   referralCount: "Приглашено: {n}",
   shareReferral: "Поделиться ссылкой",
   copyReferral: "Скопировать ссылку",
@@ -190,9 +191,9 @@ export const ru = {
   leave: "Выйти",
   confirmLeave:
     "Точно выйти со стола? Фишки со стола вернутся на основной баланс.",
-  inviteTable: "Код",
-  inviteTableHint: "Копировать",
-  inviteTableCopied: "Скопировано",
+  inviteTable: "Пригласить",
+  inviteTableHint: "Поделиться ссылкой",
+  inviteTableCopied: "Отправлено",
   hostBadge: "Хост",
   tableNameNl: "Стол",
   rebuyTitle: "Фишки закончились",

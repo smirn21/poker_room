@@ -181,7 +181,6 @@ export function App() {
   const [tab, setTab] = useState<Tab>("lobby");
   const [user, setUser] = useState<UserDTO | null>(null);
   const [error, setErrorRaw] = useState<string | null>(null);
-  const [inviteCode, setInviteCode] = useState("");
   const [tables, setTables] = useState<TableRow[]>([]);
   const [rakePercent, setRakePercent] = useState(5);
   const [rakeCapBb, setRakeCapBb] = useState(3);
@@ -214,8 +213,6 @@ export function App() {
     }[]
   >([]);
   const [okNotice, setOkNoticeRaw] = useState<string | null>(null);
-  const [inviteCreated, setInviteCreated] = useState<string | null>(null);
-  const [inviteCopied, setInviteCopied] = useState(false);
   const [tgIdCopied, setTgIdCopied] = useState(false);
   const [pending, setPending] = useState<
     {
@@ -316,9 +313,6 @@ export function App() {
 
   useEffect(() => {
     initTelegramChrome();
-    const params = new URLSearchParams(window.location.search);
-    const pre = params.get("invite");
-    if (pre) setInviteCode(pre);
     void boot();
     return () => {
       document.documentElement.classList.remove("invite-compose");
@@ -452,20 +446,14 @@ export function App() {
         setGate("invite");
         return;
       }
-      // Already in club — honour TBL- / startapp / ?invite= deep links
+      // Already in club — honour REF / REF_TBL / startapp / ?invite= deep links
       if (pre) {
         try {
           const r = await api.redeemInvite(pre.trim());
-          const tableTarget =
-            r.tableId ??
-            (pre.toUpperCase().startsWith("TBL-") ||
-            /^[a-z0-9]{20,}$/i.test(pre)
-              ? pre.trim()
-              : null);
-          await afterInviteOrAuth(r.user, { tableId: tableTarget });
+          await afterInviteOrAuth(r.user, { tableId: r.tableId ?? null });
           return;
         } catch {
-          /* invalid club code → fall through to lobby / pending */
+          /* invalid invite → fall through to lobby / pending */
         }
       }
       await afterInviteOrAuth(u);
@@ -483,44 +471,9 @@ export function App() {
     setTables(r.tables);
   }
 
-  async function redeem() {
-    try {
-      setError(null);
-      const r = await api.redeemInvite(inviteCode.trim());
-      await afterInviteOrAuth(r.user, { tableId: r.tableId ?? null });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("errInvite"));
-    }
-  }
-
   function mapJoinError(raw: string): string {
     if (!raw.trim()) return t("errJoin");
     return localizeApiError(raw);
-  }
-
-  /** Lobby: sit by TBL-… / table id via join (not club redeem — that is silent for members). */
-  async function sitByCode() {
-    if (!user) return;
-    const code = inviteCode.trim();
-    if (!code) return;
-    try {
-      setError(null);
-      if (user.balance <= 0) {
-        rememberPendingTable(code);
-        setTab("wallet");
-        setError(t("tableWaitingDeposit"));
-        return;
-      }
-      const amount = Math.min(Math.max(1, parseChips(buyIn)), user.balance);
-      const r = await api.joinTable(code, amount);
-      setUser(r.user);
-      setTableId(r.tableId ?? code);
-      setInviteCode("");
-      clearPendingTable();
-      setGate("table");
-    } catch (e) {
-      setError(mapJoinError(e instanceof Error ? e.message : ""));
-    }
   }
 
   async function sitPendingTable() {
@@ -730,44 +683,6 @@ export function App() {
     setTronhooksInfo(deps.tronhooks ?? null);
     setDepositPayAddress(deps.payAddress);
     setUnmatched(um.unmatched);
-  }
-
-  async function createInvite() {
-    setError(null);
-    try {
-      const r = await api.createInvite(10);
-      setInviteCreated(r.invite.code);
-      setInviteCopied(false);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("createInvite"));
-    }
-  }
-
-  async function copyInviteCode() {
-    if (!inviteCreated) return;
-    try {
-      await navigator.clipboard.writeText(inviteCreated);
-      setInviteCopied(true);
-      setOkNotice(t("noticeCopied"));
-      window.setTimeout(() => setInviteCopied(false), 2000);
-    } catch {
-      setError(t("copyFailed"));
-    }
-  }
-
-  async function shareClubInvite() {
-    if (!inviteCreated) return;
-    const shareUrl = `${window.location.origin}${window.location.pathname}?invite=${encodeURIComponent(inviteCreated)}`;
-    const text = t("clubInviteShareText", { code: inviteCreated });
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: t("brand"), text, url: shareUrl });
-        return;
-      }
-    } catch {
-      /* fall through to copy */
-    }
-    await copyInviteCode();
   }
 
   async function openAdmin() {
@@ -987,32 +902,7 @@ export function App() {
           </div>
           <div className="panel invite-panel">
             <p className="invite-how">{t("inviteHow")}</p>
-            <label htmlFor="invite">{t("inviteCode")}</label>
-            <input
-              id="invite"
-              value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value)}
-              placeholder={`${t("tableCodePlaceholder")} / CLUB-…`}
-              autoCapitalize="characters"
-              autoCorrect="off"
-              autoComplete="off"
-              spellCheck={false}
-              enterKeyHint="done"
-              onFocus={(e) => {
-                document.documentElement.classList.add("invite-compose");
-                const el = e.currentTarget;
-                window.requestAnimationFrame(() => {
-                  el.scrollIntoView({ block: "center", behavior: "smooth" });
-                });
-              }}
-              onBlur={() => {
-                document.documentElement.classList.remove("invite-compose");
-              }}
-            />
-            <button type="button" onClick={redeem} className="primary-wide">
-              {t("enter")}
-            </button>
-            
+            <p className="hint hint-tight">{t("inviteNeedLink")}</p>
             <button
               type="button"
               className="secondary primary-wide"
@@ -1220,29 +1110,6 @@ export function App() {
               </button>
             </div>
             
-          </section>
-
-          <section className="panel panel-compact admin-card">
-            <h2 className="card-title">{t("cardInvites")}</h2>
-            <button type="button" className="primary-wide" onClick={createInvite}>
-              {t("createInvite")}
-            </button>
-            {inviteCreated && (
-              <div className="invite-code-block">
-                <button
-                  type="button"
-                  className="invite-code-btn"
-                  onClick={() => void copyInviteCode()}
-                  title={t("tapToCopy")}
-                >
-                  <span className="invite-code-label">{t("inviteCode")}</span>
-                  <strong className="invite-code-value">{inviteCreated}</strong>
-                </button>
-                <p className="hint invite-copy-hint">
-                  {inviteCopied ? t("copied") : t("tapToCopy")}
-                </p>
-              </div>
-            )}
           </section>
 
           <section className="panel panel-compact admin-card">
@@ -1526,43 +1393,6 @@ export function App() {
             <IconRefresh size={18} />
           </button>
         </div>
-        <div className="lobby-code-row">
-          <label className="inline-field grow" htmlFor="table-code-lobby">
-            {t("tableCodeJoin")}
-            <input
-              id="table-code-lobby"
-              value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value)}
-              placeholder={t("tableCodePlaceholder")}
-              autoCapitalize="characters"
-              autoCorrect="off"
-              autoComplete="off"
-              spellCheck={false}
-              enterKeyHint="go"
-              onFocus={(e) => {
-                const el = e.currentTarget;
-                window.requestAnimationFrame(() => {
-                  el.scrollIntoView({ block: "center", behavior: "smooth" });
-                });
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  void sitByCode();
-                }
-              }}
-            />
-          </label>
-          <button
-            type="button"
-            className="btn-compact"
-            onClick={() => void sitByCode()}
-            disabled={!inviteCode.trim()}
-          >
-            {t("sitByCode")}
-          </button>
-        </div>
-        
         <div className="table-list table-list-fit">
           {tables.map((tbl, i) => (
             <div
@@ -1989,42 +1819,6 @@ export function App() {
                 >
                   {t("shareReferral")}
                 </button>
-              )}
-            </section>
-            <section className="panel panel-compact profile-invite">
-              <h2 className="card-title">{t("cardInvites")}</h2>
-              <p className="hint hint-tight">{t("clubInviteHint")}</p>
-              <button
-                type="button"
-                className="primary-wide"
-                onClick={() => void createInvite()}
-              >
-                {t("createInvite")}
-              </button>
-              {inviteCreated && (
-                <div className="invite-code-block">
-                  <button
-                    type="button"
-                    className="invite-code-btn"
-                    onClick={() => void copyInviteCode()}
-                    title={t("tapToCopy")}
-                  >
-                    <span className="invite-code-label">{t("inviteCode")}</span>
-                    <strong className="invite-code-value">{inviteCreated}</strong>
-                  </button>
-                  <div className="invite-actions">
-                    <button
-                      type="button"
-                      className="secondary primary-wide"
-                      onClick={() => void shareClubInvite()}
-                    >
-                      {t("shareClubInvite")}
-                    </button>
-                  </div>
-                  <p className="hint invite-copy-hint">
-                    {inviteCopied ? t("copied") : t("tapToCopy")}
-                  </p>
-                </div>
               )}
             </section>
           </>

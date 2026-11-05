@@ -19,7 +19,7 @@ import {
 } from "./handStrength";
 import { useI18n } from "./i18n";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
-import { tableInviteDeepLink } from "./telegramLinks";
+import { tableReferralDeepLink } from "./telegramLinks";
 import { CenterNotice } from "./CenterNotice";
 import { localizeApiError } from "./localizeApiError";
 import {
@@ -416,8 +416,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
   const tableInviteCode = state?.inviteCode ?? null;
   const tableName = state?.name ?? null;
   const playing = state?.status === "playing";
-  /** Compact chip in topbar — never a tall banner that pushes actions off-screen */
-  /* Any seated player can share the table code — not admin-only */
+  /** Seated players share a REF+TBL deep link (club entry + seat at this table). */
   const showTableInvite = Boolean(mySeatLive && tableInviteCode);
   const needsRebuy = Boolean(
     mySeatLive &&
@@ -445,9 +444,20 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
 
   async function copyTableInvite() {
     if (!tableInviteCode) return;
-    const link = tableInviteDeepLink(tableInviteCode);
+    let refCode = user.personalInviteCode?.trim() || null;
+    if (!refCode) {
+      try {
+        const r = await api.referral();
+        refCode = r.code;
+        onUser({ ...user, personalInviteCode: r.code });
+      } catch {
+        setError(t("copyFailed"));
+        return;
+      }
+    }
+    const link = tableReferralDeepLink(refCode, tableInviteCode);
     // Deep link in the body — Telegram clients often drop/ignore share `url`.
-    const shareBody = t("inviteShareText", { code: tableInviteCode, link });
+    const shareBody = t("inviteShareText", { link });
     try {
       if (navigator.share) {
         await navigator.share({
@@ -465,7 +475,7 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
       window.setTimeout(() => setInviteCopied(false), 2000);
     } catch {
       try {
-        await navigator.clipboard.writeText(`${link}\n${tableInviteCode}`);
+        await navigator.clipboard.writeText(link);
         setInviteCopied(true);
         setOkNotice(t("noticeCopied"));
         window.setTimeout(() => setInviteCopied(false), 2000);
@@ -714,11 +724,6 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
         </button>
         <div className="table-status">
           <span className="street-pill">{streetLabel || "—"}</span>
-          {tableInviteCode && (
-            <span className="table-code-inline" title={t("inviteTableHint")}>
-              {tableInviteCode}
-            </span>
-          )}
           <span className="hint table-hand-hint">
             {t("handNo", { n: state?.handNo ?? 0 })}
           </span>
@@ -732,7 +737,9 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
               title={inviteCopied ? t("inviteTableCopied") : t("inviteShareHint")}
             >
               {isHost && <span className="host-dot" aria-hidden />}
-              <span className="invite-chip-code">{tableInviteCode}</span>
+              <span className="invite-chip-code">
+                {inviteCopied ? t("inviteTableCopied") : t("inviteTable")}
+              </span>
             </button>
           )}
           <LanguageSwitcher className="lang-switch-compact" />

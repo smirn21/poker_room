@@ -1,5 +1,7 @@
 /** Telegram deep links for opening the Mini App on a table/club invite. */
 
+import { composeTableReferralParam, normalizeInviteToken } from "@poker/shared";
+
 const PENDING_TABLE_KEY = "hh_pending_table";
 
 export function tgBotUsername(): string {
@@ -19,17 +21,30 @@ export function tgMiniAppShortName(): string | null {
 
 /**
  * Opens Mini App with start_param (A–Z a–z 0–9 _ -).
- * Main Mini App: t.me/bot?startapp=TBL-…
- * Named app:     t.me/bot/short?startapp=TBL-…
+ * Main Mini App: t.me/bot?startapp=…
+ * Named app:     t.me/bot/short?startapp=…
  */
-export function tableInviteDeepLink(code: string): string {
+export function inviteDeepLink(param: string): string {
   const bot = tgBotUsername();
-  const param = code.trim();
+  const p = param.trim();
   const short = tgMiniAppShortName();
   if (short) {
-    return `https://t.me/${bot}/${short}?startapp=${encodeURIComponent(param)}`;
+    return `https://t.me/${bot}/${short}?startapp=${encodeURIComponent(p)}`;
   }
-  return `https://t.me/${bot}?startapp=${encodeURIComponent(param)}`;
+  return `https://t.me/${bot}?startapp=${encodeURIComponent(p)}`;
+}
+
+/** @deprecated use inviteDeepLink */
+export function tableInviteDeepLink(code: string): string {
+  return inviteDeepLink(code);
+}
+
+/** Referral + table seat: startapp=REF-…_TBL-… */
+export function tableReferralDeepLink(
+  refCode: string,
+  tableCode: string,
+): string {
+  return inviteDeepLink(composeTableReferralParam(refCode, tableCode));
 }
 
 /** Invite from URL (?invite= / ?table= / tgWebAppStartParam) or WebApp start_param. */
@@ -40,7 +55,8 @@ export function resolveLaunchInviteCode(): string | null {
   const fromStart = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
   const raw = (fromQuery || fromStart || "").trim();
   if (!raw) return null;
-  return raw;
+  const normalized = normalizeInviteToken(raw);
+  return normalized || null;
 }
 
 export function readPendingTableId(): string | null {

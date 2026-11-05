@@ -5,6 +5,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { normalizeInviteToken, parseInvitePayload } from "@poker/shared";
 import { config } from "./config.js";
 
 const BRAND_NAME = "Hold'em House";
@@ -163,7 +164,7 @@ function welcomeCopy(lang?: string): {
       text:
         `<b>${BRAND_NAME}</b>\n\n` +
         "Рады видеть вас за сукном.\n" +
-        "Закрытый Texas Hold'em для своих — войдите по коду клуба или стола.\n\n" +
+        "Закрытый Texas Hold'em — вход только по реферальной ссылке от участника клуба.\n\n" +
         "Нажмите кнопку под этим сообщением, чтобы открыть мини-приложение.",
       button: "Открыть клуб",
       menuHint:
@@ -174,7 +175,7 @@ function welcomeCopy(lang?: string): {
     text:
       `<b>${BRAND_NAME}</b>\n\n` +
       "Glad to see you at the felt.\n" +
-      "Private Texas Hold'em — enter with a club or table code.\n\n" +
+      "Private Texas Hold'em — entry only via a member’s referral link.\n\n" +
       "Tap the button under this message to open the mini app.",
     button: "Open club",
     menuHint: "You can also open the club via the bot menu button.",
@@ -182,12 +183,11 @@ function welcomeCopy(lang?: string): {
 }
 
 function normalizeStartDeepLink(raw: string): string {
-  let c = raw.trim();
-  if (/^ref[_-]/i.test(c)) {
-    c = c.replace(/^ref[_-]/i, "");
-    if (!/^(REF|CLUB|TBL)-/i.test(c)) c = `REF-${c}`;
+  const parts = parseInvitePayload(raw);
+  if (parts.refCode && parts.tableCode) {
+    return `${parts.refCode}_${parts.tableCode}`;
   }
-  return c.toUpperCase();
+  return normalizeInviteToken(raw);
 }
 
 export async function sendStartGreeting(

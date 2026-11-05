@@ -3,27 +3,28 @@ import type { MessageKey } from "./ru";
 export const en: Record<MessageKey, string> = {
   brand: "Hold'em House",
   openingRoom: "Opening the room…",
-  inviteOnly: "Invite-only. Enter a club code or table code (TBL-…).",
+  inviteOnly: "Invite-only — you need a referral link from a member.",
   inviteWelcome: "Welcome to the felt",
   inviteLead:
-    "Hold'em House is private Texas Hold'em for your circle. Enter a club code (CLUB-…) from any member, or a table code (TBL-…) from anyone already seated.",
+    "Hold'em House is private Texas Hold'em. Entry is only via a personal invite link from a club member.",
   invitePointSeats: "Up to 9 seats at one table",
   invitePointTable:
-    "Any club member can mint a CLUB-… code; seated players share TBL-…",
+    "Members share a link from Profile or straight from the table",
   invitePointWallet: "Chips via the club wallet (USDT TRC20)",
   inviteHow:
-    "Paste the code below. After entry you'll land in the lobby — pick a table or sit by code.",
+    "Open the Mini App from an invite link in Telegram. You can't join without one.",
+  inviteNeedLink:
+    "If you opened the app without an invite — ask a club member for their referral link and open it in Telegram.",
   inviteCode: "Invite code",
-  inviteShareHint: "Share table",
-  inviteShareText:
-    "Join my Hold'em House table\n{link}\nCode: {code}",
+  inviteShareHint: "Invite to table",
+  inviteShareText: "Join my Hold'em House table\n{link}",
   tableWaitingDeposit:
     "The table is waiting — top up chips, then tap “Sit at table”.",
   sitPendingTable: "Sit at table",
   pendingTableHint: "After a deposit you can join from the invite.",
   clubInviteShareText: "Join Hold'em House with invite: {code}",
   clubInviteHint:
-    "Create a CLUB-… code and send it to a friend — they join the club and can sit at a table.",
+    "Share your referral link — a friend joins the club and can sit at a table.",
   shareClubInvite: "Share",
   tableCodeJoin: "Table code",
   tableCodePlaceholder: "TBL-XXXXXX",
@@ -166,7 +167,7 @@ export const en: Record<MessageKey, string> = {
   copyFailed: "Copy failed",
   referralTitle: "Your referral link",
   referralHint:
-    "Permanent link: anyone who opens it and joins the club is attributed to you.",
+    "The only way to invite someone. Anyone who opens your link joins under you. From a table you can share a link that also seats them there.",
   referralCount: "Invited: {n}",
   shareReferral: "Share link",
   copyReferral: "Copy link",
@@ -192,9 +193,9 @@ export const en: Record<MessageKey, string> = {
   leave: "Leave",
   confirmLeave:
     "Leave the table? Your table chips will return to your main balance.",
-  inviteTable: "Code",
-  inviteTableHint: "Copy",
-  inviteTableCopied: "Copied",
+  inviteTable: "Invite",
+  inviteTableHint: "Share link",
+  inviteTableCopied: "Shared",
   hostBadge: "Host",
   rebuyTitle: "You're out of chips",
   rebuyHint: "Rebuy to stay. Otherwise you'll be removed in {sec}s.",
