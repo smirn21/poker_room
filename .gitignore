@@ -3,6 +3,8 @@ dist
 build
 .env
 .env.local
+.env.*.local
+apps/web/.env.production.local
 *.db
 *.db-journal
 .DS_Store
@@ -11,3 +13,6 @@ apps/api/prisma/*.db
 apps/api/prisma/*.db-journal
 apps/web/dist
 *.log
+*.tsbuildinfo
+.taste-skill/
+deploy/*.b64

@@ -19,5 +19,6 @@ When the work (or a finished slice) is ready:
 
 1. **git commit** with a message **in Russian**
 2. **git push** to the current branch remote
+3. **Leave git clean**: `git status` without leftover untracked/unstaged junk (see [clean-git-working-tree.mdc](./clean-git-working-tree.mdc))
 
 Do not commit secrets (`.env`, tokens). Use subagents, Computer Use (PA dashboard), and browser as needed. Quick tunnel URL changes on always-on restart → re-run `pa_point_web_at_tunnel.sh`.

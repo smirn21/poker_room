@@ -265,7 +265,7 @@ export function App() {
     null,
   );
   const [adjustTgId, setAdjustTgId] = useState("");
-  const [adjustAmt, setAdjustAmt] = useState(1000);
+  const [adjustAmt, setAdjustAmt] = useState("1000");
   const [adjustTarget, setAdjustTarget] = useState<UserDTO | null>(null);
   const [adjustMeta, setAdjustMeta] = useState<{
     referredBy: { id: string; name: string; telegramId: string } | null;
@@ -841,7 +841,7 @@ export function App() {
 
   async function adjustBalance(sign: 1 | -1) {
     const id = adjustTgId.trim();
-    const amt = Math.abs(Math.floor(adjustAmt));
+    const amt = Math.abs(Math.floor(parseChips(adjustAmt)));
     if (!id || amt < 1) return;
     setError(null);
     setOkNotice(null);
@@ -1086,10 +1086,14 @@ export function App() {
               {t("adjustAmount")}
               <input
                 id="adj-amt"
-                type="number"
-                min={1}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                enterKeyHint="done"
+                autoComplete="off"
                 value={adjustAmt}
-                onChange={(e) => setAdjustAmt(Number(e.target.value))}
+                onChange={(e) => setAdjustAmt(digitsOnly(e.target.value))}
+                onFocus={(e) => scrollFieldAboveKeyboard(e.currentTarget)}
               />
             </label>
             <div className="row adjust-actions">
@@ -1097,7 +1101,7 @@ export function App() {
                 type="button"
                 className="btn-compact"
                 onClick={() => void adjustBalance(1)}
-                disabled={!adjustTgId.trim() || adjustAmt < 1}
+                disabled={!adjustTgId.trim() || parseChips(adjustAmt) < 1}
               >
                 {t("creditBalance")}
               </button>
@@ -1105,7 +1109,7 @@ export function App() {
                 type="button"
                 className="secondary btn-compact"
                 onClick={() => void adjustBalance(-1)}
-                disabled={!adjustTgId.trim() || adjustAmt < 1}
+                disabled={!adjustTgId.trim() || parseChips(adjustAmt) < 1}
               >
                 {t("debitBalance")}
               </button>
