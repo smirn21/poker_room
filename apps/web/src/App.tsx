@@ -30,7 +30,7 @@ import {
   IconWallet,
 } from "./Icons";
 import { preloadDeckImages } from "./preloadCards";
-import { unlockAudio } from "./sounds";
+import { preloadSfx, unlockAudio } from "./sounds";
 
 type Gate = "boot" | "invite" | "app" | "table" | "admin";
 type Tab = "lobby" | "tables" | "wallet" | "profile";
@@ -319,9 +319,10 @@ export function App() {
     };
   }, []);
 
-  // Warm deck PNGs + unlock audio on first gesture (Telegram / iOS)
+  // Warm deck PNGs + SFX + unlock audio on first gesture (Telegram / iOS)
   useEffect(() => {
     preloadDeckImages();
+    void preloadSfx();
     const unlock = () => unlockAudio();
     window.addEventListener("pointerdown", unlock, { once: true });
     window.addEventListener("touchstart", unlock, { once: true });

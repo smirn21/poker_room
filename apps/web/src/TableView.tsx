@@ -26,6 +26,7 @@ import {
   playAction,
   playDealCard,
   playDealSequence,
+  playShuffle,
   playTurnUrgent,
   playWin,
   unlockAudio,
@@ -197,11 +198,12 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
       prevBoardLen.current = 0;
       setRevealedBoard([]);
       setFlying([]);
-      // Hole-card deal riff when a new hand starts
+      // Shuffle sting + hole-card deal when a new hand starts
       if (state.status === "playing" && dealtHandSfx.current !== state.handNo) {
         dealtHandSfx.current = state.handNo;
         const seatsIn = state.seats.filter((s) => s.inHand).length;
-        playDealSequence(Math.min(12, Math.max(4, seatsIn * 2)), 95, 60);
+        playShuffle();
+        playDealSequence(Math.min(12, Math.max(4, seatsIn * 2)), 95, 180);
       }
     }
     if (board.length === prevBoardLen.current) {

@@ -1,8 +1,37 @@
-/** Lightweight table SFX via Web Audio (no asset files). */
+/**
+ * Table SFX: real CC0 samples when loaded, Web Audio synth as fallback.
+ * Samples live in /public/sfx/ (see CREDITS.txt).
+ */
 
 let ctx: AudioContext | null = null;
 let unlocked = false;
 let resumeHooked = false;
+let preloadStarted = false;
+
+type SampleKey =
+  | "deal1"
+  | "deal2"
+  | "fold"
+  | "shuffle"
+  | "chip1"
+  | "chip2"
+  | "chip3"
+  | "chip4"
+  | "clink";
+
+const SAMPLE_URLS: Record<SampleKey, string> = {
+  deal1: "/sfx/deal1.mp3",
+  deal2: "/sfx/deal2.mp3",
+  fold: "/sfx/fold.mp3",
+  shuffle: "/sfx/shuffle.mp3",
+  chip1: "/sfx/chip_bet1.mp3",
+  chip2: "/sfx/chip_bet2.mp3",
+  chip3: "/sfx/chip_bet3.mp3",
+  chip4: "/sfx/chip_bet4.mp3",
+  clink: "/sfx/chip_clink.mp3",
+};
+
+const buffers = new Map<SampleKey, AudioBuffer>();
 
 function getCtx(): AudioContext | null {
   if (typeof window === "undefined") return null;
@@ -31,7 +60,6 @@ function hookResumeListeners(): void {
   });
   window.addEventListener("pageshow", kick);
   window.addEventListener("focus", kick);
-  // iOS often suspends after gesture ends — re-resume on every pointer
   window.addEventListener("pointerdown", kick, { passive: true });
   window.addEventListener("touchstart", kick, { passive: true });
 }
@@ -43,7 +71,6 @@ export function unlockAudio(): void {
   unlocked = true;
   hookResumeListeners();
   if (c.state === "suspended") void c.resume();
-  // Prime a near-silent buffer so subsequent plays aren't dropped cold
   try {
     const buf = c.createBuffer(1, 1, c.sampleRate);
     const src = c.createBufferSource();
@@ -53,6 +80,7 @@ export function unlockAudio(): void {
   } catch {
     /* ignore */
   }
+  void preloadSfx();
 }
 
 function ensureRunning(): AudioContext | null {
@@ -63,8 +91,57 @@ function ensureRunning(): AudioContext | null {
   return c.state === "running" || c.state === "suspended" ? c : null;
 }
 
+/** Decode /sfx assets into AudioBuffers (safe to call many times). */
+export async function preloadSfx(): Promise<void> {
+  if (preloadStarted) return;
+  preloadStarted = true;
+  const c = getCtx();
+  if (!c) return;
+  await Promise.all(
+    (Object.keys(SAMPLE_URLS) as SampleKey[]).map(async (key) => {
+      try {
+        const res = await fetch(SAMPLE_URLS[key]);
+        if (!res.ok) return;
+        const raw = await res.arrayBuffer();
+        const buf = await c.decodeAudioData(raw.slice(0));
+        buffers.set(key, buf);
+      } catch {
+        /* keep synth fallback for this key */
+      }
+    }),
+  );
+}
+
+function playBuffer(
+  key: SampleKey,
+  opts?: { gain?: number; rate?: number; when?: number },
+): boolean {
+  const c = ensureRunning();
+  const buf = buffers.get(key);
+  if (!c || !buf) return false;
+  const t0 = opts?.when ?? c.currentTime;
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  src.playbackRate.value = opts?.rate ?? 1;
+  const g = c.createGain();
+  g.gain.value = opts?.gain ?? 0.7;
+  src.connect(g);
+  g.connect(c.destination);
+  src.start(t0);
+  return true;
+}
+
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]!;
+}
+
 /** Soft card flick / slap onto felt. */
 export function playDealCard(index = 0): void {
+  unlockAudio();
+  const key = index % 2 === 0 ? "deal1" : "deal2";
+  const rate = 0.92 + (index % 5) * 0.03 + Math.random() * 0.04;
+  if (playBuffer(key, { gain: 0.55, rate })) return;
+
   const c = ensureRunning();
   if (!c) return;
   const t0 = c.currentTime + index * 0.002;
@@ -123,7 +200,32 @@ export type ActionSfx =
   | "raise"
   | "all-in";
 
-/** Distinct click for fold / check / call / raise / all-in. */
+const CHIP_KEYS: SampleKey[] = ["chip1", "chip2", "chip3", "chip4"];
+
+function playChipStack(intensity: "soft" | "mid" | "hard"): void {
+  const gain =
+    intensity === "soft" ? 0.45 : intensity === "mid" ? 0.65 : 0.85;
+  const rate =
+    intensity === "soft"
+      ? 0.95 + Math.random() * 0.08
+      : intensity === "mid"
+        ? 0.98 + Math.random() * 0.1
+        : 1.02 + Math.random() * 0.12;
+  if (playBuffer(pick(CHIP_KEYS), { gain, rate })) {
+    if (intensity === "hard") {
+      window.setTimeout(() => {
+        playBuffer(pick(CHIP_KEYS), {
+          gain: 0.55,
+          rate: 1.05 + Math.random() * 0.1,
+        });
+      }, 70);
+    }
+    return;
+  }
+  // synth fallback handled by caller via click()
+}
+
+/** Distinct SFX for fold / check / call / raise / all-in. */
 export function playAction(action: ActionSfx): void {
   unlockAudio();
   const c = ensureRunning();
@@ -147,54 +249,65 @@ export function playAction(action: ActionSfx): void {
 
   switch (action) {
     case "fold":
-      click(180, 0.12, "triangle");
+      if (!playBuffer("fold", { gain: 0.55, rate: 0.95 + Math.random() * 0.08 })) {
+        click(180, 0.12, "triangle");
+      }
       break;
     case "check":
       click(660, 0.07);
       break;
     case "call":
-      click(520, 0.09);
+      playChipStack("soft");
+      if (!buffers.has("chip1")) click(520, 0.09);
       break;
     case "bet":
-      click(740, 0.1);
+      playChipStack("mid");
+      if (!buffers.has("chip1")) click(740, 0.1);
       break;
     case "raise":
-      click(880, 0.08);
-      window.setTimeout(() => {
-        const t1 = c.currentTime;
-        const osc = c.createOscillator();
-        osc.type = "square";
-        osc.frequency.setValueAtTime(1100, t1);
-        const g = c.createGain();
-        g.gain.setValueAtTime(0.09, t1);
-        g.gain.exponentialRampToValueAtTime(0.001, t1 + 0.1);
-        osc.connect(g);
-        g.connect(c.destination);
-        osc.start(t1);
-        osc.stop(t1 + 0.12);
-      }, 55);
+      playChipStack("hard");
+      if (!buffers.has("chip1")) {
+        click(880, 0.08);
+        window.setTimeout(() => {
+          const t1 = c.currentTime;
+          const osc = c.createOscillator();
+          osc.type = "square";
+          osc.frequency.setValueAtTime(1100, t1);
+          const g = c.createGain();
+          g.gain.setValueAtTime(0.09, t1);
+          g.gain.exponentialRampToValueAtTime(0.001, t1 + 0.1);
+          osc.connect(g);
+          g.connect(c.destination);
+          osc.start(t1);
+          osc.stop(t1 + 0.12);
+        }, 55);
+      }
       break;
     case "all-in":
-      click(420, 0.12, "sawtooth");
-      window.setTimeout(() => {
-        const t1 = c.currentTime;
-        const osc = c.createOscillator();
-        osc.type = "triangle";
-        osc.frequency.setValueAtTime(980, t1);
-        const g = c.createGain();
-        g.gain.setValueAtTime(0.12, t1);
-        g.gain.exponentialRampToValueAtTime(0.001, t1 + 0.22);
-        osc.connect(g);
-        g.connect(c.destination);
-        osc.start(t1);
-        osc.stop(t1 + 0.24);
-      }, 70);
-      click(2400, 0.1);
+      playChipStack("hard");
+      window.setTimeout(() => playChipStack("hard"), 90);
+      if (!buffers.has("chip1")) {
+        click(420, 0.12, "sawtooth");
+        window.setTimeout(() => {
+          const t1 = c.currentTime;
+          const osc = c.createOscillator();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(980, t1);
+          const g = c.createGain();
+          g.gain.setValueAtTime(0.12, t1);
+          g.gain.exponentialRampToValueAtTime(0.001, t1 + 0.22);
+          osc.connect(g);
+          g.connect(c.destination);
+          osc.start(t1);
+          osc.stop(t1 + 0.24);
+        }, 70);
+        click(2400, 0.1);
+      }
       break;
   }
 }
 
-/** Bright win chime + soft sparkle. */
+/** Bright win chime + soft sparkle + coin cascade. */
 export function playWin(): void {
   unlockAudio();
   const c = ensureRunning();
@@ -281,7 +394,7 @@ export function vibrateTurnUrgent(): void {
   }
 }
 
-/** Cascade of metallic coin clinks (pot → winner). */
+/** Cascade of chip / coin clinks (pot → winner). */
 export function playCoins(count = 8, gapMs = 50): void {
   unlockAudio();
   for (let i = 0; i < count; i++) {
@@ -290,6 +403,16 @@ export function playCoins(count = 8, gapMs = 50): void {
 }
 
 function playCoinClink(index = 0): void {
+  const rate = 0.9 + (index % 6) * 0.04 + Math.random() * 0.05;
+  if (
+    playBuffer(index % 3 === 0 ? "clink" : pick(CHIP_KEYS), {
+      gain: 0.4 + Math.random() * 0.2,
+      rate,
+    })
+  ) {
+    return;
+  }
+
   const c = ensureRunning();
   if (!c) return;
   const t0 = c.currentTime;
@@ -323,4 +446,12 @@ function playCoinClink(index = 0): void {
   rg.connect(c.destination);
   ring.start(t0);
   ring.stop(t0 + 0.18);
+}
+
+/** Optional shuffle sting when a new hand starts. */
+export function playShuffle(): void {
+  unlockAudio();
+  if (!playBuffer("shuffle", { gain: 0.4, rate: 1 })) {
+    playDealSequence(4, 70, 0);
+  }
 }
