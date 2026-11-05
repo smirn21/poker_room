@@ -137,15 +137,10 @@ export const en: Record<MessageKey, string> = {
   depositAddress: "Address",
   depositClubAddress: "Club address",
   depositAdminHint:
-    "Auto: TronHooks webhook matches unique USDT amounts. Admin only for unmatched/disputes.",
-  depositWatchStatus: "TronGrid poll: {on} · poll: {at} · error: {err}",
+    "Auto-credit via TronHooks (unique USDT amount). Below — pending intents and unmatched transfers.",
   depositHooksStatus:
     "TronHooks: {on} · webhook: {url} · event: {at} · {result} · error: {err}",
-  depositPollOk:
-    "Poll: credited {matched}, unmatched {unmatched}, expired {expired}",
-  errDepositPoll: "Could not poll Tron",
-  pollTronNow: "Check TronGrid now",
-  registerTronhooks: "Register TronHooks watch",
+  registerTronhooks: "Rebind TronHooks to current API",
   errTronhooksRegister: "Could not register TronHooks",
   tronhooksSecretOnce:
     "Copy SECRET into .env as TRONHOOKS_WEBHOOK_SECRET and restart API: {secret}",

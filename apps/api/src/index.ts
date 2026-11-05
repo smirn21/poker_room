@@ -130,21 +130,19 @@ await registerRoutes(app);
 await app.listen({ port: config.port, host: "0.0.0.0" });
 setupSocket(app.server, app);
 
-const { startTronWatcher } = await import("./tronWatcher.js");
-startTronWatcher(app.log);
-
-const { ensureTronhooksAligned } = await import("./tronhooks.js");
+const {
+  ensureTronhooksAligned,
+  startTronhooksWatchdog,
+} = await import("./tronhooks.js");
 void ensureTronhooksAligned(app.log).then(() => {
   app.log.info({ tronhooks: tronhooksStatus() }, "tronhooks_boot_status");
+  startTronhooksWatchdog(app.log);
 });
 
 const { startTelegramBot } = await import("./telegramBot.js");
 startTelegramBot(app.log);
 
 app.log.info(
-  {
-    tronhooks: tronhooksStatus(),
-    trongridPoll: config.tronWatchEnabled,
-  },
+  { tronhooks: tronhooksStatus() },
   `API on :${config.port} (devBypass=${config.devBypassAuth})`,
 );

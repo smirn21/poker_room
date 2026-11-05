@@ -342,3 +342,58 @@ export async function ensureTronhooksAligned(log?: {
     log?.warn?.({ err: msg }, "tronhooks_align_failed");
   }
 }
+
+let watchdogTimer: ReturnType<typeof setInterval> | null = null;
+let lastSeenPublicUrl: string | null = null;
+let alignInFlight = false;
+
+/**
+ * Rebind TronHooks when the quick-tunnel URL flips (or the remote watch drifts)
+ * even if the Node process itself did not restart.
+ */
+export function startTronhooksWatchdog(log?: {
+  info: (o: unknown, msg?: string) => void;
+  warn: (o: unknown, msg?: string) => void;
+}) {
+  if (watchdogTimer) return;
+  const tick = async () => {
+    if (alignInFlight) return;
+    if (!config.tronhooksApiKey || !config.tronUsdtAddress) return;
+    const expected = expectedWebhookUrl();
+    if (!expected) return;
+    const url = resolvePublicApiUrl().replace(/\/$/, "");
+    alignInFlight = true;
+    try {
+      const watches = await listTronhooksWatches();
+      const aligned = watches.some(
+        (w) =>
+          w.address === config.tronUsdtAddress &&
+          w.webhook_url === expected &&
+          String(w.status).toUpperCase() === "ACTIVE",
+      );
+      if (aligned && url === lastSeenPublicUrl) return;
+      log?.info?.(
+        {
+          from: lastSeenPublicUrl,
+          to: url,
+          expected,
+          aligned,
+        },
+        "tronhooks_watchdog_realign",
+      );
+      if (url) persistEnvValue("PUBLIC_API_URL", url);
+      await ensureTronhooksAligned(log);
+      lastSeenPublicUrl = url || null;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      markTronhooksError(msg);
+      log?.warn?.({ err: msg }, "tronhooks_watchdog_failed");
+    } finally {
+      alignInFlight = false;
+    }
+  };
+  lastSeenPublicUrl = resolvePublicApiUrl().replace(/\/$/, "") || null;
+  // First remote check shortly after boot (boot already called ensure once).
+  watchdogTimer = setInterval(() => void tick(), 20_000);
+  setTimeout(() => void tick(), 5_000);
+}

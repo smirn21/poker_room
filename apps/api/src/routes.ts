@@ -15,7 +15,6 @@ import {
   confirmDepositIntent,
   formatUsdtMicro,
 } from "./depositService.js";
-import { pollTronUsdtDeposits, tronWatchStatus } from "./tronWatcher.js";
 import {
   expectedWebhookUrl,
   listTronhooksWatches,
@@ -804,7 +803,6 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       address: configured ? config.tronUsdtAddress : null,
       chipsPerUsdt: config.chipsPerUsdt,
       ttlMinutes: config.depositTtlMinutes,
-      watchEnabled: config.tronWatchEnabled && configured,
     };
   });
 
@@ -1075,7 +1073,6 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
         amountUsdt:
           d.amountUsdtMicro != null ? formatUsdtMicro(d.amountUsdtMicro) : null,
       })),
-      watch: tronWatchStatus(),
       tronhooks: tronhooksStatus(),
       payAddress: config.tronUsdtAddress || null,
       chipsPerUsdt: config.chipsPerUsdt,
@@ -1146,19 +1143,6 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
         amountUsdt: formatUsdtMicro(r.amountUsdtMicro),
       })),
     };
-  });
-
-  app.post("/admin/deposits/poll", async (req) => {
-    const user = await requireUser(app, req);
-    if (user.role !== "admin") throw httpError.forbidden();
-    try {
-      const result = await pollTronUsdtDeposits(app.log);
-      return { ok: true, ...result, watch: tronWatchStatus() };
-    } catch (e) {
-      throw httpError.badRequest(
-        e instanceof Error ? e.message : "Tron poll failed",
-      );
-    }
   });
 
   app.post("/admin/deposits/:id/confirm", async (req) => {

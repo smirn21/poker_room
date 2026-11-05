@@ -153,7 +153,6 @@ export const api = {
       address: string | null;
       chipsPerUsdt: number;
       ttlMinutes: number;
-      watchEnabled: boolean;
     }>("/wallet/deposit/config"),
   deposit: (amountChips: number, asset: "USDT" = "USDT") =>
     request<{
@@ -257,12 +256,6 @@ export const api = {
         txid: string | null;
         user: { name: string; telegramId: string };
       }[];
-      watch: {
-        enabled: boolean;
-        address: string | null;
-        lastOkAt: string | null;
-        lastError: string | null;
-      };
       tronhooks?: {
         enabled: boolean;
         hasApiKey: boolean;
@@ -299,13 +292,6 @@ export const api = {
         createdAt: string;
       }[];
     }>("/admin/deposits/unmatched"),
-  pollDeposits: () =>
-    request<{
-      ok: boolean;
-      matched: number;
-      unmatched: number;
-      expired: number;
-    }>("/admin/deposits/poll", { method: "POST" }),
   confirmDeposit: (id: string, txid?: string) =>
     request(`/admin/deposits/${encodeURIComponent(id)}/confirm`, {
       method: "POST",

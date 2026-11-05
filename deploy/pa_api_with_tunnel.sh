@@ -70,14 +70,18 @@ stdbuf -oL -eL "${CF}" tunnel --no-autoupdate --url "http://127.0.0.1:${PORT}" 2
         [[ -f "${URL_FILE}" ]] && OLD_URL="$(cat "${URL_FILE}" 2>/dev/null || true)"
         echo "${NEW_URL}" > "${URL_FILE}"
         echo "TUNNEL_URL ${NEW_URL}" >&2
-        # Rebuild Mini App when tunnel URL changes (phone otherwise keeps dead VITE_*).
+        # Rebuild Mini App + rebind TronHooks when tunnel URL changes.
         if [[ "${NEW_URL}" != "${OLD_URL}" ]]; then
-          echo "tunnel_url_changed — scheduling pa_point_web_at_tunnel.sh" >&2
+          echo "tunnel_url_changed — scheduling point_web + tronhooks align" >&2
           (
             sleep 3
             bash "${HOME}/poker_room/deploy/pa_point_web_at_tunnel.sh" \
               >>"${HOME}/poker_point_web.log" 2>&1 \
               || echo "point_web_failed" >&2
+            # API watchdog also realigns; this covers the gap before the next tick.
+            python3 "${HOME}/poker_room/deploy/verify_tronhooks.py" \
+              >>"${HOME}/poker_tronhooks_align.log" 2>&1 \
+              || echo "tronhooks_align_failed" >&2
           ) &
         fi
       fi

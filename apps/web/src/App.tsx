@@ -234,12 +234,6 @@ export function App() {
       note: string | null;
     }[]
   >([]);
-  const [depositWatch, setDepositWatch] = useState<{
-    enabled: boolean;
-    address: string | null;
-    lastOkAt: string | null;
-    lastError: string | null;
-  } | null>(null);
   const [tronhooksInfo, setTronhooksInfo] = useState<{
     enabled: boolean;
     hasApiKey: boolean;
@@ -680,7 +674,6 @@ export function App() {
       api.unmatchedDeposits().catch(() => ({ unmatched: [] })),
     ]);
     setPending(deps.deposits);
-    setDepositWatch(deps.watch);
     setTronhooksInfo(deps.tronhooks ?? null);
     setDepositPayAddress(deps.payAddress);
     setUnmatched(um.unmatched);
@@ -698,7 +691,6 @@ export function App() {
       api.unmatchedDeposits().catch(() => ({ unmatched: [] })),
     ]);
     setPending(deps.deposits);
-    setDepositWatch(deps.watch);
     setTronhooksInfo(deps.tronhooks ?? null);
     setDepositPayAddress(deps.payAddress);
     setUnmatched(um.unmatched);
@@ -721,23 +713,6 @@ export function App() {
   async function cancelDep(id: string) {
     await api.cancelDeposit(id);
     await refreshAdminDeposits();
-  }
-
-  async function pollDepsNow() {
-    try {
-      setError(null);
-      const r = await api.pollDeposits();
-      setOkNotice(
-        t("depositPollOk", {
-          matched: r.matched,
-          unmatched: r.unmatched,
-          expired: r.expired,
-        }),
-      );
-      await refreshAdminDeposits();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("errDepositPoll"));
-    }
   }
 
   async function registerTronhooksNow() {
@@ -1140,30 +1115,12 @@ export function App() {
                 })}
               </p>
             )}
-            {depositWatch && (
-              <p className="hint hint-tight">
-                {t("depositWatchStatus", {
-                  on: depositWatch.enabled ? t("on") : t("off"),
-                  at: depositWatch.lastOkAt
-                    ? new Date(depositWatch.lastOkAt).toLocaleString()
-                    : "—",
-                  err: depositWatch.lastError ?? "—",
-                })}
-              </p>
-            )}
             <button
               type="button"
               className="secondary primary-wide"
               onClick={() => void registerTronhooksNow()}
             >
               {t("registerTronhooks")}
-            </button>
-            <button
-              type="button"
-              className="secondary primary-wide"
-              onClick={() => void pollDepsNow()}
-            >
-              {t("pollTronNow")}
             </button>
             {pending.length === 0 && <p className="hint">{t("none")}</p>}
             <div className="admin-list">

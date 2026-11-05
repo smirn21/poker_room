@@ -81,3 +81,11 @@ cp -R "${ROOT}/apps/web/dist/." "${HOME}/poker_room_static/"
 echo "${URL}" > "${HOME}/poker_room_api_url.txt"
 echo "DONE_POINT_WEB ${URL}"
 curl -sf "${URL}/health" && echo " HEALTH_OK" || echo " HEALTH_FAIL"
+
+# Keep TronHooks watch on the same public URL (payments break if webhook is stale).
+if [[ -f "${ROOT}/deploy/verify_tronhooks.py" ]]; then
+  python3 "${ROOT}/deploy/verify_tronhooks.py" \
+    >>"${HOME}/poker_tronhooks_align.log" 2>&1 \
+    && echo "TRONHOOKS_ALIGNED ${URL}" \
+    || echo "TRONHOOKS_ALIGN_FAIL" >&2
+fi
