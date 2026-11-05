@@ -7,20 +7,26 @@ export NVM_DIR="${HOME}/.nvm"
 . "${NVM_DIR}/nvm.sh"
 nvm use 20 >/dev/null
 
-URL=""
-# PA always-on logs: /var/log/alwayson-log-*.log
-shopt -s nullglob
-for path in /var/log/alwayson-log-*.log "${HOME}/poker_room_tunnel.log"; do
-  [[ -f "${path}" ]] || continue
-  cand=$(grep -oE 'https://[a-zA-Z0-9-]+\.trycloudflare\.com' "${path}" 2>/dev/null | tail -n 1 || true)
-  if [[ -n "${cand}" ]]; then
-    URL="${cand}"
-  fi
-done
-shopt -u nullglob
+URL="${1:-}"
+# Prefer explicit arg / saved URL, then newest match across always-on + tunnel logs.
+if [[ -z "${URL}" && -f "${HOME}/poker_room_api_url.txt" ]]; then
+  URL=$(tr -d '[:space:]' < "${HOME}/poker_room_api_url.txt" || true)
+fi
+if [[ -z "${URL}" ]]; then
+  # PA always-on logs: /var/log/alwayson-log-*.log
+  shopt -s nullglob
+  for path in /var/log/alwayson-log-*.log "${HOME}/poker_room_tunnel.log" "${HOME}/poker_room_alwayson_console.log"; do
+    [[ -f "${path}" ]] || continue
+    cand=$(grep -oE 'https://[a-zA-Z0-9-]+\.trycloudflare\.com' "${path}" 2>/dev/null | tail -n 1 || true)
+    if [[ -n "${cand}" ]]; then
+      URL="${cand}"
+    fi
+  done
+  shopt -u nullglob
+fi
 
 if [[ -z "${URL}" ]]; then
-  echo "No trycloudflare URL found in always-on logs yet" >&2
+  echo "No trycloudflare URL found (pass URL arg or check always-on logs)" >&2
   exit 1
 fi
 
