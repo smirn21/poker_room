@@ -364,6 +364,56 @@ export class HoldEmTable {
     return true;
   }
 
+  /** True when betting is done and the board must be run out (everyone all-in / one can act). */
+  isAllInRunoutSituation(): boolean {
+    if (this.status !== "playing") return false;
+    const stillIn = this.seats.filter((s) => s.player && !s.folded);
+    if (stillIn.length < 2) return false;
+    const canAct = stillIn.filter((s) => !s.allIn && s.player!.stack > 0);
+    return canAct.length <= 1;
+  }
+
+  /**
+   * Server schedules pauses between streets. True while we still need another
+   * street deal or the final showdown after the river is out.
+   */
+  needsAllInRunout(): boolean {
+    if (this.status !== "playing") return false;
+    if (!this.isAllInRunoutSituation()) return false;
+    // Board incomplete → deal next street; board complete → showdown next tick.
+    return true;
+  }
+
+  /** Deal the next runout street, or showdown once all 5 cards are out. */
+  continueAllInRunout(): void {
+    if (this.status !== "playing") return;
+    if (!this.isAllInRunoutSituation()) return;
+
+    if (this.board.length >= 5) {
+      this.showdown();
+      return;
+    }
+
+    if (this.street === "preflop") {
+      this.street = "flop";
+      this.board.push(this.deck.pop()!, this.deck.pop()!, this.deck.pop()!);
+    } else if (this.street === "flop") {
+      this.street = "turn";
+      this.board.push(this.deck.pop()!);
+    } else if (this.street === "turn") {
+      this.street = "river";
+      this.board.push(this.deck.pop()!);
+    } else if (this.street === "river") {
+      // Should already have 5; fall through to showdown.
+      this.showdown();
+      return;
+    }
+
+    this.actionIndex = -1;
+    this.turnEndsAt = null;
+    this.message = this.street!.toUpperCase();
+  }
+
   private nextStreetOrShowdown(): void {
     const stillIn = this.seats.filter((s) => s.player && !s.folded);
     const canAct = stillIn.filter((s) => !s.allIn && s.player!.stack > 0);
@@ -383,13 +433,15 @@ export class HoldEmTable {
     }
 
     if (canAct.length <= 1) {
-      // run out remaining board if needed then showdown
-      while (this.board.length < 5) {
-        if (this.street === "flop") this.street = "turn";
-        else if (this.street === "turn") this.street = "river";
-        this.board.push(this.deck.pop()!);
+      // All-in runout: one street at a time. TableManager pauses, then
+      // continueAllInRunout() for turn / river / showdown.
+      this.actionIndex = -1;
+      this.turnEndsAt = null;
+      this.message = this.street!.toUpperCase();
+      if (this.board.length >= 5) {
+        // River already dealt in this step — showdown on the next scheduled tick
+        // so clients can see the last card before winners flash.
       }
-      this.showdown();
       return;
     }
 

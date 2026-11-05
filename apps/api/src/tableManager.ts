@@ -22,6 +22,8 @@ interface LiveTable {
   mutex: AsyncMutex;
   turnTimer: NodeJS.Timeout | null;
   autoNextTimer: NodeJS.Timeout | null;
+  /** Stagger all-in board runout (flop → turn → river → showdown) */
+  runoutTimer: NodeJS.Timeout | null;
   name: string;
   createdById: string;
   inviteCode: string | null;
@@ -68,6 +70,7 @@ export class TableManager {
     const live = this.tables.get(tableId);
     if (live?.turnTimer) clearTimeout(live.turnTimer);
     if (live?.autoNextTimer) clearTimeout(live.autoNextTimer);
+    if (live?.runoutTimer) clearTimeout(live.runoutTimer);
     if (live) {
       for (const t of live.rebuyTimers.values()) clearTimeout(t);
       live.rebuyTimers.clear();
@@ -123,6 +126,7 @@ export class TableManager {
       mutex: new AsyncMutex(),
       turnTimer: null,
       autoNextTimer: null,
+      runoutTimer: null,
       name: row.name,
       createdById: row.createdById,
       inviteCode,
@@ -158,6 +162,7 @@ export class TableManager {
         await this.maybeTransferHost(tableId);
       }
       this.scheduleTurnTimer(tableId);
+      this.scheduleAllInRunout(tableId);
       if (live.engine.status === "hand_over") {
         this.scheduleAutoNextHand(tableId);
       } else {
@@ -486,6 +491,34 @@ export class TableManager {
     if (!live?.autoNextTimer) return;
     clearTimeout(live.autoNextTimer);
     live.autoNextTimer = null;
+  }
+
+  private clearAllInRunout(tableId: string): void {
+    const live = this.tables.get(tableId);
+    if (!live?.runoutTimer) return;
+    clearTimeout(live.runoutTimer);
+    live.runoutTimer = null;
+  }
+
+  /**
+   * After everyone is all-in: flop is already out; pause, then turn, pause,
+   * river, pause, showdown — so the board is readable.
+   */
+  private scheduleAllInRunout(tableId: string): void {
+    const live = this.tables.get(tableId);
+    if (!live) return;
+    this.clearAllInRunout(tableId);
+    if (!live.engine.needsAllInRunout()) return;
+    const delay = config.allInRunoutPauseMs;
+    live.runoutTimer = setTimeout(() => {
+      const cur = this.tables.get(tableId);
+      if (cur) cur.runoutTimer = null;
+      void this.withTable(tableId, (eng) => {
+        if (eng.needsAllInRunout()) eng.continueAllInRunout();
+      }).catch((err) => {
+        console.error("all_in_runout_failed", tableId, err);
+      });
+    }, delay);
   }
 
   /** After showdown, deal the next hand without a manual button press. */

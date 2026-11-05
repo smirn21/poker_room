@@ -219,15 +219,16 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
     prevBoardLen.current = board.length;
     setBoardAnimKey((k) => k + 1);
     setRevealedBoard(board.slice(0, from));
-    // Focal moment: stagger street cards (flop 3, then turn/river one-by-one)
-    const gap = board.length - from >= 3 ? 160 : 220;
+    // Focal moment: stagger street cards (flop slower; turn/river one-by-one)
+    const added = board.length - from;
+    const gap = added >= 3 ? 280 : 320;
     board.slice(from).forEach((card, i) => {
       window.setTimeout(() => {
         playDealCard(from + i);
         setRevealedBoard((prev) =>
           prev.includes(card) ? prev : [...prev, card],
         );
-      }, 120 + i * gap);
+      }, 160 + i * gap);
     });
   }, [state]);
 

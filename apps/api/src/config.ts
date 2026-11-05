@@ -80,6 +80,11 @@ export const config = {
     7000,
     Number(process.env.AUTO_NEXT_HAND_MS ?? 7000) || 7000,
   ),
+  /** Pause between all-in runout streets (flop → turn → river → showdown) */
+  allInRunoutPauseMs: Math.max(
+    1200,
+    Number(process.env.ALL_IN_RUNOUT_PAUSE_MS ?? 2000) || 2000,
+  ),
 
   /** USDT TRC20 club receive address (Trust Wallet / your wallet). */
   tronUsdtAddress: (process.env.TRON_USDT_ADDRESS ?? "").trim(),
