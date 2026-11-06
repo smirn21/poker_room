@@ -33,6 +33,8 @@ fi
 echo "Tunnel URL: ${URL}"
 
 ROOT="${HOME}/poker_room"
+# Self-heal web/api deps so rebuild works after PA wipe without manual npm install.
+bash "${ROOT}/deploy/pa_ensure_deps.sh"
 # Bot username for t.me deep links (table invites)
 BOT_USER="Wpt_room_bot"
 if [[ -f "${ROOT}/.env" ]]; then

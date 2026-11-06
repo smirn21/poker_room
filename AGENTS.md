@@ -38,9 +38,16 @@ If any step fails, fix it (restart always-on, re-run `deploy/pa_point_web_at_tun
 ## Deploy notes (PA)
 
 - Node API is **always-on** via `bash ~/poker_room/deploy/pa_api_with_tunnel.sh` (cloudflared quick tunnel).
-- Quick tunnel URL **changes on restart** → must rebuild web: `bash ~/poker_room/deploy/pa_point_web_at_tunnel.sh`.
+- On start, that script runs `pa_ensure_deps.sh` (npm/prisma/self-heal after unpaid wipe) then opens the tunnel.
+- Quick tunnel URL **changes on restart** → always-on auto-runs `pa_point_web_at_tunnel.sh` (also calls `pa_ensure_deps.sh`).
 - Static Mini App root: `~/poker_room_static` → webapp `kiosk-hedgehog22.eu.pythonanywhere.com`.
 - CORS must allow that Mini App origin.
+
+### Restart after PA reboot / billing (normal ops)
+
+1. **Tasks** → always-on `poker-api` → **Restart** (deps + API + tunnel + web rebuild if URL changed).
+2. **Web** → Reload the kiosk webapp (only if the static site looks stale).
+3. Do **not** hand-run `npm install` unless Restart still fails — check always-on log first.
 
 ## Telegram Mini App layout
 
