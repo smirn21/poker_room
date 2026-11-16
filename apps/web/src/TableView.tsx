@@ -722,9 +722,24 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
         </div>
       )}
       <div className="table-topbar">
-        <button type="button" className="secondary table-back-btn" onClick={onBack}>
-          {t("lobby")}
-        </button>
+        {/* Leave stays on the left with Lobby — top-right collides with top-rim hole cards */}
+        <div className="table-nav-left">
+          <button type="button" className="secondary table-back-btn" onClick={onBack}>
+            {t("lobby")}
+          </button>
+          <button
+            type="button"
+            className="secondary table-leave-btn"
+            onClick={leave}
+            aria-label={t("leave")}
+            title={t("leave")}
+          >
+            <span className="table-leave-full">{t("leave")}</span>
+            <span className="table-leave-short" aria-hidden>
+              ✕
+            </span>
+          </button>
+        </div>
         <div className="table-status">
           <span className="street-pill">{streetLabel || "—"}</span>
           <span className="hint table-hand-hint">
@@ -746,27 +761,6 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
             </button>
           )}
           <LanguageSwitcher className="lang-switch-compact" />
-          <button
-            type="button"
-            className={`icon-btn emoji-tool-btn${showEmoji ? " emoji-tool-btn-on" : ""}`}
-            onClick={() => setShowEmoji((v) => !v)}
-            aria-label={t("reactEmoji")}
-            title={t("reactEmoji")}
-          >
-            😊
-          </button>
-          <button
-            type="button"
-            className="secondary table-leave-btn"
-            onClick={leave}
-            aria-label={t("leave")}
-            title={t("leave")}
-          >
-            <span className="table-leave-full">{t("leave")}</span>
-            <span className="table-leave-short" aria-hidden>
-              ✕
-            </span>
-          </button>
         </div>
       </div>
 
@@ -870,16 +864,6 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
         </div>
       )}
 
-      {showEmoji && (
-        <div className="emoji-bar">
-          {REACTIONS.map((e) => (
-            <button key={e} type="button" onClick={() => sendReact(e)}>
-              {e}
-            </button>
-          ))}
-        </div>
-      )}
-
       <div className="felt" ref={feltRef}>
         <div className="felt-rail" />
 
@@ -955,16 +939,17 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
           ))}
         </div>
 
+        {(state?.seats ?? [])
+          .filter((s) => s.userId && s.userId !== user.id)
+          .map((seat) => renderSeat(seat, true))}
+
+        {/* After seats so reactions paint above hole backs */}
         {floats.map((f) => (
           <div key={f.id} className="float-react">
             <span className="float-emoji">{f.emoji}</span>
             <span className="float-name">{f.name}</span>
           </div>
         ))}
-
-        {(state?.seats ?? [])
-          .filter((s) => s.userId && s.userId !== user.id)
-          .map((seat) => renderSeat(seat, true))}
       </div>
 
       {winnerText ? (
@@ -1132,6 +1117,15 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
             </div>
           ))}
         </div>
+        {showEmoji && (
+          <div className="emoji-bar" role="listbox" aria-label={t("reactEmoji")}>
+            {REACTIONS.map((e) => (
+              <button key={e} type="button" onClick={() => sendReact(e)}>
+                {e}
+              </button>
+            ))}
+          </div>
+        )}
         <form className="row chat-compose" onSubmit={sendChat}>
           <button
             type="button"

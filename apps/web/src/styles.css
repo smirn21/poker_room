@@ -1638,6 +1638,8 @@ input:focus-visible {
   min-width: 0;
   margin: 0 0 0.2rem;
   padding: 0 0.15rem;
+  position: relative;
+  z-index: 60;
 }
 
 .table-name-chip-hero {
@@ -1661,6 +1663,17 @@ input:focus-visible {
   padding-right: 0.1rem;
   flex-shrink: 0;
   min-width: 0;
+  /* Above felt overflow (top-rim hole backs) so chrome stays tappable */
+  position: relative;
+  z-index: 60;
+}
+
+.table-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .table-leave-short {
@@ -1677,7 +1690,7 @@ input:focus-visible {
   opacity: 0.85;
 }
 
-body.has-tg-back .table-topbar > button.secondary:first-child,
+body.has-tg-back .table-topbar .table-back-btn,
 body.has-tg-back .app-shell > button.secondary:last-child {
   /* Native Telegram BackButton is visible — hide duplicate in-app Back */
   display: none;
@@ -2378,9 +2391,18 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     row-gap: 0.2rem;
   }
 
+  .table-nav-left {
+    gap: 0.18rem;
+  }
+
   .table-back-btn {
     padding: 0.4rem 0.55rem;
     font-size: 0.72rem;
+  }
+
+  .table-nav-left .table-leave-btn {
+    padding: 0.35rem 0.45rem;
+    min-width: 2rem;
   }
 
   .table-status {
@@ -3170,13 +3192,22 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   flex-direction: column-reverse;
 }
 
-/* Top rim: bets BELOW the seat toward the board (backs stay above) */
+/* Fallback downward bet park (used if a seat still opts out-down) */
 .bet-stack.bet-out-down {
   top: calc(100% + 0.22rem);
   bottom: auto;
   left: 50%;
   transform: translateX(-50%);
   flex-direction: column;
+}
+
+/* Top-rim holes face the pot — keep a tight gap so they clear the board */
+.seat-rim-top .opp-backs-down {
+  top: calc(100% + 0.06rem);
+}
+
+.seat-rim-top .hole-opp.hole-down {
+  top: calc(100% + 0.1rem);
 }
 
 /* When face-down holes also sit above the seat on non-top rims, park bet further out */
@@ -3772,9 +3803,10 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 .float-react {
   position: absolute;
   left: 50%;
-  top: 55%;
+  /* Mid felt — clear of top-rim seats and hero strip */
+  top: 48%;
   transform: translate(-50%, 0);
-  z-index: 30;
+  z-index: 45;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3792,8 +3824,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 @keyframes floatUp {
   0% { opacity: 0; transform: translate(-50%, 12px) scale(0.7); }
   8% { opacity: 1; transform: translate(-50%, 0) scale(1.08); }
-  70% { opacity: 1; transform: translate(-50%, -28px) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -64px) scale(1); }
+  70% { opacity: 1; transform: translate(-50%, -20px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -48px) scale(1); }
 }
 
 .hero-zone {

@@ -75,12 +75,11 @@ export type BetDir = "out-up" | "out-down" | "out-left" | "out-right" | "in-up";
 type OppSlot = { left: number; top: number; hole: HoleDir };
 
 /**
- * Top rim: hole backs go UP (phone edge); bets go DOWN toward the board —
- * otherwise center-top `out-left/right` tucks the chip under the seat/backs.
- * Side seats: bets outward. Lower arc: bets up toward the rim.
+ * Top rim: hole cards face the pot (down) so they never cover the table chrome;
+ * bets go left/right of the seat. Side seats: bets outward. Lower arc: bets up.
  */
 export function betDirForSlot(leftPct: number, topPct: number): BetDir {
-  if (topPct <= 22) return "out-down";
+  if (topPct <= 22) return leftPct <= 50 ? "out-left" : "out-right";
   if (leftPct <= 22) return "out-left";
   if (leftPct >= 78) return "out-right";
   return "out-up";
@@ -89,59 +88,60 @@ export function betDirForSlot(leftPct: number, topPct: number): BetDir {
 /**
  * Opponent rim slots — stay outside the center keepout (~28–72% × 28–70%)
  * so seats never collide with board / pot. hole = direction for backs & showdown.
+ * Top-arc holes face the pot (`down`) to clear topbar leave / tools.
  * Index = opponent count (hero is in the bottom strip). Full ring = 8 → 9-max.
  */
 const OPP_BY_COUNT: OppSlot[][] = [
   [],
-  [{ left: 50, top: 12, hole: "up" }],
+  [{ left: 50, top: 17, hole: "down" }],
   [
-    { left: 14, top: 16, hole: "up" },
-    { left: 86, top: 16, hole: "up" },
+    { left: 14, top: 18, hole: "down" },
+    { left: 86, top: 18, hole: "down" },
   ],
   [
-    { left: 12, top: 22, hole: "up" },
-    { left: 50, top: 12, hole: "up" },
-    { left: 88, top: 22, hole: "up" },
+    { left: 12, top: 24, hole: "left" },
+    { left: 50, top: 17, hole: "down" },
+    { left: 88, top: 24, hole: "right" },
   ],
   [
-    { left: 10, top: 30, hole: "up" },
-    { left: 24, top: 12, hole: "up" },
-    { left: 76, top: 12, hole: "up" },
-    { left: 90, top: 30, hole: "up" },
+    { left: 10, top: 30, hole: "left" },
+    { left: 24, top: 17, hole: "down" },
+    { left: 76, top: 17, hole: "down" },
+    { left: 90, top: 30, hole: "right" },
   ],
   [
-    { left: 9, top: 36, hole: "up" },
-    { left: 20, top: 13, hole: "up" },
-    { left: 50, top: 12, hole: "up" },
-    { left: 80, top: 13, hole: "up" },
-    { left: 91, top: 36, hole: "up" },
+    { left: 9, top: 36, hole: "left" },
+    { left: 20, top: 17, hole: "down" },
+    { left: 50, top: 17, hole: "down" },
+    { left: 80, top: 17, hole: "down" },
+    { left: 91, top: 36, hole: "right" },
   ],
   [
-    { left: 8, top: 42, hole: "up" },
-    { left: 11, top: 20, hole: "up" },
-    { left: 28, top: 12, hole: "up" },
-    { left: 72, top: 12, hole: "up" },
-    { left: 89, top: 20, hole: "up" },
-    { left: 92, top: 42, hole: "up" },
+    { left: 8, top: 42, hole: "left" },
+    { left: 11, top: 22, hole: "left" },
+    { left: 28, top: 17, hole: "down" },
+    { left: 72, top: 17, hole: "down" },
+    { left: 89, top: 22, hole: "right" },
+    { left: 92, top: 42, hole: "right" },
   ],
   [
-    { left: 8, top: 48, hole: "up" },
-    { left: 10, top: 26, hole: "up" },
-    { left: 24, top: 12, hole: "up" },
-    { left: 50, top: 12, hole: "up" },
-    { left: 76, top: 12, hole: "up" },
-    { left: 90, top: 26, hole: "up" },
-    { left: 92, top: 48, hole: "up" },
+    { left: 8, top: 48, hole: "left" },
+    { left: 10, top: 28, hole: "left" },
+    { left: 24, top: 17, hole: "down" },
+    { left: 50, top: 17, hole: "down" },
+    { left: 76, top: 17, hole: "down" },
+    { left: 90, top: 28, hole: "right" },
+    { left: 92, top: 48, hole: "right" },
   ],
   [
-    { left: 8, top: 54, hole: "up" },
-    { left: 9, top: 34, hole: "up" },
-    { left: 14, top: 16, hole: "up" },
-    { left: 34, top: 12, hole: "up" },
-    { left: 66, top: 12, hole: "up" },
-    { left: 86, top: 16, hole: "up" },
-    { left: 91, top: 34, hole: "up" },
-    { left: 92, top: 54, hole: "up" },
+    { left: 8, top: 54, hole: "left" },
+    { left: 9, top: 34, hole: "left" },
+    { left: 14, top: 18, hole: "down" },
+    { left: 34, top: 17, hole: "down" },
+    { left: 66, top: 17, hole: "down" },
+    { left: 86, top: 18, hole: "down" },
+    { left: 91, top: 34, hole: "right" },
+    { left: 92, top: 54, hole: "right" },
   ],
 ];
 
