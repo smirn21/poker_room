@@ -28,12 +28,34 @@ Always apply. After **any** code change, config change, or deploy, run a **full 
 
 If any step fails, fix it (restart always-on, re-run `deploy/pa_point_web_at_tunnel.sh`, rebuild, etc.) or remove the breaking change, then re-run the checklist. Then commit (RU) + push.
 
+## PythonAnywhere: SSH first, browser second
+
+**Верно:** почти всё на PA делается через SSH (`ssh pa` / BatchMode) — быстрее и точнее, чем кликать в дашборде.
+
+Делай по SSH (по умолчанию):
+
+- чтение/правка файлов, `git pull` / `reset --hard`, `scp`, `chmod`
+- логи: `~/poker_api.log`, `~/poker_room_tunnel.log`, `~/poker_point_web.log`, `/var/log/alwayson-log-*.log`
+- URL туннеля: `cat ~/poker_room_api_url.txt`
+- деплой: `bash ~/poker_room/deploy/pa_ensure_deps.sh`, `pa_point_web_at_tunnel.sh`, `verify_tronhooks.py`
+- проверки: `curl` к **публичному** tunnel URL (`/health`, auth) и к static Mini App
+
+Нюанс: always-on крутится на **другом** хосте, чем SSH-консоль. `curl http://127.0.0.1:18765` с SSH обычно **не** видит API — это нормально. Смотри публичный URL и always-on log.
+
+Браузер / Computer Use — **только если SSH не хватает**:
+
+1. Tasks → Create / Restart / Disable always-on `poker-api` (нет SSH API у PA для этого)
+2. Web → Reload kiosk webapp, если статика залипла
+3. UI smoke Mini App (`?dev=1`) — IDE browser / скрин
+
+Не открывай PA Chrome «на всякий случай», пока не упёрся в пункт из списка выше.
+
 ## Tools you may use
 
+- **SSH + shell/`curl`** — основной путь к PA (см. выше).
 - **Subagents** for parallel investigate/fix/verify.
-- **Computer Use** on the logged-in PythonAnywhere Chrome session (Tasks, Files, always-on logs, Web).
-- **IDE browser** for Mini App / health checks.
-- Shell/`curl` for `/health` and static HEAD/GET.
+- **Computer Use** on the logged-in PythonAnywhere Chrome session — только Tasks/Web UI, когда SSH недостаточен.
+- **IDE browser** for Mini App / public health UI smoke.
 
 ## Deploy notes (PA)
 
