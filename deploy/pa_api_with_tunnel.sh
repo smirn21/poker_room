@@ -6,6 +6,9 @@
 #   1) Tasks → Restart always-on "poker-api" (this script self-heals npm/prisma)
 #   2) Web → Reload kiosk webapp (only if static was rebuilt / PA static cache)
 # No manual npm install needed — pa_ensure_deps.sh runs on every start.
+#
+# If Node dies while cloudflared stays up, we exit so PA always-on restarts us
+# (previously tunnel kept running → Mini App saw 502 forever).
 set -euo pipefail
 
 export NVM_DIR="${HOME}/.nvm"
@@ -44,7 +47,11 @@ start_api() {
 
 start_api
 
-cleanup() { kill "${API_PID}" 2>/dev/null || true; }
+CF_PID=""
+cleanup() {
+  kill "${API_PID}" 2>/dev/null || true
+  [[ -n "${CF_PID}" ]] && kill "${CF_PID}" 2>/dev/null || true
+}
 trap cleanup EXIT
 
 # Wait for listen. If deps were still broken, force-reinstall once and retry.
@@ -63,7 +70,6 @@ if [[ "${ok}" -ne 1 ]]; then
   FORCE_NPM_INSTALL=1 bash "${HOME}/poker_room/deploy/pa_ensure_deps.sh"
   cd "${HOME}/poker_room/apps/api"
   start_api
-  trap cleanup EXIT
   ok=0
   for _ in $(seq 1 90); do
     if curl -sf --max-time 2 "http://127.0.0.1:${PORT}/health" >/dev/null; then
@@ -81,37 +87,71 @@ else
   sleep 2
 fi
 
-# Tee cloudflared output so we can scrape the trycloudflare URL reliably.
-# Always-on stays alive while this pipeline runs.
 TUNNEL_LOG="${HOME}/poker_room_tunnel.log"
 URL_FILE="${HOME}/poker_room_api_url.txt"
 : > "${TUNNEL_LOG}"
 
-stdbuf -oL -eL "${CF}" tunnel --no-autoupdate --url "http://127.0.0.1:${PORT}" 2>&1 \
-  | tee -a "${TUNNEL_LOG}" \
-  | while IFS= read -r line; do
-      echo "${line}"
-      if [[ "${line}" =~ https://[a-zA-Z0-9-]+\.trycloudflare\.com ]]; then
-        NEW_URL="${BASH_REMATCH[0]}"
+# Run tunnel in background; scrape URL from its log.
+stdbuf -oL -eL "${CF}" tunnel --no-autoupdate --url "http://127.0.0.1:${PORT}" \
+  >>"${TUNNEL_LOG}" 2>&1 &
+CF_PID=$!
+
+# Scrape trycloudflare URL and rebind Mini App / TronHooks when it changes.
+(
+  seen=""
+  while true; do
+    if [[ -f "${TUNNEL_LOG}" ]]; then
+      cand=$(grep -oE 'https://[a-zA-Z0-9-]+\.trycloudflare\.com' "${TUNNEL_LOG}" 2>/dev/null | tail -n 1 || true)
+      if [[ -n "${cand}" && "${cand}" != "${seen}" ]]; then
         OLD_URL=""
-        [[ -f "${URL_FILE}" ]] && OLD_URL="$(cat "${URL_FILE}" 2>/dev/null || true)"
-        echo "${NEW_URL}" > "${URL_FILE}"
-        echo "TUNNEL_URL ${NEW_URL}" >&2
-        # Rebuild Mini App + rebind TronHooks when tunnel URL changes.
-        if [[ "${NEW_URL}" != "${OLD_URL}" ]]; then
+        [[ -f "${URL_FILE}" ]] && OLD_URL="$(tr -d '[:space:]' < "${URL_FILE}" || true)"
+        echo "${cand}" > "${URL_FILE}"
+        echo "TUNNEL_URL ${cand}" >&2
+        seen="${cand}"
+        if [[ "${cand}" != "${OLD_URL}" ]]; then
           echo "tunnel_url_changed — scheduling point_web + tronhooks align" >&2
           (
             sleep 3
             bash "${HOME}/poker_room/deploy/pa_point_web_at_tunnel.sh" \
               >>"${HOME}/poker_point_web.log" 2>&1 \
               || echo "point_web_failed" >&2
-            # API watchdog also realigns; this covers the gap before the next tick.
             python3 "${HOME}/poker_room/deploy/verify_tronhooks.py" \
               >>"${HOME}/poker_tronhooks_align.log" 2>&1 \
               || echo "tronhooks_align_failed" >&2
           ) &
         fi
       fi
-    done
-# If the pipe ends, exit so always-on restarts us.
-exit 1
+    fi
+    sleep 2
+  done
+) &
+SCRAPE_PID=$!
+
+# Watchdog: if API dies (or cloudflared dies), exit so PA restarts the whole task.
+fail_streak=0
+while true; do
+  sleep 20
+  if ! kill -0 "${CF_PID}" 2>/dev/null; then
+    echo "cloudflared exited — restarting always-on" >&2
+    kill "${SCRAPE_PID}" 2>/dev/null || true
+    exit 1
+  fi
+  if curl -sf --max-time 3 "http://127.0.0.1:${PORT}/health" >/dev/null; then
+    fail_streak=0
+    continue
+  fi
+  fail_streak=$((fail_streak + 1))
+  echo "API health fail streak=${fail_streak}" >&2
+  if [[ "${fail_streak}" -ge 2 ]]; then
+    echo "API dead while tunnel up — exiting so always-on restarts" >&2
+    tail -n 40 "${HOME}/poker_api.log" >&2 || true
+    kill "${SCRAPE_PID}" 2>/dev/null || true
+    exit 1
+  fi
+  # One soft restart of Node before giving up.
+  echo "restarting Node API once" >&2
+  kill "${API_PID}" 2>/dev/null || true
+  sleep 1
+  cd "${HOME}/poker_room/apps/api"
+  start_api
+done
