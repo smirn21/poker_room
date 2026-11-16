@@ -246,9 +246,9 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
     const felt = feltRef.current;
     if (!felt) return;
     const feltBox = felt.getBoundingClientRect();
-    // Pot chips sit under the board (~58% down the felt)
+    // Pot band under street cards (~68% down the felt) — must stay visible above board
     const potX = feltBox.width / 2;
-    const potY = feltBox.height * 0.58;
+    const potY = feltBox.height * 0.68;
     const chips: FlyingChip[] = [];
     let id = 0;
 
@@ -937,21 +937,23 @@ export function TableView({ tableId, user, onBack, onUser, onTopUp }: Props) {
           </div>
         </div>
 
-        {flying.map((f) => (
-          <span
-            key={f.id}
-            className={`chip chip-fly chip-vacuum chip-v${f.value}`}
-            style={
-              {
-                "--dx": `${f.dx}px`,
-                "--dy": `${f.dy}px`,
-                "--ox": `${f.ox ?? 0}px`,
-                "--oy": `${f.oy ?? 0}px`,
-                animationDelay: `${f.delay}ms`,
-              } as React.CSSProperties
-            }
-          />
-        ))}
+        <div className="felt-fx" aria-hidden>
+          {flying.map((f) => (
+            <span
+              key={f.id}
+              className={`chip chip-fly chip-vacuum chip-v${f.value}`}
+              style={
+                {
+                  "--dx": `${f.dx}px`,
+                  "--dy": `${f.dy}px`,
+                  "--ox": `${f.ox ?? 0}px`,
+                  "--oy": `${f.oy ?? 0}px`,
+                  animationDelay: `${f.delay}ms`,
+                } as React.CSSProperties
+              }
+            />
+          ))}
+        </div>
 
         {floats.map((f) => (
           <div key={f.id} className="float-react">
