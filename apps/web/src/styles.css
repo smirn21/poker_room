@@ -3230,7 +3230,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
 /* Lift betting seats above the board so street bets stay readable */
 .seat.seat-betting {
-  z-index: 17;
+  z-index: 22;
 }
 
 .seat.winner .avatar {
