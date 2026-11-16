@@ -364,13 +364,20 @@ export class HoldEmTable {
     return true;
   }
 
-  /** True when betting is done and the board must be run out (everyone all-in / one can act). */
+  /**
+   * True when betting is closed and the board must be run out
+   * (everyone all-in, or only one player still has chips — and they already
+   * called/checked). Must NOT be true while someone still needs to respond
+   * to an all-in; otherwise we deal the board without a call (bug: short pot).
+   */
   isAllInRunoutSituation(): boolean {
     if (this.status !== "playing") return false;
     const stillIn = this.seats.filter((s) => s.player && !s.folded);
     if (stillIn.length < 2) return false;
     const canAct = stillIn.filter((s) => !s.allIn && s.player!.stack > 0);
-    return canAct.length <= 1;
+    if (canAct.length > 1) return false;
+    // Zero or one player with chips left — only after the betting round is closed.
+    return this.bettingRoundComplete();
   }
 
   /**
@@ -485,6 +492,8 @@ export class HoldEmTable {
   private showdown(): void {
     this.street = "showdown";
     this.collectBetsToPot();
+    // Return uncalled chips BEFORE rake (standard cash-game: don't rake excess).
+    this.returnUncalledBets();
     this.takeRakeFromPot();
     const sidePots = this.buildSidePots();
     this.winners = [];
@@ -496,9 +505,7 @@ export class HoldEmTable {
       const eligible = pot.eligible.filter((i) => !this.seats[i].folded);
       if (eligible.length === 0) continue;
       if (eligible.length === 1) {
-        // Return chips to the sole eligible seat. At a multi-way showdown this is
-        // an uncalled bet — credit the stack but do NOT mark them as a hand winner
-        // (otherwise both players show «ПОБЕДА» when only one took the pot).
+        // Sole eligible for this layer (should be rare after returnUncalledBets).
         this.pay(eligible[0], pot.amount);
         if (stillInCount <= 1) {
           this.winners.push({ seatIndex: eligible[0], amount: pot.amount });
@@ -606,6 +613,32 @@ export class HoldEmTable {
       this.pot += s.bet;
       s.bet = 0;
     }
+  }
+
+  /**
+   * Return chips above the next-highest investment so they are not raked
+   * and not treated as a contested pot.
+   */
+  private returnUncalledBets(): void {
+    const invested = this.seats
+      .map((s, i) => ({ i, inv: s.totalInvested, folded: s.folded }))
+      .filter((x) => x.inv > 0)
+      .sort((a, b) => b.inv - a.inv);
+    if (invested.length < 2) return;
+    const top = invested[0]!;
+    const second = invested[1]!.inv;
+    const excess = top.inv - second;
+    if (excess <= 0) return;
+    const refund = Math.min(excess, this.pot);
+    if (refund <= 0) return;
+    this.pot -= refund;
+    this.seats[top.i]!.totalInvested -= refund;
+    this.pay(top.i, refund);
+    this.handHistory.push({
+      event: "uncalled_returned",
+      seat: top.i,
+      amount: refund,
+    });
   }
 
   private postBlind(seatIndex: number, amount: number): void {
