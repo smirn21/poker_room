@@ -69,21 +69,20 @@ export function formatCard(card: Card): { label: string; red: boolean } {
 
 export type HoleDir = "up" | "down" | "left" | "right";
 
-/** Street bet placement relative to seat — always away from the board. */
-export type BetDir = "out-up" | "out-left" | "out-right" | "in-up";
+/** Street bet placement relative to seat — always away from hole cards / chrome. */
+export type BetDir = "out-up" | "out-down" | "out-left" | "out-right" | "in-up";
 
 type OppSlot = { left: number; top: number; hole: HoleDir };
 
 /**
- * Bets stay on-felt: top arc beside the avatar; everyone else above the seat
- * (hole backs also use "up", so bet sits further out in the same column).
+ * Top rim: hole backs go UP (phone edge); bets go DOWN toward the board —
+ * otherwise center-top `out-left/right` tucks the chip under the seat/backs.
+ * Side seats: bets outward. Lower arc: bets up toward the rim.
  */
 export function betDirForSlot(leftPct: number, topPct: number): BetDir {
-  if (topPct <= 20) {
-    // Near the left/right phone edge — stay above the seat, don't go sideways off-screen
-    if (leftPct <= 22 || leftPct >= 78) return "out-up";
-    return leftPct <= 50 ? "out-left" : "out-right";
-  }
+  if (topPct <= 22) return "out-down";
+  if (leftPct <= 22) return "out-left";
+  if (leftPct >= 78) return "out-right";
   return "out-up";
 }
 

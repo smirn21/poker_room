@@ -2663,13 +2663,13 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     border-radius: 999px;
   }
 
-  /* Street bets stay on the rim — never under community cards */
+  /* Street bets stay on the rim — never under community / hole cards */
   .bet-stack {
-    z-index: 18;
+    z-index: 24;
   }
 
   .bet-stack.bet-stack-loud {
-    z-index: 19;
+    z-index: 26;
   }
 
   .bet-stack.bet-in-up,
@@ -2678,8 +2678,17 @@ body.has-tg-back .app-shell > button.secondary:last-child {
     transform-origin: bottom center;
   }
 
+  .bet-stack.bet-out-down {
+    transform: translateX(-50%) scale(1);
+    transform-origin: top center;
+  }
+
   .bet-stack.bet-stack-loud.bet-in-up,
   .bet-stack.bet-stack-loud.bet-out-up {
+    transform: translateX(-50%) scale(1.06);
+  }
+
+  .bet-stack.bet-stack-loud.bet-out-down {
     transform: translateX(-50%) scale(1.06);
   }
 
@@ -3133,7 +3142,8 @@ body.has-tg-back .app-shell > button.secondary:last-child {
 
 .bet-stack {
   position: absolute;
-  z-index: 16;
+  /* Above opp hole backs (z6) and seat chrome — never under cards */
+  z-index: 24;
   pointer-events: none;
   display: flex;
   flex-direction: column;
@@ -3151,7 +3161,7 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   flex-direction: column-reverse;
 }
 
-/* Top/side rim: push bets ABOVE the seat (clear of board & phone edges) */
+/* Lower/mid rim: bets ABOVE the seat (toward phone edge / clear of board) */
 .bet-stack.bet-out-up {
   bottom: calc(100% + 0.18rem);
   top: auto;
@@ -3160,7 +3170,16 @@ body.has-tg-back .app-shell > button.secondary:last-child {
   flex-direction: column-reverse;
 }
 
-/* When face-down holes also sit above the seat, park the bet further out */
+/* Top rim: bets BELOW the seat toward the board (backs stay above) */
+.bet-stack.bet-out-down {
+  top: calc(100% + 0.22rem);
+  bottom: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  flex-direction: column;
+}
+
+/* When face-down holes also sit above the seat on non-top rims, park bet further out */
 .seat:has(.opp-backs-up) .bet-stack.bet-out-up {
   bottom: calc(100% + 1.65rem);
 }
