@@ -147,9 +147,15 @@ while true; do
   fi
   if curl -sf --max-time 3 "http://127.0.0.1:${PORT}/health" >/dev/null; then
     fail_streak=0
-    # Every ~3 min: if static Mini App still points at a stale tunnel, rebuild.
-    if (( watch_loops % 9 == 0 )); then
+    # Quick tunnel can go zombie (process up, public 530) while Node is fine.
+    # Every ~2 min probe the public URL; exit so always-on refreshes the tunnel.
+    if (( watch_loops % 6 == 0 )); then
       LIVE="$(tr -d '[:space:]' < "${URL_FILE}" 2>/dev/null || true)"
+      if [[ -n "${LIVE}" ]] && ! curl -sf --max-time 8 "${LIVE}/health" >/dev/null; then
+        echo "public_tunnel_dead LIVE=${LIVE} — exiting for always-on restart" >&2
+        kill "${SCRAPE_PID}" 2>/dev/null || true
+        exit 1
+      fi
       STATIC_URL="$(grep -oE 'https://[a-zA-Z0-9-]+\.trycloudflare\.com' \
         "${HOME}/poker_room_static/assets/"*.js 2>/dev/null | sort -u | tail -n 1 || true)"
       if [[ -n "${LIVE}" && -n "${STATIC_URL}" && "${LIVE}" != "${STATIC_URL}" ]]; then
