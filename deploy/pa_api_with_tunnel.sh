@@ -9,6 +9,19 @@
 #
 # If Node dies while cloudflared stays up, we exit so PA always-on restarts us
 # (previously tunnel kept running → Mini App saw 502 forever).
+#
+# PA NFS: rsync can rewrite this file while always-on is mid-run → bash
+# "Stale file handle". Re-exec from a /tmp copy so deploys don't kill us.
+if [[ "${POKER_API_SCRIPT_COPIED:-}" != "1" ]]; then
+  _src="${BASH_SOURCE[0]:-$0}"
+  _dst="${HOME}/poker_api_with_tunnel.runtime.sh"
+  cp -f "${_src}" "${_dst}" 2>/dev/null || cp -f "${_src}" "/tmp/poker_api_with_tunnel.runtime.sh"
+  [[ -f "${_dst}" ]] || _dst="/tmp/poker_api_with_tunnel.runtime.sh"
+  chmod +x "${_dst}" 2>/dev/null || true
+  export POKER_API_SCRIPT_COPIED=1
+  exec bash "${_dst}" "$@"
+fi
+
 set -euo pipefail
 
 export NVM_DIR="${HOME}/.nvm"
