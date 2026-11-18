@@ -96,6 +96,22 @@ stdbuf -oL -eL "${CF}" tunnel --no-autoupdate --url "http://127.0.0.1:${PORT}" \
   >>"${TUNNEL_LOG}" 2>&1 &
 CF_PID=$!
 
+schedule_point_web() {
+  local url="$1"
+  # nohup: must survive this always-on process exiting (otherwise
+  # Mini App keeps the old trycloudflare URL → «нет связи» for hours).
+  echo "tunnel_url_changed — scheduling point_web + tronhooks align (${url})" >&2
+  nohup bash -c "
+    sleep 2
+    flock -n \"\$HOME/poker_point_web.lock\" \
+      bash \"\$HOME/poker_room/deploy/pa_point_web_at_tunnel.sh\" \"${url}\" \
+      >>\"\$HOME/poker_point_web.log\" 2>&1 \
+      || echo point_web_failed >>\"\$HOME/poker_point_web.log\"
+  " >/dev/null 2>&1 &
+}
+# So the scrape subshell can call it.
+export -f schedule_point_web
+
 # Scrape trycloudflare URL and rebind Mini App / TronHooks when it changes.
 (
   seen=""
@@ -109,16 +125,7 @@ CF_PID=$!
         echo "TUNNEL_URL ${cand}" >&2
         seen="${cand}"
         if [[ "${cand}" != "${OLD_URL}" ]]; then
-          echo "tunnel_url_changed — scheduling point_web + tronhooks align" >&2
-          (
-            sleep 3
-            bash "${HOME}/poker_room/deploy/pa_point_web_at_tunnel.sh" \
-              >>"${HOME}/poker_point_web.log" 2>&1 \
-              || echo "point_web_failed" >&2
-            python3 "${HOME}/poker_room/deploy/verify_tronhooks.py" \
-              >>"${HOME}/poker_tronhooks_align.log" 2>&1 \
-              || echo "tronhooks_align_failed" >&2
-          ) &
+          schedule_point_web "${cand}"
         fi
       fi
     fi
@@ -129,8 +136,10 @@ SCRAPE_PID=$!
 
 # Watchdog: if API dies (or cloudflared dies), exit so PA restarts the whole task.
 fail_streak=0
+watch_loops=0
 while true; do
   sleep 20
+  watch_loops=$((watch_loops + 1))
   if ! kill -0 "${CF_PID}" 2>/dev/null; then
     echo "cloudflared exited — restarting always-on" >&2
     kill "${SCRAPE_PID}" 2>/dev/null || true
@@ -138,6 +147,16 @@ while true; do
   fi
   if curl -sf --max-time 3 "http://127.0.0.1:${PORT}/health" >/dev/null; then
     fail_streak=0
+    # Every ~3 min: if static Mini App still points at a stale tunnel, rebuild.
+    if (( watch_loops % 9 == 0 )); then
+      LIVE="$(tr -d '[:space:]' < "${URL_FILE}" 2>/dev/null || true)"
+      STATIC_URL="$(grep -oE 'https://[a-zA-Z0-9-]+\.trycloudflare\.com' \
+        "${HOME}/poker_room_static/assets/"*.js 2>/dev/null | sort -u | tail -n 1 || true)"
+      if [[ -n "${LIVE}" && -n "${STATIC_URL}" && "${LIVE}" != "${STATIC_URL}" ]]; then
+        echo "static_stale LIVE=${LIVE} STATIC=${STATIC_URL} — re-pointing web" >&2
+        schedule_point_web "${LIVE}"
+      fi
+    fi
     continue
   fi
   fail_streak=$((fail_streak + 1))
@@ -148,10 +167,12 @@ while true; do
     kill "${SCRAPE_PID}" 2>/dev/null || true
     exit 1
   fi
-  # One soft restart of Node before giving up.
-  echo "restarting Node API once" >&2
+  # Soft restart: heal prisma/deps first (Bus error / PA wipe often leave
+  # @prisma/client uninitialized — bare node restart then fails forever).
+  echo "restarting Node API once (with ensure_deps)" >&2
   kill "${API_PID}" 2>/dev/null || true
   sleep 1
+  bash "${HOME}/poker_room/deploy/pa_ensure_deps.sh" || true
   cd "${HOME}/poker_room/apps/api"
   start_api
 done

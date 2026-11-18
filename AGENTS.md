@@ -71,6 +71,17 @@ If any step fails, fix it (restart always-on, re-run `deploy/pa_point_web_at_tun
 2. **Web** → Reload the kiosk webapp (only if the static site looks stale).
 3. Do **not** hand-run `npm install` unless Restart still fails — check always-on log first.
 
+### Why Mini App says «нет связи» after a few days
+
+Typical chain on PA:
+
+1. Node hits **Bus error** (PA host / memory) after long uptime.
+2. Soft restart used to skip `prisma generate` → API stays dead.
+3. Watchdog exits → always-on starts a **new quick tunnel URL**.
+4. If `pa_point_web_at_tunnel.sh` dies with the old process, static Mini App still embeds the **old** `VITE_WS_URL` → clients cannot reach the live API.
+
+Mitigations in `pa_api_with_tunnel.sh`: soft restart runs `pa_ensure_deps.sh`; point_web is `nohup`+`flock` so it survives restarts; watchdog re-points static if URL drifts.
+
 ## Telegram Mini App layout
 
 - Use `viewport-fit=cover` and padding from `safe-area-inset-*` + Telegram `contentSafeAreaInset` / CSS vars (`--tg-content-safe-area-inset-*`).
