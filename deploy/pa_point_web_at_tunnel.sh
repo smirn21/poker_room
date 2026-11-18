@@ -77,8 +77,20 @@ cd "${ROOT}"
 npm run build -w @poker/web
 
 mkdir -p "${HOME}/poker_room_static"
-rm -rf "${HOME}/poker_room_static"/*
-cp -R "${ROOT}/apps/web/dist/." "${HOME}/poker_room_static/"
+# PA NFS sometimes returns "Stale file handle" / can't preserve perms — don't abort
+# after a successful Vite build (that left Mini App on a dead tunnel URL).
+rm -rf "${HOME}/poker_room_static"/* 2>/dev/null || true
+if command -v rsync >/dev/null 2>&1; then
+  rsync -a --delete --no-owner --no-group --no-perms \
+    "${ROOT}/apps/web/dist/" "${HOME}/poker_room_static/" \
+    || cp -R "${ROOT}/apps/web/dist/." "${HOME}/poker_room_static/" || true
+else
+  cp -R "${ROOT}/apps/web/dist/." "${HOME}/poker_room_static/" || true
+fi
+if [[ ! -f "${HOME}/poker_room_static/index.html" ]]; then
+  echo "point_web: static index.html missing after copy" >&2
+  exit 1
+fi
 
 echo "${URL}" > "${HOME}/poker_room_api_url.txt"
 echo "DONE_POINT_WEB ${URL}"
