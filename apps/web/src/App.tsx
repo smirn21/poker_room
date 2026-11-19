@@ -412,52 +412,64 @@ export function App() {
   }
 
   async function boot() {
-    try {
-      setError(null);
-      setGate("boot");
-      const initData = await resolveInitData();
-      if (!initData) {
-        setError(t("errOpenFromTelegram"));
+    // PA Node Bus error / tunnel blip: retry before showing «нет связи»
+    const maxAttempts = 4;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        setError(null);
+        setGate("boot");
+        const initData = await resolveInitData();
+        if (!initData) {
+          setError(t("errOpenFromTelegram"));
+          setGate("boot");
+          return;
+        }
+        const { token, user: u } = await api.authTelegram(initData);
+        setToken(token);
+        setUser(u);
+        requestTelegramFullscreen();
+        if (u.blocked) {
+          setGate("app");
+          setTab("profile");
+          setError(t("errBlocked"));
+          return;
+        }
+        const pre = resolveLaunchInviteCode();
+        if (!u.whitelisted) {
+          if (pre) {
+            const r = await api.redeemInvite(pre.trim());
+            await afterInviteOrAuth(r.user, { tableId: r.tableId ?? null });
+            return;
+          }
+          setGate("invite");
+          return;
+        }
+        // Already in club — honour REF / REF_TBL / startapp / ?invite= deep links
+        if (pre) {
+          try {
+            const r = await api.redeemInvite(pre.trim());
+            await afterInviteOrAuth(r.user, { tableId: r.tableId ?? null });
+            return;
+          } catch {
+            /* invalid invite → fall through to lobby / pending */
+          }
+        }
+        await afterInviteOrAuth(u);
+        return;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : t("errBoot");
+        const net =
+          /failed to fetch|network|load failed|timeout|503|502|530|no connection to api/i.test(
+            msg,
+          );
+        if (net && attempt < maxAttempts) {
+          await new Promise((r) => setTimeout(r, 700 * attempt));
+          continue;
+        }
+        setError(net ? t("errBootNet") : msg || t("errBoot"));
         setGate("boot");
         return;
       }
-      const { token, user: u } = await api.authTelegram(initData);
-      setToken(token);
-      setUser(u);
-      requestTelegramFullscreen();
-      if (u.blocked) {
-        setGate("app");
-        setTab("profile");
-        setError(t("errBlocked"));
-        return;
-      }
-      const pre = resolveLaunchInviteCode();
-      if (!u.whitelisted) {
-        if (pre) {
-          const r = await api.redeemInvite(pre.trim());
-          await afterInviteOrAuth(r.user, { tableId: r.tableId ?? null });
-          return;
-        }
-        setGate("invite");
-        return;
-      }
-      // Already in club — honour REF / REF_TBL / startapp / ?invite= deep links
-      if (pre) {
-        try {
-          const r = await api.redeemInvite(pre.trim());
-          await afterInviteOrAuth(r.user, { tableId: r.tableId ?? null });
-          return;
-        } catch {
-          /* invalid invite → fall through to lobby / pending */
-        }
-      }
-      await afterInviteOrAuth(u);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : t("errBoot");
-      const net =
-        /failed to fetch|network|load failed|timeout|503|502|530/i.test(msg);
-      setError(net ? t("errBootNet") : msg || t("errBoot"));
-      setGate("boot");
     }
   }
 
