@@ -37,7 +37,8 @@ export const en: Record<MessageKey, string> = {
   confirmDeleteTable: "Delete this table?",
   errRename: "Rename failed",
   errDeleteTable: "Delete failed",
-  errBootNet: "Can't reach the server. Check network and tap Retry.",
+  errBootNet:
+    "Server is briefly restarting or you're offline. Wait a couple of seconds and tap Retry.",
   privateHoldem: "Private Texas Hold'em · invite only",
   chips: "chips",
   wallet: "Wallet",

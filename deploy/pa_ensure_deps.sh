@@ -28,12 +28,18 @@ else
   echo "pa_ensure_deps: node_modules ok" >&2
 fi
 
-# Prisma client (API imports @prisma/client).
-echo "pa_ensure_deps: prisma generate" >&2
-(
-  cd "${ROOT}/apps/api"
-  npx prisma generate >/dev/null
-) || echo "pa_ensure_deps: prisma_generate_failed" >&2
+# Prisma client (API imports @prisma/client). Skip generate when already present —
+# soft restart after Bus error usually only needs a Node bounce; generate costs ~30s.
+PRISMA_CLIENT="${ROOT}/node_modules/.prisma/client/index.js"
+if [[ "${FORCE_PRISMA_GENERATE:-0}" == "1" || "${need_install}" -eq 1 || ! -f "${PRISMA_CLIENT}" ]]; then
+  echo "pa_ensure_deps: prisma generate" >&2
+  (
+    cd "${ROOT}/apps/api"
+    npx prisma generate >/dev/null
+  ) || echo "pa_ensure_deps: prisma_generate_failed" >&2
+else
+  echo "pa_ensure_deps: prisma client ok (skip generate)" >&2
+fi
 
 if [[ ! -f "${ROOT}/apps/api/dist/index.js" ]]; then
   echo "pa_ensure_deps: building @poker/api (dist missing)" >&2

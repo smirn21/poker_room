@@ -412,8 +412,8 @@ export function App() {
   }
 
   async function boot() {
-    // PA Node Bus error / tunnel blip: retry before showing «нет связи»
-    const maxAttempts = 4;
+    // PA Node Bus error recovery can take a few–30s; keep trying before «нет связи».
+    const maxAttempts = 12;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         setError(null);
@@ -459,11 +459,13 @@ export function App() {
       } catch (e) {
         const msg = e instanceof Error ? e.message : t("errBoot");
         const net =
-          /failed to fetch|network|load failed|timeout|503|502|530|no connection to api/i.test(
+          /failed to fetch|network|load failed|timeout|503|502|530|522|524|refused|unreachable|no connection to api/i.test(
             msg,
           );
         if (net && attempt < maxAttempts) {
-          await new Promise((r) => setTimeout(r, 700 * attempt));
+          // ~1s → ~5s backoff; total wait covers typical soft-restart window
+          const delayMs = Math.min(5000, 800 + attempt * 700);
+          await new Promise((r) => setTimeout(r, delayMs));
           continue;
         }
         setError(net ? t("errBootNet") : msg || t("errBoot"));

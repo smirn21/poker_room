@@ -147,9 +147,46 @@ export -f schedule_point_web
 ) &
 SCRAPE_PID=$!
 
+# Soft restart without always running prisma generate (~30s). Bus error usually
+# leaves deps intact — try Node first; ensure_deps only if health stays down.
+soft_restart_api() {
+  local reason="${1:-unhealthy}"
+  echo "soft_restart (${reason}): quick Node bounce" >&2
+  kill "${API_PID}" 2>/dev/null || true
+  sleep 1
+  cd "${HOME}/poker_room/apps/api"
+  start_api
+  local i
+  for i in $(seq 1 20); do
+    if curl -sf --max-time 2 "http://127.0.0.1:${PORT}/health" >/dev/null; then
+      echo "soft_restart: API up after quick bounce (${i} checks)" >&2
+      return 0
+    fi
+    sleep 0.5
+  done
+  echo "soft_restart: quick bounce failed — ensure_deps + retry" >&2
+  kill "${API_PID}" 2>/dev/null || true
+  sleep 1
+  bash "${HOME}/poker_room/deploy/pa_ensure_deps.sh" || true
+  cd "${HOME}/poker_room/apps/api"
+  start_api
+  for i in $(seq 1 40); do
+    if curl -sf --max-time 2 "http://127.0.0.1:${PORT}/health" >/dev/null; then
+      echo "soft_restart: API up after ensure_deps (${i} checks)" >&2
+      return 0
+    fi
+    sleep 0.5
+  done
+  echo "soft_restart: still down after ensure_deps" >&2
+  return 1
+}
+
 # Watchdog: if API dies (or cloudflared dies), exit so PA restarts the whole task.
 fail_streak=0
 watch_loops=0
+# PA Node often Bus-errors after ~1 day uptime (~05:55 UTC recently).
+# Recycle prophylactically every ~12h while healthy (tunnel URL usually kept).
+PROACTIVE_RECYCLE_LOOPS=2160 # 2160 * 20s ≈ 12h
 while true; do
   sleep 20
   watch_loops=$((watch_loops + 1))
@@ -160,6 +197,16 @@ while true; do
   fi
   if curl -sf --max-time 3 "http://127.0.0.1:${PORT}/health" >/dev/null; then
     fail_streak=0
+    if (( watch_loops >= PROACTIVE_RECYCLE_LOOPS )); then
+      echo "proactive Node recycle after ~12h uptime (avoid Bus error)" >&2
+      if soft_restart_api "proactive"; then
+        watch_loops=0
+      else
+        echo "proactive recycle failed — exiting for always-on restart" >&2
+        kill "${SCRAPE_PID}" 2>/dev/null || true
+        exit 1
+      fi
+    fi
     # Quick tunnel can go zombie (process up, public 530) while Node is fine.
     # Every ~2 min probe the public URL; exit so always-on refreshes the tunnel.
     if (( watch_loops % 6 == 0 )); then
@@ -186,12 +233,11 @@ while true; do
     kill "${SCRAPE_PID}" 2>/dev/null || true
     exit 1
   fi
-  # Soft restart: heal prisma/deps first (Bus error / PA wipe often leave
-  # @prisma/client uninitialized — bare node restart then fails forever).
-  echo "restarting Node API once (with ensure_deps)" >&2
-  kill "${API_PID}" 2>/dev/null || true
-  sleep 1
-  bash "${HOME}/poker_room/deploy/pa_ensure_deps.sh" || true
-  cd "${HOME}/poker_room/apps/api"
-  start_api
+  if soft_restart_api "health_fail"; then
+    fail_streak=0
+  else
+    echo "soft_restart failed — exiting so always-on restarts" >&2
+    kill "${SCRAPE_PID}" 2>/dev/null || true
+    exit 1
+  fi
 done
